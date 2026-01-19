@@ -15,27 +15,34 @@
     <div class="bg-grid"></div>
 
     <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark">A</div>
-        <div class="brand-text">
-          <span>ArberCharts</span>
-          <small>Premium Charting</small>
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="images/arber.jpg" alt="Arber Gashi" />
+          </div>
+          <div class="brand-text">
+            <span>ArberCharts</span>
+            <small>Premium Charting</small>
+          </div>
         </div>
-      </div>
-      <nav class="nav">
-        <a href="#product" data-i18n="nav_product">Product</a>
-        <a href="#demo" data-i18n="nav_demo">Demo</a>
-        <a href="#pricing" data-i18n="nav_pricing">Licensing</a>
-        <a href="#contact" data-i18n="nav_contact">Contact</a>
-      </nav>
-      <div class="lang-toggle">
-        <button class="lang-btn is-active" data-lang="en">EN</button>
-        <button class="lang-btn" data-lang="de">DE</button>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-i18n="nav_menu">Menu</button>
+        <nav class="nav" id="primary-nav">
+          <a href="index.html" data-i18n="nav_home">Home</a>
+          <a href="products/index.html" data-i18n="nav_products">Products</a>
+          <a href="demo.html" data-i18n="nav_demo">Demo</a>
+          <a href="licensing.html" data-i18n="nav_pricing">Licensing</a>
+          <a href="contact.html" data-i18n="nav_contact">Contact</a>
+        </nav>
+        <div class="lang-toggle">
+          <button class="lang-btn is-active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="de">DE</button>
+        </div>
       </div>
     </header>
 
     <main>
-      <section class="hero" id="product">
+      <div class="container">
+      <section class="hero">
         <div class="hero-copy">
           <div class="badge">
             <span data-i18n="badge">Final Release 1.0.0</span>
@@ -47,8 +54,8 @@
             ArberCharts delivers high‑performance rendering, refined visuals, and a fluent API that makes complex data feel effortless.
           </p>
           <div class="hero-cta">
-            <a class="btn primary" href="#contact" data-i18n="cta_request">Request Access</a>
-            <a class="btn ghost" href="#demo" data-i18n="cta_demo">View Demo</a>
+            <a class="btn primary" href="products/arbercharts.html" data-i18n="cta_product">Explore ArberCharts</a>
+            <a class="btn ghost" href="demo.html" data-i18n="cta_demo">View Demo</a>
           </div>
           <div class="meta">
             <div>
@@ -95,128 +102,65 @@
       <section class="section highlight">
         <div class="section-title">
           <span data-i18n="section_product">Product</span>
-          <h2 data-i18n="section_product_title">Designed to outperform legacy charting stacks.</h2>
+          <h2 data-i18n="section_product_title">Engineered for stability and repeatable output.</h2>
         </div>
-        <div class="feature-grid">
-          <article>
-            <h3 data-i18n="feature_speed_title">Performance at scale</h3>
-            <p data-i18n="feature_speed_body">Zero‑allocation render paths, deterministic grids, and fast tooltips built for heavy data.</p>
-          </article>
-          <article>
-            <h3 data-i18n="feature_api_title">Fluent developer experience</h3>
-            <p data-i18n="feature_api_body">A streamlined API that reduces boilerplate and keeps you focused on the visualization.</p>
-          </article>
-          <article>
-            <h3 data-i18n="feature_visual_title">Presentation‑grade visuals</h3>
-            <p data-i18n="feature_visual_body">Consistent styling, advanced legends, and precise crosshair interactions.</p>
-          </article>
-          <article>
-            <h3 data-i18n="feature_domain_title">Domain coverage</h3>
-            <p data-i18n="feature_domain_body">Financial, statistical, medical, analysis, specialized, and circular renderers.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section" id="demo">
-        <div class="section-title">
-          <span data-i18n="section_demo">Demo App</span>
-          <h2 data-i18n="section_demo_title">A premium showcase for your customers.</h2>
-        </div>
-        <div class="demo-grid">
-          <div class="demo-card">
-            <h3 data-i18n="demo_financial_title">Financial</h3>
-            <p data-i18n="demo_financial_body">Candlestick, Renko, MACD, Ichimoku, and more — tuned for trading desks.</p>
+        <p class="section-note" data-i18n="spec_note">Core capabilities summarized for technical review.</p>
+        <div class="spec-grid">
+          <div class="spec-card">
+            <strong data-i18n="spec_renderers_title">Renderer library</strong>
+            <span data-i18n="spec_renderers_body">140+ renderer families across financial, medical, statistical, and specialized domains.</span>
           </div>
-          <div class="demo-card">
-            <h3 data-i18n="demo_medical_title">Medical</h3>
-            <p data-i18n="demo_medical_body">ECG, NIRS, Ventilator, and high‑precision crosshair overlays.</p>
+          <div class="spec-card">
+            <strong data-i18n="spec_rendering_title">Rendering path</strong>
+            <span data-i18n="spec_rendering_body">Zero‑allocation pipeline with deterministic grid layout.</span>
           </div>
-          <div class="demo-card">
-            <h3 data-i18n="demo_specialized_title">Specialized</h3>
-            <p data-i18n="demo_specialized_body">Sunburst, Sankey, Parallel Coordinates, and more for analytics teams.</p>
+          <div class="spec-card">
+            <strong data-i18n="spec_api_title">API design</strong>
+            <span data-i18n="spec_api_body">Fluent builders and consistent defaults for predictable output.</span>
+          </div>
+          <div class="spec-card">
+            <strong data-i18n="spec_runtime_title">Runtime</strong>
+            <span data-i18n="spec_runtime_body">Optimized for JetBrains Runtime 25 with HiDPI support.</span>
           </div>
         </div>
       </section>
 
-      <section class="section pricing" id="pricing">
+      <section class="section">
         <div class="section-title">
-          <span data-i18n="section_pricing">Licensing</span>
-          <h2 data-i18n="section_pricing_title">Developer‑friendly licensing with paid distribution.</h2>
+          <span data-i18n="section_portfolio">Components</span>
+          <h2 data-i18n="section_portfolio_title">Core framework plus demo application.</h2>
         </div>
-        <div class="pricing-grid">
-          <article class="tier">
-            <h3 data-i18n="pricing_dev_title">Developer License</h3>
-            <p class="price" data-i18n="pricing_dev_price">Free</p>
-            <ul>
-              <li data-i18n="pricing_dev_1">Unlimited development & evaluation</li>
-              <li data-i18n="pricing_dev_2">Internal demos & CI/CD</li>
-              <li data-i18n="pricing_dev_3">No external distribution</li>
-            </ul>
+        <div class="listing-grid">
+          <article class="listing-card">
+            <h3>ArberCharts Core</h3>
+            <p data-i18n="portfolio_core">The core charting framework for Java developers.</p>
+            <a class="text-link" href="products/arbercharts.html" data-i18n="portfolio_view">View product</a>
           </article>
-          <article class="tier featured">
-            <h3 data-i18n="pricing_dist_title">Distribution License</h3>
-            <p class="price">CHF 6,000<span>/yr</span></p>
-            <ul>
-              <li data-i18n="pricing_dist_1">Per product line</li>
-              <li data-i18n="pricing_dist_2">Updates included</li>
-              <li data-i18n="pricing_dist_3">Commercial distribution rights</li>
-            </ul>
-          </article>
-          <article class="tier">
-            <h3 data-i18n="pricing_enterprise_title">Enterprise/OEM</h3>
-            <p class="price">CHF 25,000<span>/yr</span></p>
-            <ul>
-              <li data-i18n="pricing_enterprise_1">Unlimited distribution</li>
-              <li data-i18n="pricing_enterprise_2">Priority support + SLA</li>
-              <li data-i18n="pricing_enterprise_3">Security patch commitments</li>
-            </ul>
+          <article class="listing-card">
+            <h3 data-i18n="portfolio_demo_title">Demo App</h3>
+            <p data-i18n="portfolio_demo_body">Reference panels for evaluation, QA, and stakeholder review.</p>
+            <a class="text-link" href="demo.html" data-i18n="portfolio_demo_link">View demo</a>
           </article>
         </div>
       </section>
 
-      <section class="section contact" id="contact">
-        <div class="section-title">
-          <span data-i18n="section_contact">Contact</span>
-          <h2 data-i18n="section_contact_title">Let’s bring ArberCharts into your product.</h2>
-        </div>
-        <div class="contact-grid">
-          <div class="contact-card">
-            <h3 data-i18n="contact_title">Talk to us</h3>
-            <p data-i18n="contact_body">
-              Tell us about your project. We respond fast and can provide a tailored licensing proposal.
-            </p>
-            <p class="contact-links">
-              <a href="mailto:gashi@pro-business.ch">gashi@pro-business.ch</a>
-              <span>https://www.arbergashi.com</span>
-            </p>
+      <section class="section callout">
+        <div class="callout-card">
+          <div>
+            <h2 data-i18n="callout_title">Ready to offer world‑class charts?</h2>
+            <p data-i18n="callout_body">Let us tailor licensing and onboarding for your team.</p>
           </div>
-          <form class="contact-form" action="mailto:gashi@pro-business.ch" method="post" enctype="text/plain">
-            <label>
-              <span data-i18n="form_name">Name</span>
-              <input type="text" name="name" required />
-            </label>
-            <label>
-              <span data-i18n="form_email">Email</span>
-              <input type="email" name="email" required />
-            </label>
-            <label>
-              <span data-i18n="form_company">Company</span>
-              <input type="text" name="company" />
-            </label>
-            <label>
-              <span data-i18n="form_message">Message</span>
-              <textarea name="message" rows="5" required></textarea>
-            </label>
-            <button class="btn primary" type="submit" data-i18n="form_submit">Send Request</button>
-            <p class="form-note" data-i18n="form_note">Your mail client will open to send the message.</p>
-          </form>
+          <a class="btn primary" href="contact.html" data-i18n="callout_cta">Contact us</a>
         </div>
       </section>
+      </div>
     </main>
 
     <footer class="footer">
-      <p>© 2026 ArberCharts. All rights reserved.</p>
-      <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+      <div class="container">
+        <p>© 2026 Arber Gashi. All rights reserved.</p>
+        <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+      </div>
     </footer>
 
     <script src="app.js"></script>

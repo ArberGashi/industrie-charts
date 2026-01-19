@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArberCharts — Licensing</title>
+    <meta name="description" content="Licensing and pricing for ArberCharts." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page-shell">
+    <div class="bg-orbit"></div>
+    <div class="bg-grid"></div>
+
+    <header class="topbar">
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="images/arber.jpg" alt="Arber Gashi" />
+          </div>
+          <div class="brand-text">
+            <span>ArberCharts</span>
+            <small>Premium Charting</small>
+          </div>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-i18n="nav_menu">Menu</button>
+        <nav class="nav" id="primary-nav">
+          <a href="index.html" data-i18n="nav_home">Home</a>
+          <a href="products/index.html" data-i18n="nav_products">Products</a>
+          <a href="demo.html" data-i18n="nav_demo">Demo</a>
+          <a href="licensing.html" data-i18n="nav_pricing">Licensing</a>
+          <a href="contact.html" data-i18n="nav_contact">Contact</a>
+        </nav>
+        <div class="lang-toggle">
+          <button class="lang-btn is-active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="de">DE</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page pricing">
+      <div class="container">
+      <section class="page-hero">
+        <span data-i18n="section_pricing">Licensing</span>
+        <h1 data-i18n="section_pricing_title">Licensing built for product teams.</h1>
+        <p data-i18n="pricing_subtitle">Free for development, licensed for commercial distribution.</p>
+      </section>
+
+      <section class="pricing-grid">
+        <article class="tier">
+          <h3 data-i18n="pricing_dev_title">Developer License</h3>
+          <p class="price" data-i18n="pricing_dev_price">Free</p>
+          <ul>
+            <li data-i18n="pricing_dev_1">Unlimited development & evaluation</li>
+            <li data-i18n="pricing_dev_2">Internal demos & CI/CD</li>
+            <li data-i18n="pricing_dev_3">No external distribution</li>
+          </ul>
+        </article>
+        <article class="tier featured">
+          <span class="tier-tag" data-i18n="pricing_popular">Standard</span>
+          <h3 data-i18n="pricing_dist_title">Distribution License</h3>
+          <p class="price">CHF 6,000<span>/yr</span></p>
+          <ul>
+            <li data-i18n="pricing_dist_1">Per product line</li>
+            <li data-i18n="pricing_dist_2">Updates included</li>
+            <li data-i18n="pricing_dist_3">Commercial distribution rights</li>
+          </ul>
+        </article>
+        <article class="tier">
+          <h3 data-i18n="pricing_enterprise_title">Enterprise/OEM</h3>
+          <p class="price">CHF 25,000<span>/yr</span></p>
+          <ul>
+            <li data-i18n="pricing_enterprise_1">Unlimited distribution</li>
+            <li data-i18n="pricing_enterprise_2">Priority support + SLA</li>
+            <li data-i18n="pricing_enterprise_3">Security patch commitments</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="section callout">
+        <div class="callout-card">
+          <div>
+            <h2 data-i18n="pricing_callout_title">Need custom terms?</h2>
+            <p data-i18n="pricing_callout_body">Contact us for enterprise or OEM distribution.</p>
+          </div>
+          <a class="btn primary" href="contact.html" data-i18n="callout_cta">Contact us</a>
+        </div>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 Arber Gashi. All rights reserved.</p>
+        <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

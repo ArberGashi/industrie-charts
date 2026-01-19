@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArberCharts — Contact</title>
+    <meta name="description" content="Contact ArberCharts for licensing, support, and enterprise inquiries." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page-shell">
+    <div class="bg-orbit"></div>
+    <div class="bg-grid"></div>
+
+    <header class="topbar">
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="images/arber.jpg" alt="Arber Gashi" />
+          </div>
+          <div class="brand-text">
+            <span>ArberCharts</span>
+            <small>Premium Charting</small>
+          </div>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-i18n="nav_menu">Menu</button>
+        <nav class="nav" id="primary-nav">
+          <a href="index.html" data-i18n="nav_home">Home</a>
+          <a href="products/index.html" data-i18n="nav_products">Products</a>
+          <a href="demo.html" data-i18n="nav_demo">Demo</a>
+          <a href="licensing.html" data-i18n="nav_pricing">Licensing</a>
+          <a href="contact.html" data-i18n="nav_contact">Contact</a>
+        </nav>
+        <div class="lang-toggle">
+          <button class="lang-btn is-active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="de">DE</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="container">
+      <section class="page-hero">
+        <span data-i18n="section_contact">Contact</span>
+        <h1 data-i18n="section_contact_title">Contact for licensing and evaluation.</h1>
+        <p data-i18n="contact_body">Describe your use case and distribution needs.</p>
+      </section>
+
+      <section class="contact-grid">
+        <article class="contact-card">
+          <h3 data-i18n="contact_title">Talk to us</h3>
+          <p data-i18n="contact_body">Describe your use case and distribution needs.</p>
+          <div class="contact-line">
+            <strong data-i18n="contact_email_label">Email</strong>
+            <a href="mailto:gashi@pro-business.ch">gashi@pro-business.ch</a>
+          </div>
+          <div class="contact-line">
+            <strong data-i18n="contact_location_label">Location</strong>
+            <span data-i18n="contact_location_body">Switzerland</span>
+          </div>
+          <div class="contact-line">
+            <strong data-i18n="contact_response_label">Response time</strong>
+            <span data-i18n="contact_response_body">Within 1 business day</span>
+          </div>
+        </article>
+
+        <form class="contact-form" action="mailto:gashi@pro-business.ch" method="post" enctype="text/plain">
+          <h3 data-i18n="contact_form_title">Send a request</h3>
+          <label>
+            <span data-i18n="form_name">Name</span>
+            <input type="text" name="name" required />
+          </label>
+          <label>
+            <span data-i18n="form_email">Email</span>
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            <span data-i18n="form_company">Company</span>
+            <input type="text" name="company" />
+          </label>
+          <label>
+            <span data-i18n="form_message">Message</span>
+            <textarea name="message" rows="4" required></textarea>
+          </label>
+          <button class="btn primary" type="submit" data-i18n="form_submit">Send Request</button>
+          <p class="form-note" data-i18n="form_note">Your mail client will open to send the message.</p>
+        </form>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 Arber Gashi. All rights reserved.</p>
+        <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

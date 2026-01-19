@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArberCharts — Products</title>
+    <meta name="description" content="Explore the ArberCharts product line for high‑performance data visualization." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body class="page-shell">
+    <div class="bg-orbit"></div>
+    <div class="bg-grid"></div>
+
+    <header class="topbar">
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="../images/arber.jpg" alt="Arber Gashi" />
+          </div>
+          <div class="brand-text">
+            <span>ArberCharts</span>
+            <small>Premium Charting</small>
+          </div>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-i18n="nav_menu">Menu</button>
+        <nav class="nav" id="primary-nav">
+          <a href="../index.html" data-i18n="nav_home">Home</a>
+          <a href="index.html" data-i18n="nav_products">Products</a>
+          <a href="../demo.html" data-i18n="nav_demo">Demo</a>
+          <a href="../licensing.html" data-i18n="nav_pricing">Licensing</a>
+          <a href="../contact.html" data-i18n="nav_contact">Contact</a>
+        </nav>
+        <div class="lang-toggle">
+          <button class="lang-btn is-active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="de">DE</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="container">
+      <section class="page-hero">
+        <span data-i18n="products_kicker">Products</span>
+        <h1 data-i18n="products_title">Product overview.</h1>
+        <p data-i18n="products_subtitle">ArberCharts core framework plus demo application.</p>
+      </section>
+
+      <section class="listing-grid">
+        <article class="listing-card">
+          <h3>ArberCharts Core</h3>
+          <p data-i18n="portfolio_core">The core charting framework for Java developers.</p>
+          <a class="btn ghost" href="arbercharts.html" data-i18n="portfolio_view">View product</a>
+        </article>
+        <article class="listing-card">
+          <h3 data-i18n="portfolio_demo_title">Demo App</h3>
+          <p data-i18n="portfolio_demo_body">Reference panels for evaluation, QA, and stakeholder review.</p>
+          <a class="btn ghost" href="../demo.html" data-i18n="portfolio_demo_link">View demo</a>
+        </article>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 Arber Gashi. All rights reserved.</p>
+        <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+      </div>
+    </footer>
+
+    <script src="../app.js"></script>
+  </body>
+</html>

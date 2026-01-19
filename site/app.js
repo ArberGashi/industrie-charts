@@ -1,76 +1,208 @@
 const dictionary = {
-  nav_product: { en: "Product", de: "Produkt" },
+  nav_home: { en: "Home", de: "Start" },
+  nav_products: { en: "Products", de: "Produkte" },
   nav_demo: { en: "Demo", de: "Demo" },
   nav_pricing: { en: "Licensing", de: "Lizenzierung" },
   nav_contact: { en: "Contact", de: "Kontakt" },
+  nav_menu: { en: "Menu", de: "Menü" },
   badge: { en: "Final Release 1.0.0", de: "Final Release 1.0.0" },
   hero_title: {
-    en: "A premium Java charting framework built for world‑class presentation.",
-    de: "Ein Premium‑Charting‑Framework für Java mit Weltklasse‑Präsentation."
+    en: "Java charting framework for production dashboards.",
+    de: "Java‑Charting‑Framework für produktive Dashboards."
   },
   hero_subtitle: {
-    en: "ArberCharts delivers high‑performance rendering, refined visuals, and a fluent API that makes complex data feel effortless.",
-    de: "ArberCharts liefert High‑Performance‑Rendering, starke Visuals und eine Fluent API, die komplexe Daten leicht macht."
+    en: "Built for predictable rendering, consistent visuals, and a fluent API.",
+    de: "Für vorhersehbares Rendering, konsistente Visuals und eine Fluent API."
   },
-  cta_request: { en: "Request Access", de: "Zugang anfragen" },
+  cta_product: { en: "Explore ArberCharts", de: "ArberCharts entdecken" },
   cta_demo: { en: "View Demo", de: "Demo ansehen" },
+  cta_license: { en: "View Licensing", de: "Lizenz ansehen" },
+  cta_contact: { en: "Contact Sales", de: "Vertrieb kontaktieren" },
   meta_renderers: { en: "renderer families", de: "Renderer‑Familien" },
   meta_perf: { en: "rendering path", de: "Rendering‑Pfad" },
   meta_runtime: { en: "optimized runtime", de: "optimierte Runtime" },
   panel_title: { en: "Live Market Overview", de: "Live Marktübersicht" },
   floating_note: {
-    en: "From financial indicators to medical monitors — every renderer is tuned for clarity.",
-    de: "Von Finanz‑Indikatoren bis Medical‑Monitoring — jeder Renderer ist auf Klarheit optimiert."
+    en: "Renderer defaults tuned for readable output across domains.",
+    de: "Renderer‑Defaults sind für Lesbarkeit über alle Domains abgestimmt."
   },
   section_product: { en: "Product", de: "Produkt" },
   section_product_title: {
-    en: "Designed to outperform legacy charting stacks.",
-    de: "Entwickelt, um klassische Chart‑Stacks zu übertreffen."
+    en: "Engineered for stability and repeatable output.",
+    de: "Für Stabilität und reproduzierbare Ausgabe entwickelt."
   },
-  feature_speed_title: { en: "Performance at scale", de: "Performance im Maßstab" },
-  feature_speed_body: {
-    en: "Zero‑allocation render paths, deterministic grids, and fast tooltips built for heavy data.",
-    de: "Zero‑Allocation‑Rendering, deterministische Grids und schnelle Tooltips für große Datenmengen."
+  section_portfolio: { en: "Components", de: "Komponenten" },
+  section_portfolio_title: {
+    en: "Core framework plus demo application.",
+    de: "Core‑Framework plus Demo‑Applikation."
   },
-  feature_api_title: { en: "Fluent developer experience", de: "Fluent Developer Experience" },
-  feature_api_body: {
-    en: "A streamlined API that reduces boilerplate and keeps you focused on the visualization.",
-    de: "Eine schlanke API, die Boilerplate reduziert und den Fokus auf die Visualisierung legt."
+  portfolio_core: { en: "The core charting framework for Java developers.", de: "Das Core‑Charting‑Framework für Java‑Entwickler." },
+  portfolio_view: { en: "View product", de: "Produkt ansehen" },
+  portfolio_demo_title: { en: "Demo App", de: "Demo‑App" },
+  portfolio_demo_body: {
+    en: "Reference panels for evaluation, QA, and stakeholder review.",
+    de: "Referenz‑Panels für Evaluation, QA und Stakeholder‑Review."
   },
-  feature_visual_title: { en: "Presentation‑grade visuals", de: "Präsentations‑Visuals" },
-  feature_visual_body: {
-    en: "Consistent styling, advanced legends, and precise crosshair interactions.",
-    de: "Konsistentes Styling, starke Legenden und präzise Crosshair‑Interaktion."
+  portfolio_demo_link: { en: "View demo", de: "Demo ansehen" },
+  spec_note: { en: "Core capabilities summarized for technical review.", de: "Kernfunktionen für die technische Prüfung zusammengefasst." },
+  spec_renderers_title: { en: "Renderer library", de: "Renderer‑Bibliothek" },
+  spec_renderers_body: {
+    en: "140+ renderer families across financial, medical, statistical, and specialized domains.",
+    de: "140+ Renderer‑Familien über Financial, Medical, Statistical und Specialized."
   },
-  feature_domain_title: { en: "Domain coverage", de: "Domain‑Abdeckung" },
-  feature_domain_body: {
+  spec_rendering_title: { en: "Rendering path", de: "Rendering‑Pfad" },
+  spec_rendering_body: {
+    en: "Zero‑allocation pipeline with deterministic grid layout.",
+    de: "Zero‑Allocation‑Pipeline mit deterministischem Grid‑Layout."
+  },
+  spec_api_title: { en: "API design", de: "API‑Design" },
+  spec_api_body: {
+    en: "Fluent builders and consistent defaults for predictable output.",
+    de: "Fluent Builder und konsistente Defaults für vorhersehbare Ausgabe."
+  },
+  spec_runtime_title: { en: "Runtime", de: "Runtime" },
+  spec_runtime_body: {
+    en: "Optimized for JetBrains Runtime 25 with HiDPI support.",
+    de: "Optimiert für JetBrains Runtime 25 mit HiDPI‑Support."
+  },
+  callout_title: { en: "Need onboarding or licensing guidance?", de: "Brauchen Sie Onboarding oder Lizenz‑Hinweise?" },
+  callout_body: {
+    en: "We provide clear licensing options and onboarding support.",
+    de: "Wir bieten klare Lizenzoptionen und Onboarding‑Support."
+  },
+  callout_cta: { en: "Contact us", de: "Kontakt aufnehmen" },
+  products_kicker: { en: "Products", de: "Produkte" },
+  products_title: { en: "Product overview.", de: "Produktübersicht." },
+  products_subtitle: {
+    en: "ArberCharts core framework plus demo application.",
+    de: "ArberCharts Core‑Framework plus Demo‑Applikation."
+  },
+  product_kicker: { en: "Product", de: "Produkt" },
+  product_title: { en: "ArberCharts Core Framework", de: "ArberCharts Core Framework" },
+  product_subtitle: {
+    en: "A charting engine for modern Java applications with predictable rendering.",
+    de: "Eine Charting‑Engine für moderne Java‑Anwendungen mit reproduzierbarem Rendering."
+  },
+  product_features: { en: "Core Capabilities", de: "Kernfunktionen" },
+  product_features_title: { en: "Core capabilities for production use.", de: "Kernfunktionen für den Produktionseinsatz." },
+  product_features_note: {
+    en: "Focused on predictable output and stable rendering.",
+    de: "Fokus auf vorhersehbare Ausgabe und stabiles Rendering."
+  },
+  product_perf_title: { en: "Performance at scale", de: "Performance im Maßstab" },
+  product_perf_body: {
+    en: "Zero‑allocation rendering, deterministic grids, optimized paint pipeline.",
+    de: "Zero‑Allocation‑Rendering, deterministische Grids, optimierte Paint‑Pipeline."
+  },
+  product_fluent_title: { en: "Fluent API", de: "Fluent API" },
+  product_fluent_body: {
+    en: "Builder‑style API with clear defaults for common scenarios.",
+    de: "Builder‑API mit klaren Defaults für Standard‑Szenarien."
+  },
+  product_legend_title: { en: "Legends & crosshair", de: "Legenden & Crosshair" },
+  product_legend_body: {
+    en: "Legends, crosshair overlays, and precise tooltips.",
+    de: "Legenden, Crosshair‑Overlays und präzise Tooltips."
+  },
+  product_domains_title: { en: "Domain coverage", de: "Domain‑Abdeckung" },
+  product_domains_body: {
     en: "Financial, statistical, medical, analysis, specialized, and circular renderers.",
     de: "Financial, Statistical, Medical, Analysis, Specialized und Circular Renderer."
   },
-  section_demo: { en: "Demo App", de: "Demo‑App" },
-  section_demo_title: {
-    en: "A premium showcase for your customers.",
-    de: "Ein Premium‑Showcase für deine Kunden."
+  product_renderers: { en: "Renderer Library", de: "Renderer‑Bibliothek" },
+  product_renderers_title: { en: "Over 140 renderer families.", de: "Über 140 Renderer‑Familien." },
+  product_renderers_note: {
+    en: "Each renderer ships with default themes and demo presets.",
+    de: "Jeder Renderer liefert Default‑Themes und Demo‑Presets."
   },
+  product_financial: { en: "Financial", de: "Financial" },
+  product_financial_body: {
+    en: "Candlestick, Renko, MACD, Ichimoku, and advanced indicators.",
+    de: "Candlestick, Renko, MACD, Ichimoku und fortgeschrittene Indikatoren."
+  },
+  product_medical: { en: "Medical", de: "Medical" },
+  product_medical_body: {
+    en: "ECG, NIRS, ventilator waveforms, and precise clinical grids.",
+    de: "ECG, NIRS, Ventilator‑Waveforms und präzise klinische Grids."
+  },
+  product_specialized: { en: "Specialized", de: "Specialized" },
+  product_specialized_body: {
+    en: "Sunburst, Sankey, Parallel Coordinates, and multi‑dimensional visuals.",
+    de: "Sunburst, Sankey, Parallel Coordinates und multidimensionale Visuals."
+  },
+  product_callout_title: { en: "Need a tailored rollout?", de: "Brauchst du einen maßgeschneiderten Rollout?" },
+  product_callout_body: {
+    en: "Onboarding, integrations, and enterprise support are available.",
+    de: "Onboarding, Integrationen und Enterprise‑Support sind verfügbar."
+  },
+  product_downloads_title: { en: "Developer Downloads", de: "Developer‑Downloads" },
+  product_downloads_body: {
+    en: "Provide the core library to developers and the demo to stakeholders.",
+    de: "Gib Entwicklern die Core‑Bibliothek und Stakeholdern die Demo."
+  },
+  download_core: { en: "Download Core JAR", de: "Core‑JAR herunterladen" },
+  download_demo: { en: "Download Demo JAR", de: "Demo‑JAR herunterladen" },
+  download_dmg: { en: "Download macOS DMG", de: "macOS‑DMG herunterladen" },
+  demo_kicker: { en: "Demo App", de: "Demo‑App" },
+  demo_title: { en: "Reference app for evaluation and QA.", de: "Referenz‑App für Evaluation und QA." },
+  demo_subtitle: {
+    en: "Domain panels with the same renderer stack used in production.",
+    de: "Domain‑Panels mit dem gleichen Renderer‑Stack wie in Produktion."
+  },
+  demo_download: { en: "Download Demo JAR", de: "Demo‑JAR herunterladen" },
+  demo_download_dmg: { en: "Download macOS DMG", de: "macOS‑DMG herunterladen" },
+  demo_downloads_title: { en: "Downloads", de: "Downloads" },
+  demo_downloads_body: {
+    en: "Grab the demo JAR for any OS or use the native macOS installer.",
+    de: "Nutze das Demo‑JAR für jedes OS oder den nativen macOS‑Installer."
+  },
+  demo_downloads_jar_body: {
+    en: "For Windows, Linux, and macOS with a compatible JRE.",
+    de: "Für Windows, Linux und macOS mit kompatiblem JRE."
+  },
+  demo_downloads_dmg_body: {
+    en: "Native installer for Apple Silicon and Intel Macs.",
+    de: "Nativer Installer für Apple Silicon und Intel Macs."
+  },
+  demo_sections: { en: "Showcase", de: "Showcase" },
+  demo_sections_title: { en: "Every domain is represented.", de: "Jede Domain ist vertreten." },
   demo_financial_title: { en: "Financial", de: "Financial" },
   demo_financial_body: {
-    en: "Candlestick, Renko, MACD, Ichimoku, and more — tuned for trading desks.",
-    de: "Candlestick, Renko, MACD, Ichimoku und mehr — optimiert für Trading‑Desks."
+    en: "Candlestick, Renko, MACD, Ichimoku, and indicators.",
+    de: "Candlestick, Renko, MACD, Ichimoku und Indikatoren."
   },
   demo_medical_title: { en: "Medical", de: "Medical" },
   demo_medical_body: {
-    en: "ECG, NIRS, Ventilator, and high‑precision crosshair overlays.",
-    de: "ECG, NIRS, Ventilator und High‑Precision‑Crosshair‑Overlays."
+    en: "ECG, NIRS, ventilator waveforms, precision grids.",
+    de: "ECG, NIRS, Ventilator‑Waveforms, Präzisions‑Grids."
   },
   demo_specialized_title: { en: "Specialized", de: "Specialized" },
   demo_specialized_body: {
-    en: "Sunburst, Sankey, Parallel Coordinates, and more for analytics teams.",
-    de: "Sunburst, Sankey, Parallel Coordinates und mehr für Analytics‑Teams."
+    en: "Sunburst, Sankey, Parallel Coordinates, multi‑dimensional visuals.",
+    de: "Sunburst, Sankey, Parallel Coordinates, multidimensionale Visuals."
   },
+  demo_gallery_kicker: { en: "Gallery", de: "Galerie" },
+  demo_gallery_title: { en: "Screens from the demo app.", de: "Screens aus der Demo‑App." },
+  demo_gallery_body: {
+    en: "Replace these with real captures from your current demo build.",
+    de: "Diese Platzhalter mit echten Screens aus dem Demo‑Build ersetzen."
+  },
+  demo_gallery_financial: { en: "Financial indicators and overlays.", de: "Finanz‑Indikatoren und Overlays." },
+  demo_gallery_medical: { en: "Medical waveforms with precise grids.", de: "Medical‑Waveforms mit präzisen Grids." },
+  demo_gallery_specialized: {
+    en: "Specialized renderers for advanced analytics.",
+    de: "Spezialisierte Renderer für Advanced Analytics."
+  },
+  demo_run: { en: "Run", de: "Starten" },
+  demo_run_title: { en: "Launch in seconds.", de: "In Sekunden starten." },
   section_pricing: { en: "Licensing", de: "Lizenzierung" },
   section_pricing_title: {
-    en: "Developer‑friendly licensing with paid distribution.",
-    de: "Developer‑freundliche Lizenzierung mit bezahlter Distribution."
+    en: "Licensing built for product teams.",
+    de: "Lizenzierung für Produkt‑Teams."
+  },
+  pricing_subtitle: {
+    en: "Free for development, licensed for commercial distribution.",
+    de: "Kostenlos für Entwicklung, lizenziert für kommerzielle Distribution."
   },
   pricing_dev_title: { en: "Developer License", de: "Developer‑Lizenz" },
   pricing_dev_price: { en: "Free", de: "Kostenlos" },
@@ -85,16 +217,28 @@ const dictionary = {
   pricing_enterprise_1: { en: "Unlimited distribution", de: "Unbegrenzte Distribution" },
   pricing_enterprise_2: { en: "Priority support + SLA", de: "Priority Support + SLA" },
   pricing_enterprise_3: { en: "Security patch commitments", de: "Security‑Patch‑Commitments" },
+  pricing_callout_title: { en: "Need custom terms?", de: "Individuelle Konditionen?" },
+  pricing_callout_body: {
+    en: "Contact us for enterprise or OEM distribution.",
+    de: "Kontakt für Enterprise‑ oder OEM‑Distribution."
+  },
+  pricing_popular: { en: "Standard", de: "Standard" },
   section_contact: { en: "Contact", de: "Kontakt" },
   section_contact_title: {
-    en: "Let’s bring ArberCharts into your product.",
-    de: "Bringen wir ArberCharts in dein Produkt."
+    en: "Contact for licensing and evaluation.",
+    de: "Kontakt für Lizenzierung und Evaluation."
   },
   contact_title: { en: "Talk to us", de: "Kontakt aufnehmen" },
   contact_body: {
-    en: "Tell us about your project. We respond fast and can provide a tailored licensing proposal.",
-    de: "Erzähl uns von deinem Projekt. Wir antworten schnell und bieten eine passende Lizenz."
+    en: "Describe your use case and distribution needs.",
+    de: "Beschreibe deinen Use‑Case und die Distributions‑Anforderungen."
   },
+  contact_email_label: { en: "Email", de: "E‑Mail" },
+  contact_location_label: { en: "Location", de: "Standort" },
+  contact_location_body: { en: "Switzerland", de: "Schweiz" },
+  contact_response_label: { en: "Response time", de: "Antwortzeit" },
+  contact_response_body: { en: "Within 1 business day", de: "Innerhalb 1 Werktag" },
+  contact_form_title: { en: "Send a request", de: "Anfrage senden" },
   form_name: { en: "Name", de: "Name" },
   form_email: { en: "Email", de: "E‑Mail" },
   form_company: { en: "Company", de: "Firma" },
@@ -128,3 +272,20 @@ buttons.forEach((btn) => {
 });
 
 applyLanguage("en");
+
+const navToggle = document.querySelector(".nav-toggle");
+const nav = document.querySelector(".nav");
+
+if (navToggle && nav) {
+  navToggle.addEventListener("click", () => {
+    const isOpen = nav.classList.toggle("is-open");
+    navToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("is-open");
+      navToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+}
