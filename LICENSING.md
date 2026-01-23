@@ -19,6 +19,9 @@ We use a dual-track commercial model:
 This keeps adoption easy for developers while ensuring commercial value from
 production usage.
 
+ArberCharts ships with **139 renderer families** across standard, financial, statistical,
+specialized, medical, and analysis domains.
+
 ---
 
 ## 2) Developer License (Free, Unlimited)

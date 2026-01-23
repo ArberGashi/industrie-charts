@@ -2,6 +2,9 @@
 
 All prices are per product line and per year.
 
+ArberCharts ships with **139 renderer families** across standard, financial, statistical,
+specialized, medical, and analysis domains.
+
 ---
 
 ## 1) Developer License (Free)

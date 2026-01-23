@@ -3,166 +3,398 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ArberCharts — Premium Java Charting Framework</title>
-    <meta name="description" content="ArberCharts is a premium Java charting framework built for performance, clarity, and presentation-grade visuals." />
+    <title>ArberCharts — High-Performance Java Charts</title>
+    <meta name="description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
+    <meta name="keywords" content="ArberCharts, Java charts, Swing charting, charting framework, data visualization, financial charts, medical charts, statistical charts, specialized charts, zero-GC rendering, high performance, ArberChartBuilder, Java 25, JDK 25, Java Diagramme, Swing Diagramme, Datenvisualisierung, Finanzcharts, medizinische Charts" />
+    <meta name="theme-color" content="#050505" />
+    <link rel="canonical" href="https://www.arbergashi.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ArberCharts" />
+    <meta property="og:title" content="ArberCharts — High-Performance Java Charts" />
+    <meta property="og:description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
+    <meta property="og:url" content="https://www.arbergashi.com/" />
+    <meta property="og:image" content="https://www.arbergashi.com/images/candlestick.png" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ArberCharts — High-Performance Java Charts" />
+    <meta name="twitter:description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
+    <meta name="twitter:image" content="https://www.arbergashi.com/images/candlestick.png" />
+<link rel="icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="bg-orbit"></div>
-    <div class="bg-grid"></div>
-
     <header class="topbar">
       <div class="container">
-        <div class="brand">
-          <div class="brand-mark">
-            <img src="images/arber.jpg" alt="Arber Gashi" />
+        <a class="brand" href="index.html" aria-label="ArberCharts">
+          <img src="images/candlestick.png" alt="ArberCharts" />
+          <span>ArberCharts</span>
+        </a>
+        <div class="nav-actions">
+          <nav class="nav">
+            <a href="index.html" data-i18n="nav_home">Start</a>
+            <a href="products.html" data-i18n="nav_products">Produkte</a>
+            <a href="solutions.html" data-i18n="nav_solutions">Solutions</a>
+            <a href="technology.html" data-i18n="nav_technology">Technology</a>
+            <a href="licensing.html" data-i18n="nav_license">Lizenz</a>
+            <a href="contact.html" data-i18n="nav_contact">Kontakt</a>
+          </nav>
+          <div class="lang-toggle">
+            <button class="lang-btn" data-lang="de">DE</button>
+            <button class="lang-btn" data-lang="en">EN</button>
           </div>
-          <div class="brand-text">
-            <span>ArberCharts</span>
-            <small>Premium Charting</small>
-          </div>
-        </div>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-i18n="nav_menu">Menu</button>
-        <nav class="nav" id="primary-nav">
-          <a href="index.html" data-i18n="nav_home">Home</a>
-          <a href="products/index.html" data-i18n="nav_products">Products</a>
-          <a href="demo.html" data-i18n="nav_demo">Demo</a>
-          <a href="licensing.html" data-i18n="nav_pricing">Licensing</a>
-          <a href="contact.html" data-i18n="nav_contact">Contact</a>
-        </nav>
-        <div class="lang-toggle">
-          <button class="lang-btn is-active" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="de">DE</button>
+          <button class="nav-toggle" type="button" aria-label="Menu">
+            <span class="nav-line"></span>
+            <span class="nav-line"></span>
+            <span class="nav-line"></span>
+            <span class="sr-only" data-i18n="nav_menu">Menu</span>
+          </button>
         </div>
       </div>
     </header>
 
-    <main>
-      <div class="container">
+    <div class="mobile-backdrop" aria-hidden="true"></div>
+    <main class="container">
       <section class="hero">
-        <div class="hero-copy">
-          <div class="badge">
-            <span data-i18n="badge">Final Release 1.0.0</span>
-          </div>
-          <h1 data-i18n="hero_title">
-            A premium Java charting framework built for world‑class presentation.
-          </h1>
-          <p class="lead" data-i18n="hero_subtitle">
-            ArberCharts delivers high‑performance rendering, refined visuals, and a fluent API that makes complex data feel effortless.
-          </p>
-          <div class="hero-cta">
-            <a class="btn primary" href="products/arbercharts.html" data-i18n="cta_product">Explore ArberCharts</a>
-            <a class="btn ghost" href="demo.html" data-i18n="cta_demo">View Demo</a>
-          </div>
-          <div class="meta">
-            <div>
-              <strong>140+</strong>
-              <span data-i18n="meta_renderers">renderer families</span>
-            </div>
-            <div>
-              <strong>Zero‑GC</strong>
-              <span data-i18n="meta_perf">rendering path</span>
-            </div>
-            <div>
-              <strong>JBR 25</strong>
-              <span data-i18n="meta_runtime">optimized runtime</span>
-            </div>
-          </div>
+        <h1 data-i18n="hero_title">High-performance charting engine for Java 25</h1>
+        <p data-i18n="hero_subtitle">139 Renderer. Zero-GC Pipeline. Entwickelt für geschäftskritische Systeme.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="products.html" data-i18n="cta_free">Core herunterladen</a>
+          <a class="btn" href="licensing.html" data-i18n="cta_business">Pricing ansehen</a>
         </div>
-        <div class="hero-panel">
-          <div class="glass-card">
-            <div class="card-header">
-              <div class="dot red"></div>
-              <div class="dot yellow"></div>
-              <div class="dot green"></div>
-              <span data-i18n="panel_title">Live Market Overview</span>
-            </div>
-            <div class="chart-preview">
-              <div class="pulse-line"></div>
-              <div class="pulse-line alt"></div>
-              <div class="price-badges">
-                <span>+2.4%</span>
-                <span>+0.9%</span>
-                <span>‑1.1%</span>
+      </section>
+
+      <section class="section" id="problem">
+        <div class="section-title">
+          <span data-i18n="problem_kicker">Das Problem</span>
+          <h2 data-i18n="problem_title">Warum Standard-Charts in Produktion scheitern</h2>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3 data-i18n="problem_card_title">Grenzen klassischer Charting-Bibliotheken</h3>
+            <p data-i18n="problem_body">In echten Produktionsumgebungen stossen Standard-Libraries an harte Grenzen.</p>
+            <ul>
+              <li data-i18n="problem_bullet_1">GC-Ruckler durch neue Objekte im Render-Loop</li>
+              <li data-i18n="problem_bullet_2">Feature-Lücken bei Spezial-Renderern</li>
+              <li data-i18n="problem_bullet_3">Explodierende Kosten durch Lizenzmodelle pro Entwickler</li>
+            </ul>
+          </div>
+          <div class="media-slot">
+            <div class="image-strip">
+              <div class="image-strip-track">
+                <img src="images/candlestick.png" alt="Candlestick chart" />
+                <img src="images/ecg1.png" alt="ECG monitoring" />
+                <img src="images/ichimoku.png" alt="Ichimoku cloud" />
+                <img src="images/sankey.png" alt="Sankey flow" />
+                <img src="images/hexbin.png" alt="Hexbin density" />
+                <img src="images/voronoi.png" alt="Voronoi" />
+                <img src="images/candlestick.png" alt="Candlestick chart" />
+                <img src="images/ecg1.png" alt="ECG monitoring" />
+                <img src="images/ichimoku.png" alt="Ichimoku cloud" />
+                <img src="images/sankey.png" alt="Sankey flow" />
+                <img src="images/hexbin.png" alt="Hexbin density" />
+                <img src="images/voronoi.png" alt="Voronoi" />
               </div>
-              <div class="grid-lines"></div>
             </div>
           </div>
-          <div class="hero-floating">
-            <p data-i18n="floating_note">
-              From financial indicators to medical monitors — every renderer is tuned for clarity.
-            </p>
-          </div>
         </div>
       </section>
 
-      <section class="section highlight">
+      <section class="section" id="catalog">
         <div class="section-title">
-          <span data-i18n="section_product">Product</span>
-          <h2 data-i18n="section_product_title">Engineered for stability and repeatable output.</h2>
+          <span data-i18n="solution_kicker">Die Lösung</span>
+          <h2 data-i18n="solution_title">ArberCharts</h2>
         </div>
-        <p class="section-note" data-i18n="spec_note">Core capabilities summarized for technical review.</p>
-        <div class="spec-grid">
-          <div class="spec-card">
-            <strong data-i18n="spec_renderers_title">Renderer library</strong>
-            <span data-i18n="spec_renderers_body">140+ renderer families across financial, medical, statistical, and specialized domains.</span>
+        <div class="card" style="margin-bottom: 18px;">
+          <h3 data-i18n="solution_body_title">Maximale Performance (Zero-GC)</h3>
+          <p data-i18n="solution_body">Unsere Rendering-Pipeline erzeugt im aktiven Betrieb keine neuen Objekte auf dem Heap. Ergebnis: deterministisches Verhalten und flüssige 60 FPS – auch bei Millionen von Datenpunkten.</p>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-btn is-active" data-filter="all" data-i18n="catalog_filter_all">All</button>
+          <button class="filter-btn" data-filter="medical" data-i18n="catalog_filter_medical">Medical & Life Sciences</button>
+          <button class="filter-btn" data-filter="financial" data-i18n="catalog_filter_financial">Financial Engineering</button>
+          <button class="filter-btn" data-filter="analysis" data-i18n="catalog_filter_analysis">Advanced Analysis & Statistics</button>
+        </div>
+        <div class="grid cols-3">
+          <div class="card" data-filter="medical">
+            <img class="card-media" src="images/ecg.png" alt="ECG waveform" />
+            <h3 data-i18n="catalog_medical_title">Medical & Life Sciences</h3>
+            <p data-i18n="catalog_medical_body">Visualisierung kritischer Vitaldaten mit Sweep-Erase-Modi für stabile Echtzeitdarstellung.</p>
+            <ul class="card-list">
+              <li data-i18n="catalog_medical_h1">ECG</li>
+              <li data-i18n="catalog_medical_h2">EEG</li>
+              <li data-i18n="catalog_medical_h3">Capnography</li>
+              <li data-i18n="catalog_medical_h4">Ventilator Waveforms</li>
+            </ul>
           </div>
-          <div class="spec-card">
-            <strong data-i18n="spec_rendering_title">Rendering path</strong>
-            <span data-i18n="spec_rendering_body">Zero‑allocation pipeline with deterministic grid layout.</span>
+          <div class="card" data-filter="financial">
+            <img class="card-media" src="images/candlestick.png" alt="Candlestick chart" />
+            <h3 data-i18n="catalog_financial_title">Financial Engineering</h3>
+            <p data-i18n="catalog_financial_body">Analysieren Sie Märkte mit komplexen Overlays und nativen Indikatoren.</p>
+            <ul class="card-list">
+              <li data-i18n="catalog_financial_h1">Candlestick (Hollow/Solid)</li>
+              <li data-i18n="catalog_financial_h2">Ichimoku Cloud</li>
+              <li data-i18n="catalog_financial_h3">Renko</li>
+              <li data-i18n="catalog_financial_h4">Volume Profile</li>
+            </ul>
           </div>
-          <div class="spec-card">
-            <strong data-i18n="spec_api_title">API design</strong>
-            <span data-i18n="spec_api_body">Fluent builders and consistent defaults for predictable output.</span>
-          </div>
-          <div class="spec-card">
-            <strong data-i18n="spec_runtime_title">Runtime</strong>
-            <span data-i18n="spec_runtime_body">Optimized for JetBrains Runtime 25 with HiDPI support.</span>
+          <div class="card" data-filter="analysis">
+            <img class="card-media" src="images/radarchart.png" alt="Radar chart" />
+            <h3 data-i18n="catalog_analysis_title">Advanced Analysis & Statistics</h3>
+            <p data-i18n="catalog_analysis_body">Statistische Renderer für Dichten, Flüsse und grosse Datenmengen.</p>
+            <ul class="card-list">
+              <li data-i18n="catalog_analysis_h1">Violin Plots</li>
+              <li data-i18n="catalog_analysis_h2">Sankey Pro</li>
+              <li data-i18n="catalog_analysis_h3">Hexbin</li>
+              <li data-i18n="catalog_analysis_h4">FFT (Fourier)</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      <section class="section">
+      <section class="section" id="business-case">
         <div class="section-title">
-          <span data-i18n="section_portfolio">Components</span>
-          <h2 data-i18n="section_portfolio_title">Core framework plus demo application.</h2>
+          <span data-i18n="business_kicker">Business Case</span>
+          <h2 data-i18n="business_title">Rechnen Sie selbst</h2>
         </div>
-        <div class="listing-grid">
-          <article class="listing-card">
-            <h3>ArberCharts Core</h3>
-            <p data-i18n="portfolio_core">The core charting framework for Java developers.</p>
-            <a class="text-link" href="products/arbercharts.html" data-i18n="portfolio_view">View product</a>
-          </article>
-          <article class="listing-card">
-            <h3 data-i18n="portfolio_demo_title">Demo App</h3>
-            <p data-i18n="portfolio_demo_body">Reference panels for evaluation, QA, and stakeholder review.</p>
-            <a class="text-link" href="demo.html" data-i18n="portfolio_demo_link">View demo</a>
-          </article>
+        <div class="card">
+          <h3 data-i18n="business_build_title">Build vs. Buy</h3>
+          <p data-i18n="business_build_body">Die Entwicklung eines spezialisierten Renderers dauert im Schnitt 3–5 Tage. Bei CHF 150/Std. kostet Sie das ca. CHF 6.000.</p>
+          <p data-i18n="business_alt">ArberCharts Alternative: Für CHF 1'299 / Jahr erhalten Sie Zugriff auf alle 139 Renderer für Ihr gesamtes Team.</p>
+          <p data-i18n="business_roi">ROI: amortisiert sich nach der ersten gesparten Arbeitswoche – der Rest des Jahres ohne Zusatzkosten.</p>
         </div>
       </section>
 
-      <section class="section callout">
-        <div class="callout-card">
-          <div>
-            <h2 data-i18n="callout_title">Ready to offer world‑class charts?</h2>
-            <p data-i18n="callout_body">Let us tailor licensing and onboarding for your team.</p>
+      <section class="section" id="engineers">
+        <div class="section-title">
+          <span data-i18n="engineers_kicker">Von Ingenieuren</span>
+          <h2 data-i18n="engineers_title">Für Ingenieure</h2>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3 data-i18n="engineers_java_title">Native Java 25 Unterstützung</h3>
+            <p data-i18n="engineers_java_body">Nutzen Sie die volle Power moderner JREs für stabile Performance.</p>
           </div>
-          <a class="btn primary" href="contact.html" data-i18n="callout_cta">Contact us</a>
+          <div class="card">
+            <h3 data-i18n="engineers_i18n_title">i18n & Themes</h3>
+            <p data-i18n="engineers_i18n_body">Lokalisierung und Theme-Support für produktive Systeme.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="arch_fluent_title">Fluent API</h3>
+            <div class="code-block">
+<pre>ArberChartPanel panel = ArberChartBuilder.create()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.defaultDark())
+    .buildPanel();</pre>
+            </div>
+          </div>
         </div>
       </section>
-      </div>
+
+      <section class="section" id="zero-gc">
+        <div class="section-title">
+          <span data-i18n="zero_kicker">Technical Excellence</span>
+          <h2 data-i18n="zero_title">Zero-GC Konzept</h2>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3 data-i18n="zero_challenge_title">Die Herausforderung: Determinismus in Java</h3>
+            <p data-i18n="zero_challenge_body">In Echtzeitsystemen ist der Stop-the-World-GC der grösste Feind. Wenn im Render-Loop ständig neue Objekte entstehen, sind Pausen unvermeidlich.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="zero_approach_title">Der ArberCharts-Ansatz</h3>
+            <ul>
+              <li data-i18n="zero_bullet_1">Allocation-Free Rendering: keine neuen Objekte im aktiven Zeichnen.</li>
+              <li data-i18n="zero_bullet_2">Primitive-basierte Verarbeitung statt Boxing/Unboxing.</li>
+              <li data-i18n="zero_bullet_3">Object Pooling für wiederverwendbare Ressourcen.</li>
+              <li data-i18n="zero_bullet_4">Java 25 Native Performance für stabile Frame-Rates.</li>
+            </ul>
+            <p data-i18n="zero_result">Ergebnis: glattes Schriftbild und flüssige Animationen ohne Mikroruckler – auch nach stundenlangem Dauerbetrieb.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="showcase">
+        <div class="section-title">
+          <span data-i18n="showcase_kicker">Renderer-Showcase</span>
+          <h2 data-i18n="showcase_title">Top-5 Highlights</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th data-i18n="showcase_th_renderer">Renderer</th>
+                <th data-i18n="showcase_th_focus">Fokus</th>
+                <th data-i18n="showcase_th_reason">Warum er den Unterschied macht</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="table-highlight" data-i18n="showcase_row1_name">Medical Sweep-Erase</td>
+                <td data-i18n="showcase_row1_focus">Medizintechnik</td>
+                <td data-i18n="showcase_row1_reason">Simuliert das klassische Nachleuchten. Perfekt für EKG/EEG-Daten ohne flackerndes Neuzeichnen.</td>
+              </tr>
+              <tr>
+                <td class="table-highlight" data-i18n="showcase_row2_name">SankeyPro</td>
+                <td data-i18n="showcase_row2_focus">Datenanalyse</td>
+                <td data-i18n="showcase_row2_reason">Automatische Knotenplatzierung für maximale Lesbarkeit bei minimalen Kreuzungen.</td>
+              </tr>
+              <tr>
+                <td class="table-highlight" data-i18n="showcase_row3_name">Ichimoku Cloud</td>
+                <td data-i18n="showcase_row3_focus">Finance</td>
+                <td data-i18n="showcase_row3_reason">Komplexe Trendanalyse mit effizient gerenderter Cloud (Kumo) für Support/Resistance.</td>
+              </tr>
+              <tr>
+                <td class="table-highlight" data-i18n="showcase_row4_name">Violin & RidgeLine</td>
+                <td data-i18n="showcase_row4_focus">Statistik</td>
+                <td data-i18n="showcase_row4_reason">Macht Verteilungsdichten sichtbar und zeigt mehr als nur Mittelwerte.</td>
+              </tr>
+              <tr>
+                <td class="table-highlight" data-i18n="showcase_row5_name">Delaunay / Voronoi</td>
+                <td data-i18n="showcase_row5_focus">Spezialisierte Analyse</td>
+                <td data-i18n="showcase_row5_reason">Triangulation für räumliche Beziehungen, ideal für Geodaten und Materialanalysen.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="comparison">
+        <div class="section-title">
+          <span data-i18n="compare_kicker">Vergleich</span>
+          <h2 data-i18n="compare_title">ArberCharts vs. Standard</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th data-i18n="compare_th_feature">Feature</th>
+                <th data-i18n="compare_th_oss">Standard-Open-Source</th>
+                <th data-i18n="compare_th_enterprise">Enterprise-Konkurrenz</th>
+                <th class="table-highlight">ArberCharts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="compare_row1_feature">Renderer-Vielfalt</td>
+                <td data-i18n="compare_row1_oss">10–20 (Basis-Charts)</td>
+                <td data-i18n="compare_row1_enterprise">50–80</td>
+                <td class="table-highlight" data-i18n="compare_row1_ac">139+ Familien</td>
+              </tr>
+              <tr>
+                <td data-i18n="compare_row2_feature">Speichereffizienz</td>
+                <td data-i18n="compare_row2_oss">Hohe GC-Last</td>
+                <td data-i18n="compare_row2_enterprise">Mittel</td>
+                <td class="table-highlight" data-i18n="compare_row2_ac">Zero-GC Optimized</td>
+              </tr>
+              <tr>
+                <td data-i18n="compare_row3_feature">Java-Version</td>
+                <td data-i18n="compare_row3_oss">Java 8 oder 11</td>
+                <td data-i18n="compare_row3_enterprise">Java 11 / 17</td>
+                <td class="table-highlight" data-i18n="compare_row3_ac">Java 25 Ready</td>
+              </tr>
+              <tr>
+                <td data-i18n="compare_row4_feature">API-Design</td>
+                <td data-i18n="compare_row4_oss">Komplex / veraltet</td>
+                <td data-i18n="compare_row4_enterprise">Dokumentationsabhängig</td>
+                <td class="table-highlight" data-i18n="compare_row4_ac">Fluent API (Modern Java)</td>
+              </tr>
+              <tr>
+                <td data-i18n="compare_row5_feature">Lizenzkosten</td>
+                <td data-i18n="compare_row5_oss">Kostenlos (hoher Dev-Aufwand)</td>
+                <td data-i18n="compare_row5_enterprise">Sehr hoch</td>
+                <td class="table-highlight" data-i18n="compare_row5_ac">Fair & transparent</td>
+              </tr>
+              <tr>
+                <td data-i18n="compare_row6_feature">Support</td>
+                <td data-i18n="compare_row6_oss">Community</td>
+                <td data-i18n="compare_row6_enterprise">Ticket-System / Callcenter</td>
+                <td class="table-highlight" data-i18n="compare_row6_ac">Direktkontakt zum Dev</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="gallery">
+        <div class="section-title">
+          <span data-i18n="gallery_kicker">Gallery</span>
+          <h2 data-i18n="gallery_title">Produkt-Impressionen</h2>
+        </div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <img src="images/candlestick.png" alt="Candlestick" />
+            <span data-i18n="gallery_financial">Financial charts</span>
+          </div>
+          <div class="gallery-item">
+            <img src="images/ecg1.png" alt="ECG" />
+            <span data-i18n="gallery_medical">Medical monitoring</span>
+          </div>
+          <div class="gallery-item">
+            <img src="images/heatmap.png" alt="Heatmap" />
+            <span data-i18n="gallery_surface">Density surfaces</span>
+          </div>
+          <div class="gallery-item">
+            <img src="images/voronoi.png" alt="Voronoi" />
+            <span data-i18n="gallery_spatial">Spatial analysis</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="cta">
+        <div class="card">
+          <h3 data-i18n="cta_title">Bereit für das nächste Level an Performance?</h3>
+          <p data-i18n="cta_body">Laden Sie die Demo herunter und erleben Sie 139 Renderer in Aktion. Kostenlos für alle Entwickler.</p>
+          <div class="hero-cta">
+            <a class="btn primary" href="products.html" data-i18n="cta_download">Core-Framework herunterladen</a>
+            <a class="btn" href="licensing.html" data-i18n="cta_license">Lizenz erwerben</a>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <footer class="footer">
-      <div class="container">
-        <p>© 2026 Arber Gashi. All rights reserved.</p>
-        <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
+                <footer class="ac-footer">
+      <div class="ac-container">
+        <div class="ac-brand">
+          <h2 class="ac-logo">ARBER<span>CHARTS</span></h2>
+          <p class="ac-tagline" data-i18n="footer_tagline">High-performance Java charts for mission-critical systems.</p>
+          <div class="ac-contact">
+            <div class="lang-toggle footer-lang-toggle">
+              <button class="lang-btn" data-lang="de">DE</button>
+              <button class="lang-btn" data-lang="en">EN</button>
+            </div>
+            <a href="mailto:gashi@pro-business.ch">gashi@pro-business.ch</a>
+            <span class="separator">·</span>
+            <a href="https://arbergashi.com" target="_blank" rel="noopener">arbergashi.com</a>
+          </div>
+        </div>
+
+        <div class="ac-links-group">
+          <div class="ac-column">
+            <h3 data-i18n="footer_legal">Legal</h3>
+            <a href="imprint.html" data-i18n="footer_imprint">Imprint</a>
+            <a href="privacy.html" data-i18n="footer_privacy">Privacy</a>
+          </div>
+          <div class="ac-column">
+            <h3 data-i18n="footer_social">Social</h3>
+            <a href="https://github.com/ArberGashi" target="_blank" rel="noopener" data-i18n="footer_github">GitHub</a>
+            <a href="https://www.linkedin.com/in/arber-gashi-6b5535154/" target="_blank" rel="noopener" data-i18n="footer_linkedin">LinkedIn</a>
+            <a href="https://x.com/ArberGashi2811" target="_blank" rel="noopener" data-i18n="footer_x">X</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="ac-bottom">
+        <div class="ac-container ac-bottom-flex">
+          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+        </div>
       </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

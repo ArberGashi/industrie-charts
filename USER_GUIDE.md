@@ -2,6 +2,9 @@
 
 This guide covers the supported public API in `arbercharts-core`. It is written for developers integrating the framework into a Swing or headless Java application.
 
+ArberCharts ships with **139 renderer families** across standard, financial, statistical,
+specialized, medical, and analysis domains.
+
 Related docs:
 - `PUBLIC_API.md` for the stable API map
 - `RENDERER_CATALOG.md` for renderer IDs and icon keys
@@ -67,7 +70,7 @@ For real-time medical data use:
 
 ## 4) Renderers
 
-Renderers are chart types. Most extend `BaseRenderer` and can be mixed as layers.
+Renderers are chart types. The framework ships with 139 renderer families. Most extend `BaseRenderer` and can be mixed as layers.
 
 Renderer IDs and icon keys live in `RENDERER_CATALOG.md`.
 If you need dynamic creation, use:
@@ -176,9 +179,9 @@ java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts
 
 ---
 
-## 13) Packaged Demo (JBR 25)
+## 13) Packaged Demo (Java 25)
 
-To ship the demo with a bundled JetBrains Runtime 25, use the packaging scripts:
+To ship the demo with a bundled Java 25 runtime, use the packaging scripts:
 - `docs/PACKAGING.md` for requirements and commands
 - Output artifacts live under `dist/` per OS
 

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ArberCharts Demo App Icon
+  - Full color SVG for macOS/Windows/Linux
+  - Optimized for small sizes with bold geometry
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>ArberCharts</title>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1020"/>
+      <stop offset="0.55" stop-color="#1D2A44"/>
+      <stop offset="1" stop-color="#0F3D45"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F7D26A"/>
+      <stop offset="1" stop-color="#E9A93E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App tile -->
+  <rect x="40" y="40" width="432" height="432" rx="110" fill="url(#bg)"/>
+  <rect x="56" y="56" width="400" height="400" rx="96"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="6"/>
+
+  <!-- Inner chart plate -->
+  <rect x="104" y="120" width="304" height="272" rx="44"
+        fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="5"/>
+
+  <!-- Axes -->
+  <g fill="none" stroke="#FFFFFF" stroke-opacity="0.75" stroke-linecap="round">
+    <path d="M152 356 V204" stroke-width="18"/>
+    <path d="M152 356 H372" stroke-width="18"/>
+  </g>
+
+  <!-- Trend line -->
+  <path d="M172 332 C210 292 238 320 272 276 C310 228 332 252 360 216"
+        fill="none" stroke="url(#accent)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Data points -->
+  <g fill="#FFFFFF">
+    <circle cx="172" cy="332" r="14"/>
+    <circle cx="272" cy="276" r="14"/>
+    <circle cx="360" cy="216" r="14"/>
+  </g>
+</svg>
