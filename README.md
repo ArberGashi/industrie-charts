@@ -12,6 +12,8 @@ The source code is proprietary and is not published here.
 ## Product Strengths
 
 - **Zero‑GC rendering mindset**: allocation‑free render loops to avoid micro‑stutters.
+- **CircularChartModel**: lock‑free ring buffer for real‑time data (EKG/finance).
+- **Zero‑GC theme pipeline**: color flyweights and smooth theme transitions.
 - **Fluent API with ArberChartBuilder**: assemble charts in a few readable lines.
 - **139 renderers**: deep coverage for Financial, Medical, Statistical, and Specialized charts.
 - **Presentation‑grade UI features**: legends, tooltips, crosshair, grid layers.
@@ -33,14 +35,14 @@ The source code is proprietary and is not published here.
 Release assets are published on GitHub Releases:
 https://github.com/ArberGashi/charts/releases
 
-- Core JAR: `arbercharts-core-1.0.0.jar`
-- Demo JAR: `arbercharts-demo-1.0.0.jar`
+- Core JAR: `arbercharts-core-1.3.0.jar`
+- Demo JAR: `arbercharts-demo-1.3.0.jar`
 - Installers: macOS (.dmg), Windows (.msi), Linux (.deb)
 
 ## Quick Start (Demo)
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo-1.0.0.jar
+java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo-1.3.0.jar
 ```
 
 ## System Requirements

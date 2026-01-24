@@ -78,7 +78,7 @@ public interface ChartTheme {
      * @return The bullish color (default: green)
      */
     default Color getBullishColor() {
-        return new Color(0, 150, 50);
+        return com.arbergashi.charts.util.ColorRegistry.of(0, 150, 50, 255);
     }
 
     /**
@@ -90,6 +90,6 @@ public interface ChartTheme {
      * @return The bearish color (default: red)
      */
     default Color getBearishColor() {
-        return new Color(215, 50, 0);
+        return com.arbergashi.charts.util.ColorRegistry.of(215, 50, 0, 255);
     }
 }

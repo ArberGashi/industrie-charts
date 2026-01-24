@@ -26,7 +26,6 @@ public class RadialStackedPanelProvider {
                 .addLayer(stretch, new RadialStackedRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

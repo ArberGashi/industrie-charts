@@ -29,7 +29,6 @@ public class PolarChartPanelProvider {
                 .addLayer(model, new PolarRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

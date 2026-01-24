@@ -52,7 +52,6 @@ public class HeatmapPanelProvider {
                 .withTitle("User Activity Heatmap – Click Density")
                 .addLayer(model, new HeatmapRenderer())
                 .withTooltips(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -19,7 +19,6 @@ public class RadialBarPanelProvider {
                 .addLayer(model, new RadialBarRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -29,7 +29,6 @@ public class RangeAreaPanelProvider {
                 .addLayer(paris, new RangeRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

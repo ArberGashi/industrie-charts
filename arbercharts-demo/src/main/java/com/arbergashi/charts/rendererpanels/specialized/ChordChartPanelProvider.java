@@ -25,7 +25,6 @@ public class ChordChartPanelProvider {
                 .addLayer(model, new ChordDiagramRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

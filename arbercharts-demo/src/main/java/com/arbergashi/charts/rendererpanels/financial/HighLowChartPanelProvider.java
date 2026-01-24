@@ -17,7 +17,6 @@ public class HighLowChartPanelProvider {
                 .addLayer(model, new HighLowRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

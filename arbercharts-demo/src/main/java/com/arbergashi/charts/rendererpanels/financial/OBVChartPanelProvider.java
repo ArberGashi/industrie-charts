@@ -26,7 +26,6 @@ public class OBVChartPanelProvider {
                 .addLayer(obvModel, new OBVRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

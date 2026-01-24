@@ -31,7 +31,6 @@ public class SunburstChartPanelProvider {
                 .addLayer(model, new SunburstRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

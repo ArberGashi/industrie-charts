@@ -27,12 +27,14 @@ public class SweepEKGPanelProvider {
         model.setName("ECG Sweep");
         Random rand = new Random(DemoPanelUtils.DEMO_SEED + 42);
 
-        ArberChartPanel panel = ArberChartBuilder.create()
+        ArberChartPanel panel = ArberChartBuilder.of(model, new SweepEraseEKGRenderer())
                 .withTitle("ECG Monitor - Sweep Display")
-                .addLayer(model, new SweepEraseEKGRenderer())
                 .withGridLayer(new MedicalGridLayer())
                 .withTooltips(false) // Disable for real-time monitor feel
                 .withLegend(false)
+                .hints(h -> h
+                        .antialiasing(true)
+                        .strokeWidth(1.6f))
                 .build();
 
         final double[] time = {0};

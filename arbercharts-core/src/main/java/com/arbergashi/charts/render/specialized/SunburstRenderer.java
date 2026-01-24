@@ -231,6 +231,6 @@ public final class SunburstRenderer extends BaseRenderer {
         float sat = Math.min(1.0f, hsb[1] * 0.95f);
         float bri = Math.min(1.0f, hsb[2] * 0.98f);
         int rgb = Color.HSBtoRGB(hue, sat, bri);
-        return new Color(rgb);
+        return com.arbergashi.charts.util.ColorRegistry.ofArgb(0xFF000000 | (rgb & 0xFFFFFF));
     }
 }

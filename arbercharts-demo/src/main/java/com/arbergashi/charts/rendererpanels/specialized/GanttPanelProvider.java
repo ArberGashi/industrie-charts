@@ -32,7 +32,6 @@ public class GanttPanelProvider {
                 .addLayer(launch, new GanttRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

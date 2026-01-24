@@ -62,7 +62,7 @@ public final class GaugeBandsRenderer extends BaseRenderer {
             if (t.startsWith("#")) t = t.substring(1);
             if (t.length() == 6) {
                 int rgb = Integer.parseInt(t, 16);
-                return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+                return com.arbergashi.charts.util.ColorRegistry.of((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255);
             }
         } catch (Exception ignore) {
         }

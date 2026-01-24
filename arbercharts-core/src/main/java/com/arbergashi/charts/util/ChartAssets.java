@@ -29,6 +29,7 @@ public final class ChartAssets {
     private static final Map<String, Float> floatCache = new ConcurrentHashMap<>();
     private static final Map<String, Integer> intCache = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> boolCache = new ConcurrentHashMap<>();
+    private static final Map<String, Color> colorCache = new ConcurrentHashMap<>();
     private static final Map<Locale, ResourceBundle> bundleCache = new ConcurrentHashMap<>();
     private static volatile String i18nBaseName = "i18n.charts";
 
@@ -103,6 +104,7 @@ public final class ChartAssets {
         floatCache.remove(key);
         intCache.remove(key);
         boolCache.remove(key);
+        colorCache.remove(key);
         handleI18nConfigChange(key, value);
     }
 
@@ -133,6 +135,7 @@ public final class ChartAssets {
         floatCache.remove(key);
         intCache.remove(key);
         boolCache.remove(key);
+        colorCache.remove(key);
         handleI18nConfigChange(key, null);
     }
 
@@ -227,6 +230,7 @@ public final class ChartAssets {
         floatCache.clear();
         intCache.clear();
         boolCache.clear();
+        colorCache.clear();
         bundleCache.clear();
     }
 
@@ -240,11 +244,44 @@ public final class ChartAssets {
     public static java.awt.Color getColor(String key, java.awt.Color defaultColor) {
         String val = properties.getProperty(key);
         if (val == null || val.isBlank()) return defaultColor;
+        return colorCache.computeIfAbsent(key, _k -> parseColor(val, defaultColor));
+    }
+
+    private static java.awt.Color parseColor(String raw, java.awt.Color fallback) {
+        String val = raw.trim();
+        if (val.isEmpty()) return fallback;
+
+        String hex = val;
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        } else if (hex.startsWith("0x") || hex.startsWith("0X")) {
+            hex = hex.substring(2);
+        }
+
+        if (hex.length() == 6 || hex.length() == 8) {
+            try {
+                int parsed = Integer.parseUnsignedInt(hex, 16);
+                if (hex.length() == 6) {
+                    int r = (parsed >> 16) & 0xFF;
+                    int g = (parsed >> 8) & 0xFF;
+                    int b = parsed & 0xFF;
+                    return ColorRegistry.of(r, g, b, 255);
+                }
+                int r = (parsed >> 24) & 0xFF;
+                int g = (parsed >> 16) & 0xFF;
+                int b = (parsed >> 8) & 0xFF;
+                int a = parsed & 0xFF;
+                return ColorRegistry.of(r, g, b, a);
+            } catch (NumberFormatException ignore) {
+                // fall through
+            }
+        }
+
         try {
-            // Support #rrggbb and #rrggbbaa
-            return java.awt.Color.decode(val);
+            int rgb = Integer.decode(val);
+            return ColorRegistry.ofArgb(0xFF000000 | (rgb & 0xFFFFFF));
         } catch (Exception e) {
-            return defaultColor;
+            return fallback;
         }
     }
 

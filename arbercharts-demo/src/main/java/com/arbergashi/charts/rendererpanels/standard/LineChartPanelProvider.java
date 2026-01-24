@@ -42,7 +42,6 @@ public class LineChartPanelProvider {
                 .addLayer(api, new LineRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

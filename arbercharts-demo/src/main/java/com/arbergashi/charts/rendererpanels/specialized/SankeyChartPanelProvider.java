@@ -43,7 +43,6 @@ public class SankeyChartPanelProvider {
                 .addLayer(model, new SankeyRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

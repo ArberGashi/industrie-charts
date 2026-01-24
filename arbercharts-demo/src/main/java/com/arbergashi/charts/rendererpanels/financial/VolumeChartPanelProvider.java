@@ -17,7 +17,6 @@ public class VolumeChartPanelProvider {
                 .addLayer(model, new VolumeRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

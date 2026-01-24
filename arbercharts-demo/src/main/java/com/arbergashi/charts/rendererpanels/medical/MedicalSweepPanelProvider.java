@@ -26,12 +26,14 @@ public class MedicalSweepPanelProvider {
         model.setName("Monitor Sweep");
         Random rand = new Random(DemoPanelUtils.DEMO_SEED + 41);
 
-        ArberChartPanel panel = ArberChartBuilder.create()
+        ArberChartPanel panel = ArberChartBuilder.of(model, new MedicalSweepRenderer())
                 .withTitle("Medical Sweep - Multi-signal")
-                .addLayer(model, new MedicalSweepRenderer())
                 .withGridLayer(new MedicalGridLayer())
                 .withTooltips(false) // Clean monitor display
                 .withLegend(false)
+                .hints(h -> h
+                        .antialiasing(true)
+                        .strokeWidth(1.6f))
                 .build();
 
         final double[] time = {0};

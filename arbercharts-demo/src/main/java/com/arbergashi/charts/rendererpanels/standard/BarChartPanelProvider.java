@@ -32,7 +32,6 @@ public class BarChartPanelProvider {
                 .addLayer(modelB, renderer)
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

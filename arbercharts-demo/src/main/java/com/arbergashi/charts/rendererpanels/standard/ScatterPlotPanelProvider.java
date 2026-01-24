@@ -61,7 +61,6 @@ public class ScatterPlotPanelProvider {
                 .addLayer(noise, new ScatterRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

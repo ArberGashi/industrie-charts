@@ -1,46 +1,43 @@
 package com.arbergashi.charts.rendererpanels.statistical;
 
+import com.arbergashi.charts.api.ArberChartBuilder;
 import com.arbergashi.charts.model.BoxPlotOutlierModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.render.statistical.BoxPlotRenderer;
-import com.arbergashi.charts.ui.ArberChartPanel;
-import com.arbergashi.charts.api.ArberChartBuilder;
 import com.arbergashi.charts.rendererpanels.DemoPanelUtils;
-import java.util.Random;
+import com.arbergashi.charts.ui.ArberChartPanel;
+
 import java.util.Arrays;
+import java.util.Random;
 
 public class BoxPlotChartPanelProvider {
     public static ArberChartPanel create() {
-        // Response Time Distribution Across Microservices
-        // Professional statistical analysis for DevOps/SRE teams
-        OutlierBoxPlotModel model = new OutlierBoxPlotModel("Response Time (ms)");
+        OutlierBoxPlotModel model = new OutlierBoxPlotModel("Release Cycle (days)");
         Random rand = new Random(DemoPanelUtils.DEMO_SEED + 100);
-        
-        String[] services = {"Auth Service", "User API", "Order API", "Payment Gateway", "Search", "Notifications"};
 
-        for (int i = 0; i < services.length; i++) {
-            // Generate realistic response time distributions
-            double baseLatency = 18 + i * 12 + rand.nextDouble() * 8;
-            double median = baseLatency + rand.nextDouble() * 6;
-            double iqr = 7 + rand.nextDouble() * 10;
-            double q1 = median - iqr / 2;
-            double q3 = median + iqr / 2;
-            double min = Math.max(5, q1 - 1.5 * iqr + rand.nextDouble() * 5);
-            double max = q3 + 1.5 * iqr + rand.nextDouble() * 18;
+        String[] teams = {"Core Platform", "Mobile", "Payments", "Data", "Search", "Infra"};
+
+        for (int i = 0; i < teams.length; i++) {
+            double base = 10 + i * 4 + rand.nextDouble() * 3;
+            double median = base + rand.nextDouble() * 2.5;
+            double iqr = 3.5 + rand.nextDouble() * 2.5;
+            double min = Math.max(2, median - (iqr * 1.5) - rand.nextDouble());
+            double max = median + (iqr * 1.5) + rand.nextDouble() * 2.5;
             double[] outliers = buildOutliers(rand, min, max, iqr);
 
-            // addPoint(x, median, min, max, iqr, label)
             model.addBoxPlot(i, median, min, max, iqr,
-                String.format("%s (p50: %.1fms)", services[i], median), outliers);
+                    String.format("%s (p50: %.1f d)", teams[i], median), outliers);
         }
-        
+
         return ArberChartBuilder.create()
-                .withTitle("Microservice Response Time Distribution")
+                .withTitle("Release Cycle Variability by Team")
                 .addLayer(model, new BoxPlotRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .yAxis(axis -> axis
+                        .setUnitSuffix("d")
+                        .setTicks(6))
+                .build().withAnimations(true);
     }
 
     private static double[] buildOutliers(Random rand, double min, double max, double iqr) {
@@ -48,8 +45,8 @@ public class BoxPlotChartPanelProvider {
         double[] outliers = new double[count];
         for (int i = 0; i < count; i++) {
             boolean high = rand.nextBoolean();
-            outliers[i] = high ? max + (2.0 + rand.nextDouble() * 4.0) * iqr
-                    : min - (2.0 + rand.nextDouble() * 3.0) * iqr;
+            outliers[i] = high ? max + (1.5 + rand.nextDouble() * 2.5) * iqr
+                    : min - (1.5 + rand.nextDouble() * 2.0) * iqr;
         }
         Arrays.sort(outliers);
         return outliers;

@@ -19,6 +19,7 @@ import com.arbergashi.charts.util.ChartI18N;
 import com.arbergashi.charts.util.FormatUtils;
 import com.arbergashi.charts.util.NiceScale;
 import com.arbergashi.charts.util.AnimationUtils;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.ui.legend.DockedLegendPanel;
 import com.arbergashi.charts.ui.legend.InteractiveLegendOverlay;
 import com.arbergashi.charts.ui.legend.LegendChartContext;
@@ -127,6 +128,8 @@ public class ArberChartPanel extends JPanel {
     private AxisConfig xAxisConfig = new AxisConfig();
     private AxisConfig yAxisConfig = new AxisConfig();
     private ChartRenderHints renderHints = new ChartRenderHints();
+    private transient Composite soloComposite;
+    private transient float soloCompositeAlpha = Float.NaN;
 
     // --- Animation State ---
     private Timer zoomAnimationTimer;
@@ -186,10 +189,10 @@ public class ArberChartPanel extends JPanel {
      * The chart supports stacking multiple layers. Each layer consists of a data model and a renderer.
      * Layers are drawn in the order they are added (Painter's Algorithm).
      * </p>
+     * <p>This method is safe to call on the EDT only; it triggers repainting.</p>
      *
      * @param model    The data model containing the series data.
      * @param renderer The renderer used to visualize this specific series.
-     * @implNote This method is safe to call on the EDT only; it triggers repainting.
      */
     public void addLayer(ChartModel model, ChartRenderer renderer) {
         if (model == null || renderer == null) return;
@@ -221,9 +224,9 @@ public class ArberChartPanel extends JPanel {
      * This is useful for technical indicators (e.g., Moving Averages, Regression Lines) that
      * are derived from the main dataset but require a separate rendering pass.
      * </p>
+     * <p>Overlay renderers share the primary model and are drawn as additional layers.</p>
      *
      * @param renderer The overlay renderer.
-     * @implNote Overlay renderers share the primary model and are drawn as additional layers.
      */
     public void addOverlay(ChartRenderer renderer) {
         if (layers.isEmpty()) return;
@@ -233,7 +236,7 @@ public class ArberChartPanel extends JPanel {
     /**
      * Removes all layers and clears the chart.
      *
-     * @implNote Listeners are removed and the panel is repainted.
+     * <p>Listeners are removed and the panel is repainted.</p>
      */
     public void clearLayers() {
         for (RenderLayer layer : layers) {
@@ -342,7 +345,7 @@ public class ArberChartPanel extends JPanel {
 
                     @Override
                     public void soloSeries(String seriesId) {
-                        boolean currentlySolo = isOnlySeriesVisible(seriesId);
+                        boolean currentlySolo = isSoloSeries(seriesId);
                         if (currentlySolo) {
                             showAllSeries();
                         } else {
@@ -673,6 +676,9 @@ public class ArberChartPanel extends JPanel {
         }
     }
 
+    /**
+     * Render order: background fill -&gt; grid layer -&gt; data layers -&gt; overlays.
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -699,6 +705,13 @@ public class ArberChartPanel extends JPanel {
             
             // 2. Build Context (View Matrix)
             PlotContext ctx = getOrBuildContext();
+
+            // 2.5 Fill panel background from theme (ensures consistent theming for transparent renderers)
+            ChartTheme bgTheme = ctx.theme() != null ? ctx.theme() : theme;
+            if (bgTheme != null && bgTheme.getBackground() != null) {
+                g2.setColor(bgTheme.getBackground());
+                g2.fillRect(0, 0, getWidth(), getHeight());
+            }
             
             // 3. Render Grid (Background)
             boolean showGrid = (xAxisConfig == null || xAxisConfig.isShowGrid())
@@ -726,8 +739,13 @@ public class ArberChartPanel extends JPanel {
                 }
                 // Clip to plot bounds to prevent drawing outside
                 Shape oldClip = g2.getClip();
+                Composite oldComposite = g2.getComposite();
                 g2.clip(ctx.plotBounds());
+                if (layer.renderer instanceof BaseRenderer br && layerVisibility.isDimmed(br.getId())) {
+                    g2.setComposite(getSoloComposite());
+                }
                 layer.renderer.render(g2, layer.model, ctx);
+                g2.setComposite(oldComposite);
                 g2.setClip(oldClip);
             }
 
@@ -1398,36 +1416,27 @@ public class ArberChartPanel extends JPanel {
         return overlayCanvas;
     }
 
-    private boolean isOnlySeriesVisible(String seriesId) {
-        if (seriesId == null) return false;
-        boolean anyVisible = false;
-
-        for (RenderLayer layer : layers) {
-            if (layer.renderer instanceof BaseRenderer br) {
-                boolean v = layerVisibility.isVisible(br.getId());
-                if (v) {
-                    anyVisible = true;
-                    if (!br.getId().equals(seriesId)) return false;
-                }
-            }
-        }
-        return anyVisible;
+    private boolean isSoloSeries(String seriesId) {
+        return seriesId != null && layerVisibility.isSoloActive() && !layerVisibility.isDimmed(seriesId);
     }
 
     private void showAllSeries() {
-        for (RenderLayer layer : layers) {
-            if (layer.renderer instanceof BaseRenderer br) {
-                layerVisibility.setVisible(br.getId(), true);
-            }
-        }
+        layerVisibility.clearSolo();
     }
 
     private void soloSeriesInternal(String seriesId) {
-        for (RenderLayer layer : layers) {
-            if (layer.renderer instanceof BaseRenderer br) {
-                layerVisibility.setVisible(br.getId(), br.getId().equals(seriesId));
-            }
+        layerVisibility.setSolo(seriesId);
+    }
+
+    private Composite getSoloComposite() {
+        float alpha = ChartAssets.getFloat("Chart.legend.soloDimAlpha", 0.05f);
+        if (alpha < 0f) alpha = 0f;
+        if (alpha > 1f) alpha = 1f;
+        if (soloComposite == null || soloCompositeAlpha != alpha) {
+            soloCompositeAlpha = alpha;
+            soloComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
         }
+        return soloComposite;
     }
 
     private String formatAxisValueX(double value) {

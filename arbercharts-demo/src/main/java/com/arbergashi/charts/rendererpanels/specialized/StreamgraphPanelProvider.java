@@ -33,8 +33,8 @@ public class StreamgraphPanelProvider {
                 .withTitle("Traffic Mix – Streamgraph Overview")
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
                 .addLayer(model, new StreamgraphRenderer())
-                .build();
+                .build()
+                .withAnimations(true);
     }
 }

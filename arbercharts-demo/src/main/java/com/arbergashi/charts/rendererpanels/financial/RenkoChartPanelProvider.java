@@ -27,7 +27,6 @@ public class RenkoChartPanelProvider {
                 .addLayer(model, new RenkoRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

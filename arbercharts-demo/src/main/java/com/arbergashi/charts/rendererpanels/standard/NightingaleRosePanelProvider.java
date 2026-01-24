@@ -22,7 +22,6 @@ public class NightingaleRosePanelProvider {
                 .addLayer(model, new NightingaleRoseRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

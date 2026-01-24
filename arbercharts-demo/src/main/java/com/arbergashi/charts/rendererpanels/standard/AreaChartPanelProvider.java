@@ -73,8 +73,7 @@ public class AreaChartPanelProvider {
                 .addLayer(nuclear, new StackedAreaRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 
     private static double lerp(double a, double b, double t) {

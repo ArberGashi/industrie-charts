@@ -36,7 +36,6 @@ public class HistogramChartPanelProvider {
                 .addLayer(model, new HistogramRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

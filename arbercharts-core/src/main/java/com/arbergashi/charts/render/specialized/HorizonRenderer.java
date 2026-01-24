@@ -462,7 +462,7 @@ public final class HorizonRenderer extends BaseRenderer {
                 int r = clamp255(base.getRed() - b * 18);
                 int g = clamp255(base.getGreen() - b * 14);
                 int bl = clamp255(base.getBlue() - b * 10);
-                colors[b] = new Color(r, g, bl);
+                colors[b] = com.arbergashi.charts.util.ColorRegistry.of(r, g, bl, 255);
             }
         }
         bandColors = colors;

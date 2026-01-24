@@ -1,4 +1,4 @@
-# ArberCharts User Guide (Core 1.0.0)
+# ArberCharts User Guide (Core 1.3.0)
 
 This guide covers the supported public API in `arbercharts-core`. It is written for developers integrating the framework into a Swing or headless Java application.
 
@@ -20,7 +20,7 @@ Related docs:
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -65,6 +65,7 @@ Recommended model for general use: `DefaultChartModel`.
 For real-time medical data use:
 - `FastMedicalModel`
 - `CircularFastMedicalModel` (sweep-erase monitors)
+- `CircularChartModel` for lock-free streams outside the medical presets
 
 ---
 
@@ -92,6 +93,9 @@ Apply themes with:
 ```java
 panel.withTheme(ChartThemes.defaultLight());
 ```
+
+Theme transitions and alpha variants are backed by the Zero-GC color registry for
+stable performance during live theme switching.
 
 ---
 
@@ -174,7 +178,7 @@ Use `PUBLIC_API.md` for the definitive list.
 Build and run the demo app:
 ```bash
 mvn -pl arbercharts-demo package
-java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-1.0.0.jar
+java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-1.3.0.jar
 ```
 
 ---

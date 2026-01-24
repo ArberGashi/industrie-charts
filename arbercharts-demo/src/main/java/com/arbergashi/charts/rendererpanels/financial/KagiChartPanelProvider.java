@@ -16,7 +16,6 @@ public class KagiChartPanelProvider {
                 .addLayer(model, new KagiRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

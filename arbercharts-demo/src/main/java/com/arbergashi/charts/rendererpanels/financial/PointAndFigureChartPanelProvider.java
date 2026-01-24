@@ -26,7 +26,6 @@ public class PointAndFigureChartPanelProvider {
                 .addLayer(model, new PointAndFigureRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

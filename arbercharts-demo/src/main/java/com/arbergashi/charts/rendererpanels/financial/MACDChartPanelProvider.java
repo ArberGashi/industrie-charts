@@ -16,7 +16,6 @@ public class MACDChartPanelProvider {
                 .addLayer(priceModel, new MACDRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -44,7 +44,6 @@ public class StepAreaPanelProvider {
                 .addLayer(disk, new StepAreaRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -1,10 +1,9 @@
 package com.arbergashi.charts;
 
-import com.arbergashi.charts.api.ChartTheme;
-import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.ui.ArberChartPanel;
 import com.arbergashi.charts.ui.ChartExportService;
 import com.arbergashi.charts.uielements.PropertyGrid;
+import com.arbergashi.charts.util.ThemeTransitionManager;
 import com.arbergashi.charts.uielements.CommandPalette;
 import com.arbergashi.charts.actions.ChartActions;
 import com.formdev.flatlaf.FlatLaf;
@@ -134,11 +133,19 @@ public class Application extends JFrame {
     private void initActions() {
         toggleThemeAction = new ChartActions.ToggleThemeAction(() -> {
             // After LAF switch, rebuild the currently selected panel with the new chart theme.
+            com.arbergashi.charts.api.ChartTheme startTheme =
+                    (activeChartPanel != null ? activeChartPanel.getTheme() : null);
             updateContent(currentTitle);
             updateColors();
             syncMacMenuBarAppearance();
             SwingUtilities.updateComponentTreeUI(this);
             repaint();
+
+            if (activeChartPanel != null && startTheme != null) {
+                com.arbergashi.charts.api.ChartTheme targetTheme = activeChartPanel.getTheme();
+                activeChartPanel.withTheme(startTheme);
+                ThemeTransitionManager.start(startTheme, targetTheme, 350, activeChartPanel::withTheme);
+            }
         });
         exportAction = new ChartActions.ExportAction(() -> activeChartPanel);
         settingsAction = new ChartActions.SettingsAction();
@@ -334,8 +341,7 @@ public class Application extends JFrame {
         
         // Nested split for PropertyGrid on the right
         innerSplit = new InvisibleSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
-        ChartTheme chartTheme = FlatLaf.isLafDark() ? ChartThemes.defaultDark() : ChartThemes.defaultLight();
-        JPanel initialPanel = DemoPanelFactory.createPanel("Line Chart", chartTheme);
+        JPanel initialPanel = DemoPanelFactory.createPanel("Line Chart", null);
         activeChartPanel = extractChartPanel(initialPanel);
         configureChartPanel(activeChartPanel);
         innerSplit.setLeftComponent(initialPanel);
@@ -467,8 +473,7 @@ public class Application extends JFrame {
         }
         currentTitle = title;
 
-        ChartTheme chartTheme = FlatLaf.isLafDark() ? ChartThemes.defaultDark() : ChartThemes.defaultLight();
-        JPanel newPanel = DemoPanelFactory.createPanel(title, chartTheme);
+        JPanel newPanel = DemoPanelFactory.createPanel(title, null);
         activeChartPanel = extractChartPanel(newPanel);
         configureChartPanel(activeChartPanel);
 

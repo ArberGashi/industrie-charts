@@ -38,7 +38,7 @@ public final class ChartRenderHints {
 
     /**
      * Sets the preferred base stroke width in design units (dp).
-     * The framework will scale this value via {@link ChartScale#scale(float)}.
+     * The framework will scale this value via {@link com.arbergashi.charts.util.ChartScale#scale(float)}.
      */
     public ChartRenderHints setStrokeWidth(float strokeWidth) {
         this.strokeWidth = strokeWidth;

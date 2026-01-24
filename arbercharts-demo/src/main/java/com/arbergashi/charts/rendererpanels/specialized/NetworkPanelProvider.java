@@ -40,7 +40,6 @@ public class NetworkPanelProvider {
                 .addLayer(model, new NetworkRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

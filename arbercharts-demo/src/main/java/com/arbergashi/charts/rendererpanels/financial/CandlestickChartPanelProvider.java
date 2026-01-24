@@ -17,7 +17,6 @@ public class CandlestickChartPanelProvider {
                 .addLayer(model, new CandlestickRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

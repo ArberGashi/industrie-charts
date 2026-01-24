@@ -52,7 +52,6 @@ public class VectorFieldPanelProvider {
                 .addLayer(domain, renderer)
                 .withTooltips(true)
                 .withLegend(false)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

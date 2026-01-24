@@ -27,7 +27,6 @@ public class AdaptiveFunctionPanelProvider {
                 .addLayer(anchors, renderer)
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

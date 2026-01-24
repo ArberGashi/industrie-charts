@@ -23,7 +23,6 @@ public class PolarLinePanelProvider {
                 .addLayer(model, new PolarLineRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

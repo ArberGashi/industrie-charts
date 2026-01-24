@@ -138,34 +138,41 @@ public final class DemoPresentationPanel extends JPanel implements ChartHost {
 
     private Color borderColor() {
         Color border = UIManager.getColor("Component.borderColor");
-        if (border == null) border = UIManager.getColor("Separator.foreground");
-        if (border == null) border = Color.GRAY;
+        if (border == null) {
+            throw new IllegalStateException("Missing Component.borderColor in FlatLaf theme properties.");
+        }
         return ColorUtils.withAlpha(border, 0.6f);
     }
 
     private Color mutedColor() {
-        Color fg = UIManager.getColor("Label.foreground");
-        if (fg == null) fg = Color.DARK_GRAY;
+        Color fg = UIManager.getColor("Chart.foreground");
+        if (fg == null) {
+            throw new IllegalStateException("Missing Chart.foreground in FlatLaf theme properties.");
+        }
         return ColorUtils.withAlpha(fg, 0.7f);
     }
 
     private Color chipBackground() {
-        Color bg = UIManager.getColor("Panel.background");
-        if (bg == null) bg = new Color(30, 30, 30);
+        Color bg = UIManager.getColor("Chart.background");
+        if (bg == null) {
+            throw new IllegalStateException("Missing Chart.background in FlatLaf theme properties.");
+        }
         return ColorUtils.withAlpha(bg, 0.85f);
     }
 
     private Color chipForeground() {
-        Color fg = UIManager.getColor("Label.foreground");
-        if (fg == null) fg = Color.WHITE;
+        Color fg = UIManager.getColor("Chart.foreground");
+        if (fg == null) {
+            throw new IllegalStateException("Missing Chart.foreground in FlatLaf theme properties.");
+        }
         return fg;
     }
 
     private Color resolveAccentColor() {
-        Color accent = UIManager.getColor("Component.accentColor");
-        if (accent == null) accent = UIManager.getColor("Actions.Blue");
-        if (accent == null) accent = UIManager.getColor("Label.foreground");
-        if (accent == null) accent = new Color(90, 140, 255);
+        Color accent = UIManager.getColor("Chart.accent.blue");
+        if (accent == null) {
+            throw new IllegalStateException("Missing Chart.accent.blue in FlatLaf theme properties.");
+        }
         return accent;
     }
 
@@ -173,7 +180,7 @@ public final class DemoPresentationPanel extends JPanel implements ChartHost {
         return Math.round(ChartScale.scale(value));
     }
 
-    private static final class CardPanel extends JPanel {
+    private final class CardPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
@@ -183,12 +190,15 @@ public final class DemoPresentationPanel extends JPanel implements ChartHost {
                 int h = getHeight();
                 int arc = Math.round(ChartScale.scale(16));
 
-                Color base = UIManager.getColor("Panel.background");
-                if (base == null) base = new Color(30, 30, 30);
+                Color base = UIManager.getColor("Chart.background");
+                if (base == null) {
+                    throw new IllegalStateException("Missing Chart.background in FlatLaf theme properties.");
+                }
                 Color fill = isDark(base) ? ColorUtils.adjustBrightness(base, 1.08) : ColorUtils.adjustBrightness(base, 0.96);
                 Color border = UIManager.getColor("Component.borderColor");
-                if (border == null) border = UIManager.getColor("Separator.foreground");
-                if (border == null) border = Color.GRAY;
+                if (border == null) {
+                    throw new IllegalStateException("Missing Component.borderColor in FlatLaf theme properties.");
+                }
 
                 Color shadow = ColorUtils.withAlpha(Color.BLACK, 0.08f);
                 g2.setColor(shadow);

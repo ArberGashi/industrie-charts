@@ -30,7 +30,7 @@ public final class ChartStyle {
      * Returns a subtle gray with transparency as default when the property is missing.
      */
     public static Color getGridColor() {
-        return getSafeColor(KEY_GRID, new Color(128, 128, 128, 80));
+        return getSafeColor(KEY_GRID, com.arbergashi.charts.util.ColorRegistry.of(128, 128, 128, 80));
     }
 
     /**

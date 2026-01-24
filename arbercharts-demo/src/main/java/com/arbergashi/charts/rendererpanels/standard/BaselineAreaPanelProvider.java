@@ -29,7 +29,6 @@ public class BaselineAreaPanelProvider {
                 .addLayer(regionNorth, new BaselineAreaRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

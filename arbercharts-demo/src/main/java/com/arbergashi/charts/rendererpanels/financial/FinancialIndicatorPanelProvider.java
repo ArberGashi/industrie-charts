@@ -29,14 +29,12 @@ public class FinancialIndicatorPanelProvider {
                 .withTitle(title)
                 .addLayer(bundle.priceModel, renderer)
                 .withTooltips(true)
-                .withLegend(true)
-                .withAnimations(true)
-                ;
+                .withLegend(true);
 
         if (includeVolume) {
             builder.addLayer(bundle.volumeModel, new VolumeRenderer());
         }
 
-        return builder.build();
+        return builder.build().withAnimations(true);
     }
 }

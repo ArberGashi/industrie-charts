@@ -24,17 +24,14 @@ public final class ColorUtils {
      * @return New Color instance
      */
     public static Color withAlpha(Color c, float alpha) {
-        return new Color(c.getRed(), c.getGreen(), c.getBlue(), (int) (Math.clamp(alpha, 0f, 1f) * 255));
+        return ColorRegistry.withAlpha(c, alpha);
     }
 
     /**
      * Adjust brightness by multiplying RGB channels by factor (>0). Clamps to 0-255.
      */
     public static Color adjustBrightness(Color c, double factor) {
-        int r = (int) Math.min(255, Math.max(0, Math.round(c.getRed() * factor)));
-        int g = (int) Math.min(255, Math.max(0, Math.round(c.getGreen() * factor)));
-        int b = (int) Math.min(255, Math.max(0, Math.round(c.getBlue() * factor)));
-        return new Color(r, g, b, c.getAlpha());
+        return ColorRegistry.adjustBrightness(c, factor);
     }
 
     /**
@@ -50,13 +47,6 @@ public final class ColorUtils {
      * Linearly interpolate between two colors in RGBA space.
      */
     public static Color interpolate(Color a, Color b, float t) {
-        t = Math.min(1f, Math.max(0f, t));
-        int ar = a.getRed(), ag = a.getGreen(), ab = a.getBlue(), aa = a.getAlpha();
-        int br = b.getRed(), bg = b.getGreen(), bb = b.getBlue(), ba = b.getAlpha();
-        int r = (int) (ar + (br - ar) * t);
-        int g = (int) (ag + (bg - ag) * t);
-        int bl = (int) (ab + (bb - ab) * t);
-        int al = (int) (aa + (ba - aa) * t);
-        return new Color(Math.min(255, Math.max(0, r)), Math.min(255, Math.max(0, g)), Math.min(255, Math.max(0, bl)), Math.min(255, Math.max(0, al)));
+        return ColorRegistry.interpolate(a, b, t);
     }
 }

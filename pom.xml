@@ -6,7 +6,7 @@
 
     <groupId>com.arbergashi</groupId>
     <artifactId>arber-charts-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.3.0</version>
     <packaging>pom</packaging>
     <name>ArberCharts</name>
     <description>Premium Java charting framework focused on performance and presentation.</description>
@@ -128,6 +128,13 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>${maven.jar.plugin.version}</version>
+                    <configuration>
+                        <archive>
+                            <manifestEntries>
+                                <Implementation-Version>${project.version}</Implementation-Version>
+                            </manifestEntries>
+                        </archive>
+                    </configuration>
                 </plugin>
 
                 <plugin>

@@ -24,7 +24,6 @@ public class GanttResourcePanelProvider {
                 .addLayer(charlie, new GanttResourceViewRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -23,7 +23,6 @@ public class WaterfallChartPanelProvider {
                 .addLayer(model, new WaterfallRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

@@ -98,55 +98,9 @@ public final class BoxPlotRenderer extends BaseRenderer {
     private void renderLayer(Graphics2D g2, ChartModel model, PlotContext context,
                              Rectangle2D bounds, int width, int height,
                              int themeKey, int hintsKey, int layerIndex, boolean multiColor, long stamp) {
-        if (g2 != null && g2.getDeviceConfiguration() != null) {
-            GraphicsConfiguration gc = g2.getDeviceConfiguration();
-            if (layerCache == null || cacheWidth != width || cacheHeight != height || cacheConfig != gc) {
-                layerCache = gc.createCompatibleVolatileImage(width, height, Transparency.TRANSLUCENT);
-                cacheConfig = gc;
-            }
-            do {
-                int validation = layerCache.validate(gc);
-                if (validation == VolatileImage.IMAGE_INCOMPATIBLE) {
-                    layerCache = gc.createCompatibleVolatileImage(width, height, Transparency.TRANSLUCENT);
-                }
-                Graphics2D layerGraphics = layerCache.createGraphics();
-                try {
-                    ChartRenderHints hints = context.renderHints();
-                    if (hints != null) {
-                        hints.applyTo(layerGraphics);
-                    }
-                    Composite oldComposite = layerGraphics.getComposite();
-                    layerGraphics.setComposite(AlphaComposite.Clear);
-                    layerGraphics.fillRect(0, 0, width, height);
-                    layerGraphics.setComposite(oldComposite);
-                    layerGraphics.setClip(0, 0, width, height);
-                    layerGraphics.translate(-bounds.getX(), -bounds.getY());
-                    drawBoxPlot(layerGraphics, model, context);
-                } finally {
-                    layerGraphics.dispose();
-                }
-            } while (layerCache.contentsLost());
-        } else {
-            if (layerFallback == null || cacheWidth != width || cacheHeight != height) {
-                layerFallback = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            }
-            Graphics2D layerGraphics = layerFallback.createGraphics();
-            try {
-                ChartRenderHints hints = context.renderHints();
-                if (hints != null) {
-                    hints.applyTo(layerGraphics);
-                }
-                Composite oldComposite = layerGraphics.getComposite();
-                layerGraphics.setComposite(AlphaComposite.Clear);
-                layerGraphics.fillRect(0, 0, width, height);
-                layerGraphics.setComposite(oldComposite);
-                layerGraphics.setClip(0, 0, width, height);
-                layerGraphics.translate(-bounds.getX(), -bounds.getY());
-                drawBoxPlot(layerGraphics, model, context);
-            } finally {
-                layerGraphics.dispose();
-            }
-        }
+        layerCache = null;
+        cacheConfig = null;
+        renderFallbackLayer(model, context, bounds, width, height);
 
         cacheWidth = width;
         cacheHeight = height;
@@ -156,6 +110,30 @@ public final class BoxPlotRenderer extends BaseRenderer {
         cacheLayerIndex = layerIndex;
         cacheMultiColor = multiColor;
     }
+
+    private void renderFallbackLayer(ChartModel model, PlotContext context,
+                                     Rectangle2D bounds, int width, int height) {
+        if (layerFallback == null || cacheWidth != width || cacheHeight != height) {
+            layerFallback = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        }
+        Graphics2D layerGraphics = layerFallback.createGraphics();
+        try {
+            ChartRenderHints hints = context.renderHints();
+            if (hints != null) {
+                hints.applyTo(layerGraphics);
+            }
+            Composite oldComposite = layerGraphics.getComposite();
+            layerGraphics.setComposite(AlphaComposite.Clear);
+            layerGraphics.fillRect(0, 0, width, height);
+            layerGraphics.setComposite(oldComposite);
+            layerGraphics.setClip(0, 0, width, height);
+            layerGraphics.translate(-bounds.getX(), -bounds.getY());
+            drawBoxPlot(layerGraphics, model, context);
+        } finally {
+            layerGraphics.dispose();
+        }
+    }
+
 
     private void drawBoxPlot(Graphics2D g2, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();

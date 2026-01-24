@@ -27,12 +27,22 @@ public class PPGChartPanelProvider {
         model.setName("PPG Pulse");
         Random rand = new Random(DemoPanelUtils.DEMO_SEED + 33);
 
-        ArberChartPanel panel = ArberChartBuilder.create()
+        ArberChartPanel panel = ArberChartBuilder.of(model, new PPGRenderer())
                 .withTitle("PPG - Pulse Oximetry Waveform")
-                .addLayer(model, new PPGRenderer())
                 .withGridLayer(new MedicalGridLayer())
                 .withTooltips(true)
                 .withLegend(true)
+                .xAxis(axis -> axis
+                        .medicalScale(25)
+                        .setUnitSuffix("s")
+                        .setTicks(6))
+                .yAxis(axis -> axis
+                        .medicalScale(10)
+                        .setUnitSuffix("a.u.")
+                        .setTicks(6))
+                .hints(h -> h
+                        .antialiasing(true)
+                        .strokeWidth(1.6f))
                 .build();
 
         final double[] time = {0};

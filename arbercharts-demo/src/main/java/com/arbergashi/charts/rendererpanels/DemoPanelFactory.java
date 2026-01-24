@@ -7,18 +7,22 @@ import com.arbergashi.charts.rendererpanels.statistical.*;
 import com.arbergashi.charts.rendererpanels.specialized.*;
 import com.arbergashi.charts.rendererpanels.analysis.*;
 import com.arbergashi.charts.ui.ArberChartPanel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
+
+import javax.swing.*;
+
+import com.arbergashi.charts.api.BasicChartTheme;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.ArberChartBuilder;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.render.standard.LineRenderer;
-import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.ui.grid.DefaultGridLayer;
 import com.arbergashi.charts.ui.grid.FinancialGridLayer;
 import com.arbergashi.charts.ui.grid.MedicalGridLayer;
 import com.arbergashi.charts.ui.grid.AnalysisGridLayer;
 import com.arbergashi.charts.ui.grid.GridLayer;
+import com.arbergashi.charts.util.ChartAssets;
+
+import java.awt.*;
 
 /**
  * Factory for creating demo chart panels.
@@ -31,11 +35,7 @@ public class DemoPanelFactory {
         // The demo application passes the current chart theme (derived from the active FlatLaf mode).
         // This keeps the demo free from any extra theme-loader indirection.
         // If missing, fall back to stable framework defaults.
-        ChartTheme effectiveTheme = theme != null
-                ? theme
-                : (isMedicalChart(title)
-                    ? ChartThemes.defaultDark()
-                    : ChartThemes.defaultLight());
+        ChartTheme effectiveTheme = theme != null ? theme : resolveUiTheme();
 
         JPanel panel = switch (title) {
             case "Line Chart" -> LineChartPanelProvider.create();
@@ -739,7 +739,7 @@ public class DemoPanelFactory {
             case "Box Plot" -> {
                 subtitle = "Distribution with quartiles and outliers.";
                 tags = new String[]{"Distribution", "Outliers"};
-                metrics = new String[]{"Groups: 4"};
+                metrics = new String[]{"Groups: 6"};
             }
             case "Violin Plot" -> {
                 subtitle = "Density with distribution shape.";
@@ -889,6 +889,33 @@ public class DemoPanelFactory {
         };
     }
 
+    private static ChartTheme resolveUiTheme() {
+        Color background = ChartAssets.getUIColor("Chart.background", null);
+        Color foreground = ChartAssets.getUIColor("Chart.foreground", null);
+        Color grid = ChartAssets.getUIColor("Chart.grid.color", null);
+        Color axis = ChartAssets.getUIColor("Chart.axisLabelColor", null);
+        Color accent = ChartAssets.getUIColor("Chart.accent.blue", null);
+
+        Color[] series = new Color[]{
+                ChartAssets.getUIColor("Chart.accent.blue", null),
+                ChartAssets.getUIColor("Chart.accent.orange", null),
+                ChartAssets.getUIColor("Chart.accent.green", null),
+                ChartAssets.getUIColor("Chart.accent.purple", null),
+                ChartAssets.getUIColor("Chart.accent.red", null)
+        };
+
+        if (background == null || foreground == null || grid == null || axis == null || accent == null) {
+            throw new IllegalStateException("Missing Chart.* colors in FlatLaf theme properties.");
+        }
+        for (Color c : series) {
+            if (c == null) {
+                throw new IllegalStateException("Missing Chart.accent.* colors in FlatLaf theme properties.");
+            }
+        }
+
+        return new BasicChartTheme(background, foreground, grid, axis, accent, series, UIManager.getFont("Label.font"));
+    }
+
     private static ArberChartPanel createPlaceholderPanel(String title) {
         DefaultChartModel model = new DefaultChartModel("Placeholder: " + title);
         model.addPoint(0, 0, 0, "");
@@ -904,6 +931,13 @@ public class DemoPanelFactory {
         private ColorTogglePanel(ArberChartPanel chartPanel) {
             super(new java.awt.BorderLayout());
             this.chartPanel = chartPanel;
+            java.awt.Color bg = javax.swing.UIManager.getColor("Chart.background");
+            if (bg != null) {
+                setBackground(bg);
+                setOpaque(true);
+            } else {
+                setOpaque(false);
+            }
 
             javax.swing.JCheckBox toggle = new javax.swing.JCheckBox("Multi-color");
             toggle.setSelected(true);

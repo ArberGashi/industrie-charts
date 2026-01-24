@@ -80,8 +80,7 @@ public class FFTPanelProvider {
                 .addLayer(model, renderer)
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 
     private static double peak(double x, double center, double amplitude, double sigma) {

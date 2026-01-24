@@ -225,10 +225,11 @@ public class HorizonChartRenderer extends BaseRenderer {
         } else {
             for (int b = 0; b < bands; b++) {
                 float t = (b + 1) / (float) bands;
-                fill[b] = new Color(
+                fill[b] = com.arbergashi.charts.util.ColorRegistry.of(
                         Math.min(255, (int) (base.getRed() * (0.5 + t / 2.0))),
                         Math.min(255, (int) (base.getGreen() * (0.5 + t / 2.0))),
-                        Math.min(255, (int) (base.getBlue() * (0.5 + t / 2.0))));
+                        Math.min(255, (int) (base.getBlue() * (0.5 + t / 2.0))),
+                        255);
             }
         }
         bandFill = fill;

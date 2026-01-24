@@ -7,18 +7,18 @@
     <parent>
         <groupId>com.arbergashi</groupId>
         <artifactId>arber-charts-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.3.0</version>
     </parent>
 
     <artifactId>arbercharts-demo</artifactId>
-    <version>1.0.0</version>
+    <version>1.3.0</version>
     <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>com.arbergashi</groupId>
             <artifactId>arbercharts-core</artifactId>
-            <version>1.0.0</version>
+            <version>1.3.0</version>
         </dependency>
 
         <dependency>
@@ -66,6 +66,9 @@
                             <addClasspath>true</addClasspath>
                             <mainClass>com.arbergashi.charts.Application</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
@@ -87,6 +90,9 @@
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.arbergashi.charts.Application</mainClass>
+                                    <manifestEntries>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                    </manifestEntries>
                                 </transformer>
                             </transformers>
                             <filters>

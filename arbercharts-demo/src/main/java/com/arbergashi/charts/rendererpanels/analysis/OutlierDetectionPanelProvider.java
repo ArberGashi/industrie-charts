@@ -69,8 +69,7 @@ public class OutlierDetectionPanelProvider {
                 .addLayer(model, renderer)
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 
     private static String defaultLabelFor(int minute) {

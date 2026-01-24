@@ -30,7 +30,6 @@ public class ViolinPlotPanelProvider {
                 .addLayer(model, new ViolinPlotRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

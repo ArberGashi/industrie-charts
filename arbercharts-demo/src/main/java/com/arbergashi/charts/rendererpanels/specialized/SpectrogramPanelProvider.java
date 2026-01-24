@@ -39,8 +39,7 @@ public class SpectrogramPanelProvider {
                 .addLayer(model, new SpectrogramRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 
     private static double gauss(double x, double center, double amp, double sigma) {

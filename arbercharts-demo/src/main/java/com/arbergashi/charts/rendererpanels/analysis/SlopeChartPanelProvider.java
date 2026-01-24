@@ -39,7 +39,6 @@ public class SlopeChartPanelProvider {
                 .addLayer(productE, new SlopeRenderer())
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

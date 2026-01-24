@@ -11,6 +11,8 @@ import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.render.statistical.BoxPlotRenderer;
 import com.arbergashi.charts.render.statistical.HistogramRenderer;
+import com.arbergashi.charts.ui.grid.DefaultGridLayer;
+import com.arbergashi.charts.ui.grid.GridLayer;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
@@ -67,6 +69,9 @@ public class RenderHintsJmhBenchmark {
 
     private ArberChartPanel axisPanel;
     private Rectangle2D axisBounds;
+    private GridLayer gridLayer;
+    private PlotContext gridContext;
+    private DefaultChartModel gridModel;
 
     @Setup(Level.Trial)
     public void setup() {
@@ -110,6 +115,14 @@ public class RenderHintsJmhBenchmark {
         axisPanel.withXAxisConfig(xCfg);
         axisPanel.withYAxisConfig(yCfg);
 
+        gridLayer = new DefaultGridLayer();
+        gridModel = new DefaultChartModel("grid");
+        for (int i = 0; i < 600; i++) {
+            gridModel.addXY(i, Math.sin(i * 0.15) * 50.0);
+        }
+        gridContext = new DefaultPlotContext(bounds, gridModel, 0, 600, -60, 60,
+                ChartThemes.defaultDark(), aaOn);
+
         noopGraphics = new NoOpGraphics2D();
 
         // Prewarm caches to avoid counting one-time allocations in measurements.
@@ -151,6 +164,16 @@ public class RenderHintsJmhBenchmark {
     @Benchmark
     public void axisScalingFixedScale() {
         axisPanel.applyAxisOverrides(axisBounds);
+    }
+
+    @Benchmark
+    public void gridRenderingExtreme() {
+        gridLayer.renderGrid(g2, gridContext);
+    }
+
+    @Benchmark
+    public void gridRenderingExtremeNoOp() {
+        gridLayer.renderGrid(noopGraphics, gridContext);
     }
 
     private static final class BoxPlotPerfModel extends DefaultChartModel implements BoxPlotOutlierModel {

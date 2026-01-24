@@ -16,7 +16,6 @@ public class GaugeBandsChartPanelProvider {
                 .withTitle("Service Health Score")
                 .addLayer(model, renderer)
                 .withTooltips(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

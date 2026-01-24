@@ -53,7 +53,6 @@ public class RegressionPanelProvider {
                 .addLayer(model, renderer)
                 .withTooltips(true)
                 .withLegend(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }

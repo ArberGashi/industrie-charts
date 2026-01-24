@@ -26,7 +26,6 @@ public class GaugeChartPanelProvider {
                 .withTitle("Error Budget Remaining")
                 .addLayer(model, renderer)
                 .withTooltips(true)
-                .withAnimations(true)
-                .build();
+                .build().withAnimations(true);
     }
 }
