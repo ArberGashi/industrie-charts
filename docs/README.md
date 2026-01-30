@@ -78,7 +78,7 @@ Release assets are published on GitHub Releases:
 https://github.com/ArberGashi/charts/releases
 
 - Core JAR: `arbercharts-core-1.7.0-LTS.jar`
-- Demo JAR: `arbercharts-demo-1.7.0-LTS.jar`
+- Starter (Core + Swing + Server): `arbercharts-starter-1.7.0-LTS.jar`
 - Installers: macOS (.dmg), Windows (.msi), Linux (.deb)
 
 ## Quick Start (Demo)

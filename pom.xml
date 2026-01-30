@@ -46,6 +46,7 @@
         <module>arbercharts-swing-bridge</module>
         <module>arbercharts-compose-bridge</module>
         <module>arbercharts-server-bridge</module>
+        <module>arbercharts-starter</module>
         <module>arbercharts-qt-bridge</module>
         <module>arbercharts-swift-bridge</module>
         <module>arbercharts-visual-verifier</module>
