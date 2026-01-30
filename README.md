@@ -55,6 +55,8 @@ All documentation now lives under `docs/`.
 - `docs/AUDIT_RESPONSE_v1.7.md`
 - `docs/AUDIT_CLOSURE_MATRIX_v1.7.md`
 - `docs/API_NAMING_REVIEW_v1.7.md`
+- `docs/BRIDGE_VERIFICATION.md`
+- `docs/CI_SETUP.md`
 - `docs/MIGRATION_GUIDE_v1.7.md`
 - `docs/v1.7.0_BREAKING_CHANGES.md`
 - `docs/DOCTRINE_POLICY.md`

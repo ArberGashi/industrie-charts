@@ -25,6 +25,7 @@ class SkiaArberCanvas(private val canvas: Canvas) : ArberCanvas {
     private var lastX = 0f
     private var lastY = 0f
     private var clip: ArberRect? = null
+    private var clipSaveCount = 0
 
     override fun setColor(color: ArberColor) {
         strokePaint.color = color.argb()
@@ -101,8 +102,12 @@ class SkiaArberCanvas(private val canvas: Canvas) : ArberCanvas {
 
     override fun setClip(clip: ArberRect?) {
         this.clip = clip
-        canvas.restoreToCount(canvas.save())
+        if (clipSaveCount != 0) {
+            canvas.restoreToCount(clipSaveCount)
+            clipSaveCount = 0
+        }
         if (clip != null) {
+            clipSaveCount = canvas.save()
             val rect = Rect.makeXYWH(clip.x.toFloat(), clip.y.toFloat(), clip.width.toFloat(), clip.height.toFloat())
             canvas.clipRect(rect)
         }

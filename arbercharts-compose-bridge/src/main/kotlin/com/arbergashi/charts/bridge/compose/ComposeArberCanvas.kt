@@ -21,6 +21,8 @@ class ComposeArberCanvas(
     private var strokeWidth = 1f
     private var clip: ArberRect? = null
     private var color = Color.Black
+    private var lastX = 0f
+    private var lastY = 0f
     private val strokePaint = Paint().apply { style = PaintingStyle.Stroke }
     private val fillPaint = Paint().apply { style = PaintingStyle.Fill }
 
@@ -36,14 +38,16 @@ class ComposeArberCanvas(
     }
 
     override fun moveTo(x: Float, y: Float) {
-        // no-op for immediate mode; use drawPolyline or lineTo
+        lastX = x
+        lastY = y
     }
 
     override fun lineTo(x: Float, y: Float) {
         withClip {
-            val size = max(1f, strokeWidth)
-            canvas.drawRect(Rect(x, y, x + size, y + size), fillPaint)
+            canvas.drawLine(Offset(lastX, lastY), Offset(x, y), strokePaint)
         }
+        lastX = x
+        lastY = y
     }
 
     override fun drawPolyline(xs: FloatArray?, ys: FloatArray?, count: Int) {

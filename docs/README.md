@@ -32,6 +32,8 @@ Audit response and closure artifacts for v1.7.0 LTS are available here:
 - `docs/AUDIT_RESPONSE_v1.7.md`
 - `docs/AUDIT_CLOSURE_MATRIX_v1.7.md`
 - `docs/API_NAMING_REVIEW_v1.7.md`
+- `docs/BRIDGE_VERIFICATION.md`
+- `docs/CI_SETUP.md`
 
 ## Product Strengths
 

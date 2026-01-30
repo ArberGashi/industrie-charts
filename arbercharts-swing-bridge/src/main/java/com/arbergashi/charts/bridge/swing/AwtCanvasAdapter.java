@@ -20,6 +20,8 @@ public final class AwtCanvasAdapter implements ArberCanvas {
     private final Graphics2D g2;
     private float strokeWidth = 1f;
     private ArberRect clip;
+    private float lastX;
+    private float lastY;
 
     public AwtCanvasAdapter(Graphics2D g2) {
         this.g2 = g2;
@@ -38,12 +40,15 @@ public final class AwtCanvasAdapter implements ArberCanvas {
 
     @Override
     public void moveTo(float x, float y) {
-        // no-op for immediate mode; use lineTo or drawPolyline
+        lastX = x;
+        lastY = y;
     }
 
     @Override
     public void lineTo(float x, float y) {
-        g2.drawLine(Math.round(x), Math.round(y), Math.round(x), Math.round(y));
+        g2.drawLine(Math.round(lastX), Math.round(lastY), Math.round(x), Math.round(y));
+        lastX = x;
+        lastY = y;
     }
 
     @Override
