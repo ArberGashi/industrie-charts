@@ -81,6 +81,9 @@ https://github.com/ArberGashi/charts/releases
 
 - Core JAR: `arbercharts-core-1.7.0-LTS.jar`
 - Starter (Core + Swing + Server): `arbercharts-starter-1.7.0-LTS.jar`
+- Compose Bridge: `arbercharts-compose-bridge-1.7.0-LTS.jar`
+- Qt Bridge (native, per‑OS ZIP): `arbercharts-qt-bridge-<os>-1.7.0-LTS.zip`
+- Swift Bridge (native, per‑OS ZIP): `arbercharts-swift-bridge-<os>-1.7.0-LTS.zip`
 - Installers: macOS (.dmg), Windows (.msi), Linux (.deb)
 
 ## Quick Start (Demo)

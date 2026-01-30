@@ -2,6 +2,7 @@
 **/target/
 build/
 dist/
+.build/
 *.class
 *.jar
 *.war
