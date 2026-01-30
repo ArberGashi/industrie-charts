@@ -1,0 +1,31 @@
+[
+  {
+    "name": "com.arbergashi.charts.core.nativeapi.ArberNativeExport",
+    "methods": [
+      {
+        "name": "createChart",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "int"]
+      },
+      {
+        "name": "destroyChart",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "long"]
+      },
+      {
+        "name": "setViewport",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "long", "double", "double", "double", "double"]
+      },
+      {
+        "name": "updateData",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "long", "double[]", "int"]
+      },
+      {
+        "name": "render",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "long", "long"]
+      },
+      {
+        "name": "renderToBuffer",
+        "parameterTypes": ["org.graalvm.nativeimage.IsolateThread", "long", "org.graalvm.nativeimage.c.type.CCharPointer", "int"]
+      }
+    ]
+  }
+]

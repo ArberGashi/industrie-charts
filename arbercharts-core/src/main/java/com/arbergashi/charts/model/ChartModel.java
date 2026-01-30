@@ -1,5 +1,4 @@
 package com.arbergashi.charts.model;
-
 /**
  * High-Performance Chart Model Interface.
  *
@@ -15,6 +14,9 @@ public interface ChartModel {
 
     // Reused empty arrays to avoid per-call zero-length allocations
     double[] EMPTY_DOUBLE = new double[0];
+    byte[] EMPTY_BYTE = new byte[0];
+    short[] EMPTY_SHORT = new short[0];
+    long[] EMPTY_LONG = new long[0];
 
     /**
      * Returns the title of the data series.
@@ -22,6 +24,15 @@ public interface ChartModel {
      * @return Name of the series
      */
     String getName();
+
+    /**
+     * Updates the title of the data series.
+     *
+     * @param name new series name
+     */
+    default ChartModel setName(String name) {
+        return this;
+    }
 
     /**
      * Returns the number of data points.
@@ -140,6 +151,58 @@ public interface ChartModel {
     }
 
     /**
+     * Returns the provenance flag for a specific point.
+     *
+     * <p>Default: {@link ProvenanceFlags#ORIGINAL}.</p>
+     */
+    default byte getProvenanceFlag(int index) {
+        byte[] arr = getProvenanceFlagsData();
+        if (arr == null || index < 0 || index >= arr.length) return ProvenanceFlags.ORIGINAL;
+        return arr[index];
+    }
+
+    /**
+     * Returns the source identifier for a specific point.
+     * Default: 0 (unknown).
+     */
+    default short getSourceId(int index) {
+        short[] arr = getSourceIdsData();
+        if (arr == null || index < 0 || index >= arr.length) return 0;
+        return arr[index];
+    }
+
+    /**
+     * Returns the timestamp (nanoseconds) for a specific point.
+     * Default: 0 (unknown).
+     */
+    default long getTimestampNanos(int index) {
+        long[] arr = getTimestampNanosData();
+        if (arr == null || index < 0 || index >= arr.length) return 0L;
+        return arr[index];
+    }
+
+    /**
+     * Direct access to provenance flags (optional).
+     */
+    default byte[] getProvenanceFlagsData() {
+        return EMPTY_BYTE;
+    }
+
+    /**
+     * Direct access to source identifiers (optional).
+     */
+    default short[] getSourceIdsData() {
+        return EMPTY_SHORT;
+    }
+
+    /**
+     * Direct access to timestamps in nanoseconds (optional).
+     */
+    default long[] getTimestampNanosData() {
+        return EMPTY_LONG;
+    }
+
+    /**
      * Optional multi-channel getter for models that expose multiple components per index (e.g. medical data).
      * Default: fallback to single-channel Y.
      */
@@ -215,7 +278,7 @@ public interface ChartModel {
      *
      * @param listener The listener
      */
-    void addChangeListener(ChartModelListener listener);
+    void setChangeListener(ChartModelListener listener);
 
     /**
      * Removes a listener.
@@ -234,14 +297,15 @@ public interface ChartModel {
     /**
      * Optional visual color for a series; default is null.
      */
-    default java.awt.Color getColor() {
+    default com.arbergashi.charts.api.types.ArberColor getColor() {
         return null;
     }
 
     /**
      * Optional setter for a visual color; default no-op.
      */
-    default void setColor(java.awt.Color color) {
+    default ChartModel setColor(com.arbergashi.charts.api.types.ArberColor color) {
+        return this;
     }
 
     /**

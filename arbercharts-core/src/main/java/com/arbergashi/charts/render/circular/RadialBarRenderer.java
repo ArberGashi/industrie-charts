@@ -2,18 +2,16 @@ package com.arbergashi.charts.render.circular;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.MathUtils;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.text.NumberFormat;
 import java.util.Optional;
-
 /**
  * <h1>Modern Radial Bar Renderer</h1>
  * <p>
@@ -30,58 +28,53 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
-public final class RadialBarRenderer extends BaseRenderer {
+    public final class RadialBarRenderer extends BaseRenderer {
 
     private int hoverIndex = -1;
-    private final Arc2D.Double arc = new Arc2D.Double();
-    private final NumberFormat labelFormat = NumberFormat.getInstance();
-    private final Font labelFont;
 
     public RadialBarRenderer() {
         super("radialBar");
-        this.labelFont = getCachedFont(10f, Font.PLAIN);
-        this.labelFormat.setMaximumFractionDigits(1);
     }
 
-    private void drawRadialGrid(Graphics2D g2, double cx, double cy, double maxRadius, double maxValue, PlotContext context) {
-        ChartTheme t = resolveTheme(context);
-        g2.setColor(t.getGridColor());
-        g2.setStroke(getCachedStroke(1.0f));
-        g2.setFont(getCachedFont(9f, Font.PLAIN));
+    private void drawRadialGrid(ArberCanvas canvas, double cx, double cy, double maxRadius, double maxValue, PlotContext context) {
+        ChartTheme t = getResolvedTheme(context);
+        canvas.setColor(t.getGridColor());
+        canvas.setStroke(1.0f);
 
         int ringCount = 4;
         for (int i = 1; i <= ringCount; i++) {
             double r = maxRadius * ((double) i / ringCount);
-            g2.draw(getEllipse(cx - r, cy - r, r * 2, r * 2));
-
-            String label = labelFormat.format(maxValue * ((double) i / ringCount));
-            g2.drawString(label, (float) (cx + 5), (float) (cy - r - 5));
+            drawCirclePolyline(canvas, cx, cy, r);
         }
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n <= 0) return;
 
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
-        double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.85;
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
+        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
 
-        drawRadialGrid(g2, cx, cy, maxRadius, context.maxY(), context);
-        drawBars(g2, model, context, cx, cy, maxRadius);
+        drawRadialGrid(canvas, cx, cy, maxRadius, context.getMaxY(), context);
+        drawBars(canvas, model, context, cx, cy, maxRadius);
     }
 
-    private void drawBars(Graphics2D g2, ChartModel model, PlotContext context, double cx, double cy, double maxRadius) {
+    private void drawBars(ArberCanvas canvas, ChartModel model, PlotContext context, double cx, double cy, double maxRadius) {
         int n = model.getPointCount();
         double barWidth = (maxRadius * 0.8) / n;
         double gap = barWidth * 0.4;
 
         for (int i = 0; i < n; i++) {
             double value = model.getY(i);
-            double t = MathUtils.clamp(value / context.maxY(), 0, 1);
+            double t = MathUtils.clamp(value / context.getMaxY(), 0, 1);
             double angleSweep = t * 360.0;
 
             double innerRadius = maxRadius - (i + 1) * barWidth + gap;
@@ -89,47 +82,31 @@ public final class RadialBarRenderer extends BaseRenderer {
             double diameter = (innerRadius + outerRadius);
 
             float strokeWidth = (float) (outerRadius - innerRadius);
-            g2.setStroke(getCachedStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            canvas.setStroke(strokeWidth);
 
-            Color color = getSeriesColor(model, i, context);
+            ArberColor color = getSeriesColor(model, i, context);
             if (i == hoverIndex) {
-                color = color.brighter();
+                // no brighten in core
             }
-            g2.setColor(color);
+            canvas.setColor(color);
 
-            arc.setArc(cx - diameter / 2, cy - diameter / 2, diameter, diameter, 90, -angleSweep, Arc2D.OPEN);
-            g2.draw(arc);
-
-            drawBarLabel(g2, model.getLabel(i), cx, cy, innerRadius, angleSweep, resolveTheme(context));
+            drawArcPolyline(canvas, cx, cy, diameter / 2.0, 90, -angleSweep);
         }
-    }
-
-    private void drawBarLabel(Graphics2D g2, String label, double cx, double cy, double radius, double angleSweep, ChartTheme t) {
-        if (label == null || label.isEmpty() || angleSweep < 10) return;
-
-        g2.setFont(labelFont);
-
-        double angleRad = Math.toRadians(90 - angleSweep);
-        double x = cx + Math.cos(angleRad) * (radius + ChartScale.scale(8));
-        double y = cy - Math.sin(angleRad) * (radius + ChartScale.scale(8));
-
-        g2.setColor(t.getAxisLabelColor());
-        g2.drawString(label, (float)x, (float)y);
     }
 
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n <= 0) return Optional.empty();
 
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
-        double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.85;
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
+        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
 
-        double dx = pixel.getX() - cx;
-        double dy = pixel.getY() - cy;
+        double dx = pixel.x() - cx;
+        double dy = pixel.y() - cy;
         double distSq = dx * dx + dy * dy;
 
         if (distSq > maxRadius * maxRadius) {
@@ -154,13 +131,37 @@ public final class RadialBarRenderer extends BaseRenderer {
         return Optional.empty();
     }
 
-    private Color getSeriesColor(ChartModel model, int index, PlotContext context) {
+    private ArberColor getSeriesColor(ChartModel model, int index, PlotContext context) {
         if (model.getColor() != null) return model.getColor();
-        return resolveTheme(context).getSeriesColor(index);
+        return getResolvedTheme(context).getSeriesColor(index);
     }
 
     @Override
     public void clearHover() {
         this.hoverIndex = -1;
+    }
+
+    private void drawCirclePolyline(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 48;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "radial.circle.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "radial.circle.y", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
+
+    private void drawArcPolyline(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
+        int segments = Math.max(8, (int) Math.ceil(Math.abs(sweepDeg) / 6.0));
+        float[] xs = RendererAllocationCache.getFloatArray(this, "radial.arc.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "radial.arc.y", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg + sweepDeg * (i / (double) segments));
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
     }
 }

@@ -1,8 +1,7 @@
 package com.arbergashi.charts.util;
 
-import java.awt.GraphicsConfiguration;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.function.Supplier;
 /**
  * Utility for DPI scaling.
  * Ensures that lines and fonts look correct on high-DPI (e.g., 4K / Retina) monitors.
@@ -14,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class ChartScale {
 
     private static volatile float scaleFactor = 1.0f;
+    private static final ThreadLocal<Float> renderScaleOverride = new ThreadLocal<>();
 
     /**
      * Framework policy: auto-detection initializes the scale factor once.
@@ -32,7 +32,7 @@ public final class ChartScale {
      * Sets the global scale factor used by the chart framework.
      *
      * <p><b>Framework note:</b> This is a process-wide setting. Prefer setting it once during
-     * application startup (or call {@link #autoDetect(GraphicsConfiguration)} once from the primary window).
+     * application startup (or call {@link #autoDetect(float)} once from the primary window).
      * This method always overrides any previously auto-detected value.</p>
      */
     public static void setScaleFactor(float factor) {
@@ -47,14 +47,14 @@ public final class ChartScale {
     }
 
     /**
-     * Auto-detects the scale factor from the given {@link GraphicsConfiguration}.
+     * Auto-detects the scale factor from a provided scale value.
      *
      * <p><b>Framework policy:</b> This method initializes the scale factor only once.
      * The first call with a non-null {@code GraphicsConfiguration} wins. Subsequent calls are ignored
      * to avoid global scale thrash when windows move across monitors.</p>
      */
-    public static void autoDetect(GraphicsConfiguration gc) {
-        if (gc == null) {
+    public static void autoDetect(float detectedScale) {
+        if (!Float.isFinite(detectedScale) || detectedScale <= 0f) {
             // Only initialize to 1.0 if nothing has been set yet.
             if (autoDetected.compareAndSet(false, true)) {
                 scaleFactor = 1.0f;
@@ -66,27 +66,29 @@ public final class ChartScale {
             return;
         }
 
-        double s = gc.getDefaultTransform().getScaleX();
-        if (!Double.isFinite(s) || s <= 0.0) {
-            scaleFactor = 1.0f;
-        } else {
-            scaleFactor = (float) s;
-        }
+        scaleFactor = detectedScale;
     }
 
     /**
-     * Returns the currently active global scale factor.
+     * Returns the currently active scale factor for the calling thread.
      */
     public static float getScaleFactor() {
-        return scaleFactor;
+        return effectiveScale();
+    }
+
+    /**
+     * Returns true if a thread-local scale override is currently active.
+     */
+    public static boolean hasScaleOverride() {
+        return renderScaleOverride.get() != null;
     }
 
     public static float scale(float value) {
-        return value * scaleFactor;
+        return value * effectiveScale();
     }
 
     public static double scale(double value) {
-        return value * scaleFactor;
+        return value * effectiveScale();
     }
 
     /**
@@ -94,39 +96,52 @@ public final class ChartScale {
      * Fonts often require slightly different scaling than geometric shapes.
      */
     public static float font(float size) {
-        return size * scaleFactor;
+        return size * effectiveScale();
     }
 
     /**
-     * Scales a target font size in a UI-toolkit-aware way.
-     * <p>
-     * <b>Why:</b> In modern Swing applications (e.g. FlatLaf), {@link javax.swing.UIManager} fonts are already
-     * HiDPI-aware and may already include the platform scale factor. If we then apply {@link #font(float)}
-     * again, text becomes double-scaled.
-     * </p>
-     * <p>
-     * <b>Policy:</b> If the provided {@code baseFont} looks like a UI-managed font (i.e. its size already
-     * tracks the UI scale), we treat {@code sizeInDp} as the final point size. Otherwise we apply the
-     * framework scale factor.
-     * </p>
+     * Updates the global scale factor from a provided scale value.
      *
-     * @param baseFont  the font used as baseline; may be {@code null}
-     * @param sizeInDp  desired size in design units (dp)
-     * @return a size value suitable for {@link java.awt.Font#deriveFont(float)}
+     * @param detectedScale detected scale factor
+     * @return the applied scale factor
      */
-    public static float uiFontSize(java.awt.Font baseFont, float sizeInDp) {
-        if (baseFont == null) {
-            return font(sizeInDp);
+    public static float setScaleFromDetected(float detectedScale) {
+        float detected = (Float.isFinite(detectedScale) && detectedScale > 0f) ? detectedScale : 1.0f;
+        if (Math.abs(detected - scaleFactor) > 0.001f) {
+            scaleFactor = detected;
         }
-
-        // Heuristic: UI-managed fonts are typically already scaled on HiDPI setups.
-        // If the UI font size is already "large" relative to the requested dp size
-        // (e.g. 13pt UI font on a 2x scale system), do not scale again.
-        float uiSize = baseFont.getSize2D();
-        if (scaleFactor > 1.01f && uiSize >= sizeInDp * 1.15f) {
-            return sizeInDp;
-        }
-
-        return font(sizeInDp);
+        autoDetected.set(true);
+        return detected;
     }
+
+    /**
+     * Runs the given block with a thread-local scale override.
+     */
+    public static void applyScale(float scale, Runnable block) {
+        renderScaleOverride.set(scale);
+        try {
+            block.run();
+        } finally {
+            renderScaleOverride.remove();
+        }
+    }
+
+    /**
+     * Runs the given block with a thread-local scale override and returns a value.
+     */
+    public static <T> T applyScale(float scale, Supplier<T> block) {
+        renderScaleOverride.set(scale);
+        try {
+            return block.get();
+        } finally {
+            renderScaleOverride.remove();
+        }
+    }
+
+
+    private static float effectiveScale() {
+        Float override = renderScaleOverride.get();
+        return override != null ? override : scaleFactor;
+    }
+
 }

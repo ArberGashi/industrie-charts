@@ -1,12 +1,11 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
  * Locally weighted scatter-plot smoothing (LOESS) renderer.
@@ -15,11 +14,11 @@ import java.awt.geom.Path2D;
  * allocation-free sliding-window weighted average approximation that is stable under high zoom.
  * The implementation is intentionally conservative to keep the hot path zero-allocation.</p>
  *
- * <p><b>Performance:</b> O(n) for n points; uses one reusable {@link java.awt.geom.Path2D} per renderer instance.</p>
- *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class LoessRenderer extends BaseRenderer {
 
@@ -29,25 +28,29 @@ public final class LoessRenderer extends BaseRenderer {
         super("loess");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 3) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Color base = seriesOrBase(model, context, 0);
-        Color accent = isMultiColor() ? themeSeries(context, 1) : base;
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor accent = isMultiColor() ? themeSeries(context, 1) : base;
         if (accent == null) accent = base;
-        g2.setStroke(getSeriesStroke());
+        canvas.setStroke(1.0f);
 
         // Window size (odd, >= 3)
         int w = Math.max(3, Math.min(101, (int) Math.round(Math.sqrt(count))));
         if ((w & 1) == 0) w++;
         int half = w / 2;
 
-        Path2D path = getPathCache();
-        boolean started = false;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "loess.line.x", count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "loess.line.y", count);
+        int outCount = 0;
 
         for (int i = 0; i < count; i++) {
             int a = Math.max(0, i - half);
@@ -77,20 +80,17 @@ public final class LoessRenderer extends BaseRenderer {
             double px = pBuffer[0];
             double py = pBuffer[1];
 
-            if (!started) {
-                path.moveTo(px, py);
-                started = true;
-            } else {
-                path.lineTo(px, py);
-            }
+            xs[outCount] = (float) px;
+            ys[outCount] = (float) py;
+            outCount++;
         }
 
-        if (!started) return;
+        if (outCount < 2) return;
         if (isMultiColor() && accent != base) {
-            g2.setColor(ColorUtils.withAlpha(accent, 0.45f));
-            g2.draw(path);
+            canvas.setColor(accent);
+            canvas.drawPolyline(xs, ys, outCount);
         }
-        g2.setColor(base);
-        g2.draw(path);
+        canvas.setColor(base);
+        canvas.drawPolyline(xs, ys, outCount);
     }
 }

@@ -1,0 +1,1 @@
+tagSearchIndex = [{"l":"Serialized Form","h":"","k":"18","u":"serialized-form.html"},{"l":"Supported formats","h":"class com.arbergashi.charts.platform.export.ChartExportService","k":"16","u":"com/arbergashi/charts/platform/export/ChartExportService.html#supported-formats-heading"}];updateSearchResults();

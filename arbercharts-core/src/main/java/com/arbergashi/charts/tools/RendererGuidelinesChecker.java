@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 /**
  * RendererGuidelinesChecker: Checks renderer source code for compliance with zero-allocation rules.
  * Focus: Detects "new" allocations within the drawData method.

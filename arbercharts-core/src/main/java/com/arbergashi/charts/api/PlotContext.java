@@ -1,14 +1,13 @@
 package com.arbergashi.charts.api;
 
-import java.awt.geom.Rectangle2D;
-
+import com.arbergashi.charts.core.geometry.ArberRect;
 /**
  * Context for drawing a plot.
  * Defines the visible data range and screen boundaries.
  * Used for coordinate transformations between data and pixel space.
  *
  * <p><b>Framework note:</b> A {@link ChartTheme} may be provided by the chart panel.
- * Code should prefer {@link #theme()} over any global/static theme access.</p>
+ * Code should prefer {@link #getTheme()} over any global/static theme access.</p>
  *
  * @author Arber Gashi
  * @version 1.0.0
@@ -19,27 +18,27 @@ public interface PlotContext {
     /**
      * Minimum visible X value (data coordinates).
      */
-    double minX();
+    double getMinX();
 
     /**
      * Maximum visible X value (data coordinates).
      */
-    double maxX();
+    double getMaxX();
 
     /**
      * Minimum visible Y value (data coordinates).
      */
-    double minY();
+    double getMinY();
 
     /**
      * Maximum visible Y value (data coordinates).
      */
-    double maxY();
+    double getMaxY();
 
     /**
      * The pixel bounds of the plotting area.
      */
-    Rectangle2D plotBounds();
+    ArberRect getPlotBounds();
 
     /**
      * Transforms data coordinates into pixel coordinates.
@@ -56,14 +55,14 @@ public interface PlotContext {
      * Width of the data range.
      */
     default double rangeX() {
-        return maxX() - minX();
+        return getMaxX() - getMinX();
     }
 
     /**
      * Height of the data range.
      */
     default double rangeY() {
-        return maxY() - minY();
+        return getMaxY() - getMinY();
     }
 
     /**
@@ -76,14 +75,14 @@ public interface PlotContext {
     /**
      * Scale mode for X axis (used by helpers such as NiceScale).
      */
-    default com.arbergashi.charts.util.NiceScale.ScaleMode scaleModeX() {
+    default com.arbergashi.charts.util.NiceScale.ScaleMode getScaleModeX() {
         return com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR;
     }
 
     /**
      * Scale mode for Y axis (used by helpers such as NiceScale).
      */
-    default com.arbergashi.charts.util.NiceScale.ScaleMode scaleModeY() {
+    default com.arbergashi.charts.util.NiceScale.ScaleMode getScaleModeY() {
         return com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR;
     }
 
@@ -111,7 +110,21 @@ public interface PlotContext {
     /**
      * Rendering hints for the current render pass.
      */
-    default ChartRenderHints renderHints() {
+    default ChartRenderHints getRenderHints() {
+        return null;
+    }
+
+    /**
+     * Indicates whether the current data stream is considered lost/stale.
+     */
+    default boolean isSignalLost() {
+        return false;
+    }
+
+    /**
+     * Optional gap model for non-trading periods on the X axis.
+     */
+    default AxisGapModel getGapModel() {
         return null;
     }
 
@@ -120,9 +133,29 @@ public interface PlotContext {
      *
      * <p><b>Framework contract:</b> This must be non-null during rendering.
      * Implementations that do not manage per-panel themes should return a stable default
-     * such as {@link ChartThemes#defaultDark()}.</p>
+     * such as {@link ChartThemes#getDarkTheme()}.</p>
      */
-    default ChartTheme theme() {
-        return ChartThemes.defaultDark();
+    default ChartTheme getTheme() {
+        return ChartThemes.getDarkTheme();
+    }
+
+    /**
+     * Animation profile active for this render pass.
+     */
+    default AnimationProfile getAnimationProfile() {
+        return AnimationProfile.ACADEMIC;
+    }
+
+    /**
+     * Snap a pixel coordinate to a crisp device pixel boundary.
+     *
+     * <p>Policy: grids and thin strokes align to half-pixel coordinates to avoid
+     * blurry lines when using 1px strokes.</p>
+     *
+     * @param pixel pixel-space coordinate
+     * @return snapped pixel coordinate (n + 0.5)
+     */
+    default double snapPixel(double pixel) {
+        return Math.floor(pixel) + 0.5;
     }
 }

@@ -3,23 +3,25 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ArberCharts — High-Performance Java Charts</title>
-    <meta name="description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
-    <meta name="keywords" content="ArberCharts, Java charts, Swing charting, charting framework, data visualization, financial charts, medical charts, statistical charts, specialized charts, zero-GC rendering, high performance, ArberChartBuilder, Java 25, JDK 25, Java Diagramme, Swing Diagramme, Datenvisualisierung, Finanzcharts, medizinische Charts" />
+    <title>ArberCharts | Zero-GC High-Performance Java 25 Charting</title>
+    <meta name="title" content="ArberCharts | Zero-GC High-Performance Java 25 Charting" />
+    <meta name="description" content="The mission-critical charting engine for Java 25. 158 renderers for Medical, Financial, and Engineering. Zero-GC pipeline for smooth 60 FPS real-time data." />
+    <meta name="keywords" content="ArberCharts, Java 25 Charts, Zero-GC Rendering, Real-time Charting Java, Medical Waveforms, Financial Charting Library, Swing Charting, High Performance Data Viz" />
+    <meta name="author" content="Arber Gashi" />
     <meta name="theme-color" content="#050505" />
     <link rel="canonical" href="https://www.arbergashi.com/" />
+    <meta name="robots" content="index, follow" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="ArberCharts" />
-    <meta property="og:title" content="ArberCharts — High-Performance Java Charts" />
-    <meta property="og:description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
     <meta property="og:url" content="https://www.arbergashi.com/" />
-    <meta property="og:image" content="https://www.arbergashi.com/images/candlestick.png" />
-    <meta property="og:locale" content="en_US" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="ArberCharts — High-Performance Java Charts" />
-    <meta name="twitter:description" content="ArberCharts is a high-performance Java charting engine with 139 renderers for medical, financial, statistical, and specialized visualization. ArberCharts ist eine High-Performance-Charting-Engine mit 139 Renderern für Medical, Financial, Statistical und Specialized." />
-    <meta name="twitter:image" content="https://www.arbergashi.com/images/candlestick.png" />
-<link rel="icon" href="favicon.ico" />
+    <meta property="og:title" content="ArberCharts — Mission-Critical Java Visualization" />
+    <meta property="og:description" content="158 Renderers. Zero-GC Pipeline. Designed for high-stakes medical and financial systems using Java 25." />
+    <meta property="og:image" content="https://www.arbergashi.com/images/og-preview.png" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://www.arbergashi.com/" />
+    <meta property="twitter:title" content="ArberCharts — Zero-GC Java Charting" />
+    <meta property="twitter:description" content="Stop-the-world GC is the enemy. ArberCharts is the solution. High-performance rendering for modern JDKs." />
+    <meta property="twitter:image" content="https://www.arbergashi.com/images/og-preview.png" />
+    <link rel="icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -38,6 +40,7 @@
             <a href="products.html" data-i18n="nav_products">Produkte</a>
             <a href="solutions.html" data-i18n="nav_solutions">Solutions</a>
             <a href="technology.html" data-i18n="nav_technology">Technology</a>
+            <a href="/javadoc/index.html" target="_blank" rel="noopener" data-i18n="nav_docs">Docs</a>
             <a href="licensing.html" data-i18n="nav_license">Lizenz</a>
             <a href="contact.html" data-i18n="nav_contact">Kontakt</a>
           </nav>
@@ -59,7 +62,7 @@
     <main class="container">
       <section class="hero">
         <h1 data-i18n="hero_title">High-performance charting engine for Java 25</h1>
-        <p data-i18n="hero_subtitle">139 Renderer. Zero-GC Pipeline. Entwickelt für geschäftskritische Systeme.</p>
+        <p data-i18n="hero_subtitle">Version 1.7.0 LTS "Surgeon" — Jetzt mit zertifiziertem Lock-free Core & Zero-GC Pipeline für absolute Datenintegrität.</p>
         <div class="hero-cta">
           <a class="btn primary" href="products.html" data-i18n="cta_free">Core herunterladen</a>
           <a class="btn" href="licensing.html" data-i18n="cta_business">Pricing ansehen</a>
@@ -162,7 +165,7 @@
         <div class="card">
           <h3 data-i18n="business_build_title">Build vs. Buy</h3>
           <p data-i18n="business_build_body">Die Entwicklung eines spezialisierten Renderers dauert im Schnitt 3–5 Tage. Bei CHF 150/Std. kostet Sie das ca. CHF 6.000.</p>
-          <p data-i18n="business_alt">ArberCharts Alternative: Für CHF 1'299 / Jahr erhalten Sie Zugriff auf alle 139 Renderer für Ihr gesamtes Team.</p>
+          <p data-i18n="business_alt">ArberCharts Alternative: Für CHF 1'299 / Jahr erhalten Sie Zugriff auf alle 158 Renderer für Ihr gesamtes Team.</p>
           <p data-i18n="business_roi">ROI: amortisiert sich nach der ersten gesparten Arbeitswoche – der Rest des Jahres ohne Zusatzkosten.</p>
         </div>
       </section>
@@ -184,7 +187,7 @@
           <div class="card">
             <h3 data-i18n="arch_fluent_title">Fluent API</h3>
             <div class="code-block">
-<pre>ArberChartPanel panel = ArberChartBuilder.create()
+<pre>ArberChartPanel panel = ArberChartBuilder.of()
     .addLayer(model, new LineRenderer())
     .withTheme(ChartThemes.defaultDark())
     .buildPanel();</pre>
@@ -200,16 +203,16 @@
         </div>
         <div class="grid cols-2">
           <div class="card">
-            <h3 data-i18n="zero_challenge_title">Die Herausforderung: Determinismus in Java</h3>
-            <p data-i18n="zero_challenge_body">In Echtzeitsystemen ist der Stop-the-World-GC der grösste Feind. Wenn im Render-Loop ständig neue Objekte entstehen, sind Pausen unvermeidlich.</p>
+            <h3 data-i18n="zero_challenge_title">Medizinische Präzision: Der 100s Stress-Test</h3>
+            <p data-i18n="zero_challenge_body">In Version 1.7.0 LTS haben wir das Circular-Modell gegen Milliarden von Concurrency-Operationen validiert. Das Ergebnis: Null Mismatches bei maximaler Thread-Last.</p>
           </div>
           <div class="card">
-            <h3 data-i18n="zero_approach_title">Der ArberCharts-Ansatz</h3>
+            <h3 data-i18n="zero_approach_title">Der v1.7.0 LTS Standard</h3>
             <ul>
-              <li data-i18n="zero_bullet_1">Allocation-Free Rendering: keine neuen Objekte im aktiven Zeichnen.</li>
-              <li data-i18n="zero_bullet_2">Primitive-basierte Verarbeitung statt Boxing/Unboxing.</li>
-              <li data-i18n="zero_bullet_3">Object Pooling für wiederverwendbare Ressourcen.</li>
-              <li data-i18n="zero_bullet_4">Java 25 Native Performance für stabile Frame-Rates.</li>
+              <li data-i18n="zero_bullet_1"><strong>Memory Barriers:</strong> Fortschrittliche Sequence-Guards verhindern Datenkorruption in Echtzeit.</li>
+              <li data-i18n="zero_bullet_2"><strong>Flyweight Registry:</strong> Farben und Strokes werden ohne Heap-Allokation verwaltet.</li>
+              <li data-i18n="zero_bullet_3"><strong>Lock-free Design:</strong> Maximale Performance durch Vermeidung von Mutex-Contention.</li>
+              <li data-i18n="feature_solo_mode"><strong>Legend Solo-Mode:</strong> Fokussieren Sie Datenreihen durch intelligentes Dimming statt hartem Ausblenden.</li>
             </ul>
             <p data-i18n="zero_result">Ergebnis: glattes Schriftbild und flüssige Animationen ohne Mikroruckler – auch nach stundenlangem Dauerbetrieb.</p>
           </div>
@@ -281,7 +284,7 @@
                 <td data-i18n="compare_row1_feature">Renderer-Vielfalt</td>
                 <td data-i18n="compare_row1_oss">10–20 (Basis-Charts)</td>
                 <td data-i18n="compare_row1_enterprise">50–80</td>
-                <td class="table-highlight" data-i18n="compare_row1_ac">139+ Familien</td>
+                <td class="table-highlight" data-i18n="compare_row1_ac">158 Familien</td>
               </tr>
               <tr>
                 <td data-i18n="compare_row2_feature">Speichereffizienz</td>
@@ -343,10 +346,39 @@
         </div>
       </section>
 
+      <section class="section" id="docs">
+        <div class="section-title">
+          <span data-i18n="docs_kicker">Documentation</span>
+          <h2 data-i18n="docs_title">Bridge Documentation</h2>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3 data-i18n="docs_core_title">Core JavaDocs</h3>
+            <p data-i18n="docs_core_body">The public API reference for the headless core.</p>
+            <a class="btn" href="/javadoc/index.html" target="_blank" rel="noopener" data-i18n="docs_core_cta">Open Core JavaDocs</a>
+          </div>
+          <div class="card">
+            <h3 data-i18n="docs_bridge_title">Bridge Documentation</h3>
+            <p data-i18n="docs_bridge_body">Platform bridges for Swing, Server, Compose, Swift, and Qt.</p>
+            <div class="btn-row">
+              <a class="btn ghost" href="/javadoc-swing/index.html" target="_blank" rel="noopener" data-i18n="docs_swing_cta">Swing JavaDocs</a>
+              <a class="btn ghost" href="/javadoc-server/index.html" target="_blank" rel="noopener" data-i18n="docs_server_cta">Server JavaDocs</a>
+              <a class="btn ghost" href="/bridges/compose.html" data-i18n="docs_compose_cta">Compose Docs</a>
+              <a class="btn ghost" href="/bridges/swift.html" data-i18n="docs_swift_cta">Swift Docs</a>
+              <a class="btn ghost" href="/bridges/qt.html" data-i18n="docs_qt_cta">Qt Docs</a>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="support_policy_title">LTS Support Policy</h3>
+          <p data-i18n="support_policy_body">Only ArberCharts v1.7.0 LTS is supported. Older versions are deprecated and must not be used for new releases. Ship production applications exclusively on v1.7.0 LTS.</p>
+        </div>
+      </section>
+
       <section class="section" id="cta">
         <div class="card">
           <h3 data-i18n="cta_title">Bereit für das nächste Level an Performance?</h3>
-          <p data-i18n="cta_body">Laden Sie die Demo herunter und erleben Sie 139 Renderer in Aktion. Kostenlos für alle Entwickler.</p>
+          <p data-i18n="cta_body">Laden Sie die Demo herunter und erleben Sie 158 Renderer in Aktion. Kostenlos für alle Entwickler.</p>
           <div class="hero-cta">
             <a class="btn primary" href="products.html" data-i18n="cta_download">Core-Framework herunterladen</a>
             <a class="btn" href="licensing.html" data-i18n="cta_license">Lizenz erwerben</a>

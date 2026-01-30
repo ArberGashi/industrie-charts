@@ -9,7 +9,9 @@ package com.arbergashi.charts.api;
  * @version 1.0.0
  * @since 2025-06-01
  */
-@FunctionalInterface
+@FunctionalInterface/**
+ * @since 1.5.0
+ */
 public interface ChartFocusListener {
 
     /**

@@ -1,9 +1,0 @@
-<!--
-  Icon: Trend Decomposition
-  FlatLaf/FlatSVGIcon-konform (currentColor)
--->
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 20C6 14 8 8 12 8C16 8 18 14 20 20" stroke="currentColor" stroke-width="2" fill="none"/>
-    <line x1="4" y1="20" x2="20" y2="4" stroke="currentColor" stroke-width="2"/>
-</svg>
-

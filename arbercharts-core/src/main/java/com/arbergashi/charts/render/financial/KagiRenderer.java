@@ -1,12 +1,11 @@
 package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-
 /**
  * Kagi chart renderer for JDK 25.
  * Time-independent visualization of price movements.
@@ -15,28 +14,33 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class KagiRenderer extends BaseRenderer {
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     public KagiRenderer() {
         super("kagi");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n < 2) return;
 
-        Color baseColor = getSeriesColor(model);
-        Stroke thinStroke = getCachedStroke(ChartScale.scale(1.0f));
-        Stroke thickStroke = getCachedStroke(ChartScale.scale(3.0f));
+        ArberColor baseColor = getSeriesColor(model);
+        float thinStroke = ChartScale.scale(1.0f);
+        float thickStroke = ChartScale.scale(3.0f);
 
         boolean isThick = false;
         double lastY = model.getY(0);
 
         double[] buf1 = pBuffer();
         double[] buf2 = pBuffer4(); // reuse larger buffer if needed
-
         for (int i = 0; i < n - 1; i++) {
             double x1 = model.getX(i);
             double y1 = model.getY(i);
@@ -52,13 +56,21 @@ public class KagiRenderer extends BaseRenderer {
             if (y2 > lastY && !isThick) isThick = true;
             else if (y2 < lastY && isThick) isThick = false;
 
-            g2.setStroke(isThick ? thickStroke : thinStroke);
-            g2.setColor(y2 >= y1 ? baseColor : themeBearish(context));
+            canvas.setStroke(isThick ? thickStroke : thinStroke);
+            canvas.setColor(y2 >= y1 ? baseColor : themeBearish(context));
 
             // Vertical line
-            g2.draw(getLine(pix1x, pix1y, pix1x, pix2y));
+            lineX[0] = (float) pix1x;
+            lineY[0] = (float) pix1y;
+            lineX[1] = (float) pix1x;
+            lineY[1] = (float) pix2y;
+            canvas.drawPolyline(lineX, lineY, 2);
             // Horizontal connection
-            g2.draw(getLine(pix1x, pix2y, pix2x, pix2y));
+            lineX[0] = (float) pix1x;
+            lineY[0] = (float) pix2y;
+            lineX[1] = (float) pix2x;
+            lineY[1] = (float) pix2y;
+            canvas.drawPolyline(lineX, lineY, 2);
 
             lastY = y1;
         }

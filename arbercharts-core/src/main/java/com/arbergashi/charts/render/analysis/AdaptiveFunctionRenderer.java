@@ -1,21 +1,19 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ChartUtils;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.geom.Path2D;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.DoubleUnaryOperator;
-
 /**
  * Adaptive function renderer (JDK 25 standard).
  * Draws mathematical functions f(x) with adaptive sampling.
@@ -26,6 +24,8 @@ import java.util.function.DoubleUnaryOperator;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class AdaptiveFunctionRenderer extends BaseRenderer {
 
@@ -46,8 +46,10 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
         bufferPool.push(new PointBuffer());
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         // Recalculate on context changes (zoom/resize/scroll).
         if (isContextChanged(context)) {
             startAsyncCalculation(context);
@@ -59,32 +61,33 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
             return;
         }
 
-        // Use reusable Path2D from BaseRenderer (zero allocation).
-        Path2D path = getPathCache();
-
-        // Theme-aware color that fits FlatLaf palettes.
-        Color curveColor = UIManager.getColor("Chart.accent.blue");
+        // Theme-aware color.
+        ArberColor curveColor = getResolvedTheme(context).getAccentColor();
         if (isMultiColor()) {
             curveColor = themeSeries(context, 0);
         }
         if (curveColor == null) curveColor = seriesOrBase(model, context, 0);
 
-        g2.setColor(curveColor);
-        g2.setStroke(getSeriesStroke());
+        canvas.setColor(curveColor);
+        canvas.setStroke(1.0f);
+
+        float[] xs = RendererAllocationCache.getFloatArray(this, "func.line.x", renderBuffer.count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "func.line.y", renderBuffer.count);
+        int outCount = 0;
 
         // Zeichne den Pfad aus dem aktuellen Render-Buffer
         for (int i = 0; i < renderBuffer.count; i++) {
             double px = ChartUtils.transformX(renderBuffer.x[i], context);
             double py = ChartUtils.transformY(renderBuffer.y[i], context);
 
-            if (i == 0) {
-                path.moveTo(px, py);
-            } else {
-                path.lineTo(px, py);
-            }
+            xs[outCount] = (float) px;
+            ys[outCount] = (float) py;
+            outCount++;
         }
 
-        g2.draw(path);
+        if (outCount > 1) {
+            canvas.drawPolyline(xs, ys, outCount);
+        }
     }
 
     /**
@@ -92,17 +95,18 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
      *
      * @param callback Runnable for repaint (e.g., chart::repaint)
      */
-    public void setRepaintCallback(Runnable callback) {
+    public AdaptiveFunctionRenderer setRepaintCallback(Runnable callback) {
         this.repaintCallback = callback;
+        return this;
     }
 
     private boolean isContextChanged(PlotContext context) {
         if (lastContext == null) return true;
-        return lastContext.minX() != context.minX() ||
-                lastContext.maxX() != context.maxX() ||
-                lastContext.minY() != context.minY() ||
-                lastContext.maxY() != context.maxY() ||
-                !lastContext.plotBounds().equals(context.plotBounds());
+        return lastContext.getMinX() != context.getMinX() ||
+                lastContext.getMaxX() != context.getMaxX() ||
+                lastContext.getMinY() != context.getMinY() ||
+                lastContext.getMaxY() != context.getMaxY() ||
+                !lastContext.getPlotBounds().equals(context.getPlotBounds());
     }
 
     /**
@@ -122,9 +126,9 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
             }
             workingBuffer.clear();
 
-            double minX = context.minX();
-            double maxX = context.maxX();
-            double width = context.plotBounds().getWidth();
+            double minX = context.getMinX();
+            double maxX = context.getMaxX();
+            double width = context.getPlotBounds().getWidth();
             int baseSamples = (int) Math.max(100, width);
             double step = (maxX - minX) / baseSamples;
             double thresholdPx = ChartScale.scale(0.25f);
@@ -151,19 +155,16 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
                 }
             }
 
-            // Safe buffer swap on the EDT.
-            SwingUtilities.invokeLater(() -> {
-                synchronized (this) {
-                    PointBuffer temp = renderBuffer;
-                    renderBuffer = workingBuffer;
-                    // Return old buffer to the pool.
-                    synchronized (bufferPool) {
-                        temp.clear();
-                        bufferPool.push(temp);
-                    }
+            synchronized (this) {
+                PointBuffer temp = renderBuffer;
+                renderBuffer = workingBuffer;
+                // Return old buffer to the pool.
+                synchronized (bufferPool) {
+                    temp.clear();
+                    bufferPool.push(temp);
                 }
-                if (repaintCallback != null) repaintCallback.run();
-            });
+            }
+            if (repaintCallback != null) repaintCallback.run();
         }, executor);
     }
 

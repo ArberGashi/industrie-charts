@@ -1,20 +1,16 @@
 /**
- * Public API of the ArberCharts framework.
+ * Public core API contracts for ArberCharts.
  *
- * <p>This package contains the stable entry points and contracts that consumers should use
- * to build and render charts.</p>
+ * <p>Defines the stable interfaces for themes, plot context, animation profiles, and render hints.
+ * This package is UI-framework agnostic and safe to use across bridge implementations.</p>
  *
- * <h2>Main concepts</h2>
- * <ul>
- *   <li><b>{@link com.arbergashi.charts.api.ArberChartBuilder}:</b> fluent builder to create
- *       {@link com.arbergashi.charts.ui.ArberChartPanel} instances.</li>
- *   <li><b>{@link com.arbergashi.charts.api.ChartTheme}:</b> theme contract used by renderers,
- *       grids, legends, tooltips, and overlays.</li>
- *   <li><b>{@link com.arbergashi.charts.api.PlotContext}:</b> immutable view of the current
- *       plot bounds and coordinate mapping used during rendering.</li>
- * </ul>
+ * <p>Thread-safety: API types are designed for concurrent reads; mutable implementations must
+ * document their own concurrency behavior.</p>
  *
- * <p><b>Compatibility note:</b> The framework avoids global/static theme state. Themes are
- * provided per chart instance via builder/panel APIs.</p>
+ * <p>Zero-allocation: APIs are optimized for hot-path usage and avoid allocations in render loops.</p>
+ *
+ * @author Arber Gashi
+ * @version 1.7.0
+ * @since 2026-01-30
  */
 package com.arbergashi.charts.api;

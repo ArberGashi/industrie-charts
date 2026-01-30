@@ -1,15 +1,12 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.ChartScale;
 /**
  * Fourier overlay renderer.
  * Overlays dominant frequencies or an approximated Fourier series on a line chart.
@@ -17,44 +14,43 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class FourierOverlayRenderer extends BaseRenderer {
 
     private final double[] pBuffer = new double[2];
-    private Stroke cachedStroke;
     private float lastScale = -1f;
 
     public FourierOverlayRenderer() {
         super("fourierOverlay");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 10) return;
         double[] xData = model.getXData();
 
-        Color baseColor = seriesOrBase(model, context, 0);
+        ArberColor baseColor = seriesOrBase(model, context, 0);
         if (isMultiColor()) {
-            Color alt = themeSeries(context, 1);
+            ArberColor alt = themeSeries(context, 1);
             if (alt != null) baseColor = alt;
         }
-        g2.setColor(ColorUtils.withAlpha(baseColor, 0.6f));
+        canvas.setColor(baseColor);
 
         float currentScale = ChartScale.scale(1.0f);
-        if (cachedStroke == null || lastScale != currentScale) {
-            float dashLen = ChartScale.scale(5f);
-            float[] dash = RendererAllocationCache.getFloatArray(this, "dash_cachedStroke", 2);
-            dash[0] = dashLen;
-            dash[1] = dashLen;
-            cachedStroke = RendererAllocationCache.getBasicStroke(this, "cachedStroke", ChartScale.scale(1.5f), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, dash, 0f);
+        if (lastScale != currentScale) {
             lastScale = currentScale;
         }
-        g2.setStroke(cachedStroke);
+        canvas.setStroke(ChartScale.scale(1.5f));
 
         // Simuliere eine Fourier-Approximation (Sinus-Summe)
-        Path2D path = getPathCache();
-        boolean first = true;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "fourier.x", 200);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "fourier.y", 200);
+        int outCount = 0;
 
         double minX = xData[0];
         double maxX = xData[count - 1];
@@ -68,14 +64,11 @@ public class FourierOverlayRenderer extends BaseRenderer {
             double y = 50 + 20 * (Math.sin(t) + (1.0 / 3.0) * Math.sin(3 * t) + (1.0 / 5.0) * Math.sin(5 * t));
 
             context.mapToPixel(x, y, pBuffer);
-            if (first) {
-                path.moveTo(pBuffer[0], pBuffer[1]);
-                first = false;
-            } else {
-                path.lineTo(pBuffer[0], pBuffer[1]);
-            }
+            xs[outCount] = (float) pBuffer[0];
+            ys[outCount] = (float) pBuffer[1];
+            outCount++;
         }
 
-        g2.draw(path);
+        canvas.drawPolyline(xs, ys, outCount);
     }
 }

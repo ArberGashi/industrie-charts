@@ -4,9 +4,8 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.util.ChartScale;
 
-import java.awt.geom.Point2D;
+import com.arbergashi.charts.api.types.ArberPoint;
 import java.util.Optional;
-
 /**
  * Internal utility for fast, allocation-free hit-testing.
  *
@@ -28,7 +27,7 @@ public final class HitTestUtils {
      * @param context The plot context for coordinate transformation.
      * @return An Optional containing the index of the nearest point, or empty if not found.
      */
-    public static Optional<Integer> nearestPointIndex(Point2D pixel, ChartModel model, PlotContext context) {
+    public static Optional<Integer> nearestPointIndex(ArberPoint pixel, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) {
             return Optional.empty();
@@ -41,8 +40,8 @@ public final class HitTestUtils {
         for (int i = 0; i < n; i++) {
             context.mapToPixel(model.getX(i), model.getY(i), pointPixel);
 
-            double dx = pixel.getX() - pointPixel[0];
-            double dy = pixel.getY() - pointPixel[1];
+            double dx = pixel.x() - pointPixel[0];
+            double dy = pixel.y() - pointPixel[1];
             double distSq = dx * dx + dy * dy;
 
             if (distSq < minDistanceSq) {

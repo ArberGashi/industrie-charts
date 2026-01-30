@@ -1,11 +1,10 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a hierarchical chart model.
  * It uses a generic Node class to build the tree structure.
@@ -19,7 +18,7 @@ public class DefaultHierarchicalChartModel implements HierarchicalChartModel<Def
     private final DefaultNode root;
     private final AtomicLong updateStamp = new AtomicLong(0);
     private String name;
-    private Color color;
+    private ArberColor color;
 
     public DefaultHierarchicalChartModel(DefaultNode root) {
         this.root = root;
@@ -35,20 +34,22 @@ public class DefaultHierarchicalChartModel implements HierarchicalChartModel<Def
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultHierarchicalChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
     @Override
-    public void setColor(Color color) {
+    public DefaultHierarchicalChartModel setColor(ArberColor color) {
         this.color = color;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
@@ -71,15 +72,11 @@ public class DefaultHierarchicalChartModel implements HierarchicalChartModel<Def
         return 0;
     }
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException("Hierarchical models do not support direct point addition.");
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException("Hierarchical models do not support direct point addition.");
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultHierarchicalChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException("Hierarchical models do not support direct point addition.");
     }
 
@@ -98,7 +95,7 @@ public class DefaultHierarchicalChartModel implements HierarchicalChartModel<Def
     }
 
     @Override
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
         // Listeners could be implemented if the model becomes mutable
     }
 
@@ -136,7 +133,7 @@ public class DefaultHierarchicalChartModel implements HierarchicalChartModel<Def
             return Collections.unmodifiableList(children);
         }
 
-        public void addChild(DefaultNode child) {
+        public void setChild(DefaultNode child) {
             this.children.add(child);
         }
     }

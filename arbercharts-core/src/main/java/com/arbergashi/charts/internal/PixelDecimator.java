@@ -1,7 +1,6 @@
 package com.arbergashi.charts.internal;
 
 import com.arbergashi.charts.api.PlotContext;
-
 /**
  * Algorithm for data reduction for display purposes.
  *
@@ -30,11 +29,11 @@ public final class PixelDecimator {
      * @return Number of points in the output buffer
      */
     public static int decimate(double[] xIn, double[] yIn, int count, PlotContext context, double[] outX, double[] outY) {
-        double width = context.plotBounds().getWidth();
+        double width = context.getPlotBounds().width();
         if (width <= 0 || count < 2) return 0;
 
-        double minX = context.minX();
-        double maxX = context.maxX();
+        double minX = context.getMinX();
+        double maxX = context.getMaxX();
         double range = maxX - minX;
         if (range <= 0) return 0;
 

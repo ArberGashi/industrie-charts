@@ -3,15 +3,12 @@ package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Ellipse2D;
-
 /**
  * Marker overlay for minimum/maximum (y) values within a series.
  * Useful for sparklines and monitoring dashboards.
@@ -19,11 +16,12 @@ import java.awt.geom.Ellipse2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class MinMaxMarkerRenderer extends BaseRenderer {
 
     private final double[] pBuffer = new double[2];
-    private final Ellipse2D.Double ellipseCache = new Ellipse2D.Double();
 
     public MinMaxMarkerRenderer() {
         super("minMaxMarker");
@@ -34,8 +32,10 @@ public final class MinMaxMarkerRenderer extends BaseRenderer {
         return false;
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
         double[] xData = model.getXData();
@@ -59,34 +59,33 @@ public final class MinMaxMarkerRenderer extends BaseRenderer {
         }
 
         double r = ChartScale.scale(ChartAssets.getFloat("chart.render.minmax.radius", 4.0f));
-        final ChartTheme theme = resolveTheme(context);
-        Color base = theme.getAxisLabelColor();
-        Color minC = ColorUtils.withAlpha(base, 0.85f);
-        Color maxC = ColorUtils.withAlpha(getSeriesColor(model), 0.9f);
+        final ChartTheme theme = getResolvedTheme(context);
+        ArberColor base = theme.getAxisLabelColor();
+        ArberColor minC = base;
+        ArberColor maxC = getSeriesColor(model);
         if (isMultiColor()) {
-            Color minBase = themeSeries(context, 0);
-            Color maxBase = themeSeries(context, 1);
-            if (minBase != null) minC = ColorUtils.withAlpha(minBase, 0.85f);
-            if (maxBase != null) maxC = ColorUtils.withAlpha(maxBase, 0.9f);
+            ArberColor minBase = themeSeries(context, 0);
+            ArberColor maxBase = themeSeries(context, 1);
+            if (minBase != null) minC = minBase;
+            if (maxBase != null) maxC = maxBase;
         }
 
         if (minIdx == maxIdx) {
-            drawDot(g2, context, xData[minIdx], yData[minIdx], r, maxC);
+            drawDot(canvas, context, xData[minIdx], yData[minIdx], r, maxC);
             return;
         }
 
         if (ChartAssets.getBoolean("chart.render.minmax.showMin", true)) {
-            drawDot(g2, context, xData[minIdx], yData[minIdx], r, minC);
+            drawDot(canvas, context, xData[minIdx], yData[minIdx], r, minC);
         }
         if (ChartAssets.getBoolean("chart.render.minmax.showMax", true)) {
-            drawDot(g2, context, xData[maxIdx], yData[maxIdx], r, maxC);
+            drawDot(canvas, context, xData[maxIdx], yData[maxIdx], r, maxC);
         }
     }
 
-    private void drawDot(Graphics2D g2, PlotContext context, double x, double y, double r, Color c) {
+    private void drawDot(ArberCanvas canvas, PlotContext context, double x, double y, double r, ArberColor c) {
         context.mapToPixel(x, y, pBuffer);
-        g2.setColor(c);
-        ellipseCache.setFrame(pBuffer[0] - r, pBuffer[1] - r, r * 2, r * 2);
-        g2.fill(ellipseCache);
+        canvas.setColor(c);
+        canvas.fillRect((float) (pBuffer[0] - r), (float) (pBuffer[1] - r), (float) (r * 2), (float) (r * 2));
     }
 }

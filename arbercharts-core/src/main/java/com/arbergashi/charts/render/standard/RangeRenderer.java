@@ -1,152 +1,89 @@
 package com.arbergashi.charts.render.standard;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
- * <h1>RangeRenderer - Range Area Chart</h1>
- *
- * <p>Professional range renderer for displaying data with min/max boundaries.
- * Visualizes uncertainty, confidence intervals, or value ranges.</p>
- *
- * <h2>Features:</h2>
- * <ul>
- *   <li><b>Range Area:</b> Filled area between min and max values</li>
- *   <li><b>Center Line:</b> Optional median/mean line</li>
- *   <li><b>Transparency:</b> Semi-transparent fill for overlapping ranges</li>
- *   <li><b>Smooth Edges:</b> Anti-aliased boundaries</li>
- * </ul>
- *
- * <h2>Data Mapping:</h2>
- * <pre>
- * ChartPoint fields:
- *   x       → X coordinate
- *   y       → Center value (mean/median)
- *   min     → Lower boundary
- *   max     → Upper boundary
- * </pre>
- *
- * <h2>Use Cases:</h2>
- * <ul>
- *   <li>Temperature ranges (daily min/max)</li>
- *   <li>Stock price ranges (high/low/close)</li>
- *   <li>Forecast confidence intervals</li>
- *   <li>Sensor data with measurement uncertainty</li>
- * </ul>
+ * RangeRenderer - Range Area Chart
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class RangeRenderer extends BaseRenderer {
 
     private final double[] p0 = new double[2];
 
-    /**
-     * Reused paths to avoid allocations during rendering.
-     */
-    private final Path2D.Double upperPath = new Path2D.Double();
-    private final Path2D.Double lowerPath = new Path2D.Double();
-    private final Path2D.Double centerPath = new Path2D.Double();
-
     public RangeRenderer() {
         super("range");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 1) return;
 
-        final Color baseColor = getSeriesColor(model);
-        final Color rangeColor = ColorUtils.withAlpha(baseColor, 0.3f);
-
-        final Rectangle viewBounds = g.getClipBounds() != null ? g.getClipBounds() : context.plotBounds().getBounds();
-
-        // 1) Range fill path (upper forward + lower reverse)
-        Path2D rangePath = getPathCache();
-        boolean started = false;
+        final ArberColor baseColor = getSeriesColor(model);
+        final ArberColor rangeColor = ColorUtils.applyAlpha(baseColor, 0.3f);
 
         double[] xData = model.getXData();
         double[] yData = model.getYData();
         double[] minData = model.getLowData();
         double[] maxData = model.getHighData();
 
+        float[] xMax = RendererAllocationCache.getFloatArray(this, "range.x.max", count);
+        float[] yMax = RendererAllocationCache.getFloatArray(this, "range.y.max", count);
+        float[] xMin = RendererAllocationCache.getFloatArray(this, "range.x.min", count);
+        float[] yMin = RendererAllocationCache.getFloatArray(this, "range.y.min", count);
+        float[] xMid = RendererAllocationCache.getFloatArray(this, "range.x.mid", count);
+        float[] yMid = RendererAllocationCache.getFloatArray(this, "range.y.mid", count);
+
         for (int i = 0; i < count; i++) {
             context.mapToPixel(xData[i], maxData[i], p0);
-            if (!started) {
-                rangePath.moveTo(p0[0], p0[1]);
-                started = true;
-            } else {
-                rangePath.lineTo(p0[0], p0[1]);
-            }
-        }
-
-        for (int i = count - 1; i >= 0; i--) {
+            xMax[i] = (float) p0[0];
+            yMax[i] = (float) p0[1];
             context.mapToPixel(xData[i], minData[i], p0);
-            rangePath.lineTo(p0[0], p0[1]);
-        }
-
-        rangePath.closePath();
-
-        // Only draw if it intersects the clip (cheap reject)
-        if (rangePath.getBounds2D().intersects(viewBounds)) {
-            g.setColor(rangeColor);
-            g.fill(rangePath);
-        }
-
-        // 2) Upper boundary (reused)
-        upperPath.reset();
-        started = false;
-        for (int i = 0; i < count; i++) {
-            context.mapToPixel(xData[i], maxData[i], p0);
-            if (!started) {
-                upperPath.moveTo(p0[0], p0[1]);
-                started = true;
-            } else {
-                upperPath.lineTo(p0[0], p0[1]);
-            }
-        }
-
-        // 3) Lower boundary (reused)
-        lowerPath.reset();
-        started = false;
-        for (int i = 0; i < count; i++) {
-            context.mapToPixel(xData[i], minData[i], p0);
-            if (!started) {
-                lowerPath.moveTo(p0[0], p0[1]);
-                started = true;
-            } else {
-                lowerPath.lineTo(p0[0], p0[1]);
-            }
-        }
-
-        g.setColor(ColorUtils.withAlpha(baseColor, 0.6f));
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-        if (upperPath.getBounds2D().intersects(viewBounds)) g.draw(upperPath);
-        if (lowerPath.getBounds2D().intersects(viewBounds)) g.draw(lowerPath);
-
-        // 4) Center line (reused)
-        centerPath.reset();
-        started = false;
-        for (int i = 0; i < count; i++) {
+            xMin[i] = (float) p0[0];
+            yMin[i] = (float) p0[1];
             context.mapToPixel(xData[i], yData[i], p0);
-            if (!started) {
-                centerPath.moveTo(p0[0], p0[1]);
-                started = true;
-            } else {
-                centerPath.lineTo(p0[0], p0[1]);
-            }
+            xMid[i] = (float) p0[0];
+            yMid[i] = (float) p0[1];
         }
 
-        g.setColor(baseColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.0f)));
-        if (centerPath.getBounds2D().intersects(viewBounds)) g.draw(centerPath);
+        float[] polyX = RendererAllocationCache.getFloatArray(this, "range.poly.x", count * 2);
+        float[] polyY = RendererAllocationCache.getFloatArray(this, "range.poly.y", count * 2);
+        int p = 0;
+        for (int i = 0; i < count; i++) {
+            polyX[p] = xMax[i];
+            polyY[p] = yMax[i];
+            p++;
+        }
+        for (int i = count - 1; i >= 0; i--) {
+            polyX[p] = xMin[i];
+            polyY[p] = yMin[i];
+            p++;
+        }
+
+        canvas.setColor(rangeColor);
+        canvas.fillPolygon(polyX, polyY, p);
+
+        canvas.setColor(ColorUtils.applyAlpha(baseColor, 0.6f));
+        canvas.setStroke(ChartScale.scale(1.0f));
+        canvas.drawPolyline(xMax, yMax, count);
+        canvas.drawPolyline(xMin, yMin, count);
+
+        canvas.setColor(baseColor);
+        canvas.setStroke(ChartScale.scale(2.0f));
+        canvas.drawPolyline(xMid, yMid, count);
     }
 }

@@ -1,5 +1,4 @@
 package com.arbergashi.charts.model;
-
 /**
  * Optional extension for box plot models that provide explicit outliers.
  *

@@ -3,14 +3,13 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>IchimokuRenderer - Ichimoku Kinko Hyo (Ichimoku Cloud)</h1>
  *
@@ -29,6 +28,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class IchimokuRenderer extends BaseRenderer {
 
@@ -45,12 +46,10 @@ public final class IchimokuRenderer extends BaseRenderer {
     /**
      * Reused path for any polyline Ichimoku series.
      */
-    private final Path2D linePath = new Path2D.Double();
-
-    /**
-     * Reused path for the cloud quad segment.
-     */
-    private final Path2D cloudSegmentPath = new Path2D.Double();
+    private transient float[] pathX;
+    private transient float[] pathY;
+    private final float[] quadX = new float[4];
+    private final float[] quadY = new float[4];
 
     // Cached computed series (x + y) to avoid allocating ChartPoint lists
     private transient ChartModel cachedModel;
@@ -84,7 +83,7 @@ public final class IchimokuRenderer extends BaseRenderer {
         super("ichimoku");
     }
 
-    private static double calculateMidpoint(double[] highs, double[] lows, int start, int end) {
+    private static double getCalculatedMidpoint(double[] highs, double[] lows, int start, int end) {
         double high = Double.NEGATIVE_INFINITY;
         double low = Double.POSITIVE_INFINITY;
 
@@ -98,8 +97,10 @@ public final class IchimokuRenderer extends BaseRenderer {
         return (high + low) * 0.5;
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < SENKOU_B_PERIOD + DISPLACEMENT) return;
 
@@ -107,45 +108,45 @@ public final class IchimokuRenderer extends BaseRenderer {
         if (nTenkan < 2 || nKijun < 2 || nSpanA < 2 || nSpanB < 2 || nChikou < 2) return;
 
         // Theme-aligned colors (no new Color() allocations)
-        final ChartTheme theme = resolveTheme(context);
-        final Color tenkanColor = ColorUtils.adjustBrightness(theme.getBearishColor(), 1.15f);
-        final Color kijunColor = ColorUtils.adjustBrightness(theme.getAccentColor(), 1.05f);
-        final Color chikouColor = ColorUtils.withAlpha(theme.getForeground(), 0.65f);
-        final Color spanAColor = ColorUtils.adjustBrightness(theme.getBullishColor(), 1.10f);
-        final Color spanBColor = ColorUtils.adjustBrightness(theme.getBearishColor(), 1.10f);
-        final Color bullishCloudColor = ColorUtils.withAlpha(theme.getBullishColor(), 0.15f);
-        final Color bearishCloudColor = ColorUtils.withAlpha(theme.getBearishColor(), 0.15f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor tenkanColor = ColorRegistry.adjustBrightness(theme.getBearishColor(), 1.15f);
+        final ArberColor kijunColor = ColorRegistry.adjustBrightness(theme.getAccentColor(), 1.05f);
+        final ArberColor chikouColor = ColorRegistry.applyAlpha(theme.getForeground(), 0.65f);
+        final ArberColor spanAColor = ColorRegistry.adjustBrightness(theme.getBullishColor(), 1.10f);
+        final ArberColor spanBColor = ColorRegistry.adjustBrightness(theme.getBearishColor(), 1.10f);
+        final ArberColor bullishCloudColor = ColorRegistry.applyAlpha(theme.getBullishColor(), 0.15f);
+        final ArberColor bearishCloudColor = ColorRegistry.applyAlpha(theme.getBearishColor(), 0.15f);
 
-        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(g, context);
+        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(context);
 
         // Draw cloud (Kumo) first (background layer)
-        drawCloud(g, context, bullishCloudColor, bearishCloudColor, vp);
+        drawCloud(canvas, context, bullishCloudColor, bearishCloudColor, vp);
 
         // slice all series
-        final IndicatorRendererSupport.IndexRange spanRange = IndicatorRendererSupport.visibleRange(g, context, Math.min(nSpanA, nSpanB), 2);
-        final IndicatorRendererSupport.IndexRange tenkanRange = IndicatorRendererSupport.visibleRange(g, context, nTenkan, 2);
-        final IndicatorRendererSupport.IndexRange kijunRange = IndicatorRendererSupport.visibleRange(g, context, nKijun, 2);
-        final IndicatorRendererSupport.IndexRange chikouRange = IndicatorRendererSupport.visibleRange(g, context, nChikou, 2);
+        final IndicatorRendererSupport.IndexRange spanRange = IndicatorRendererSupport.visibleRange(context, Math.min(nSpanA, nSpanB), 2);
+        final IndicatorRendererSupport.IndexRange tenkanRange = IndicatorRendererSupport.visibleRange(context, nTenkan, 2);
+        final IndicatorRendererSupport.IndexRange kijunRange = IndicatorRendererSupport.visibleRange(context, nKijun, 2);
+        final IndicatorRendererSupport.IndexRange chikouRange = IndicatorRendererSupport.visibleRange(context, nChikou, 2);
 
         // Draw leading spans
-        drawLine(g, xSpanA, ySpanA, spanRange.start(), spanRange.endExclusive(), context, spanAColor, 1.5f, vp);
-        drawLine(g, xSpanB, ySpanB, spanRange.start(), spanRange.endExclusive(), context, spanBColor, 1.5f, vp);
+        drawLine(canvas, xSpanA, ySpanA, spanRange.getStart(), spanRange.getEndExclusive(), context, spanAColor, 1.5f, vp);
+        drawLine(canvas, xSpanB, ySpanB, spanRange.getStart(), spanRange.getEndExclusive(), context, spanBColor, 1.5f, vp);
 
         // Draw base lines
-        drawLine(g, xKijun, yKijun, kijunRange.start(), kijunRange.endExclusive(), context, kijunColor, 2.0f, vp);
-        drawLine(g, xTenkan, yTenkan, tenkanRange.start(), tenkanRange.endExclusive(), context, tenkanColor, 2.0f, vp);
+        drawLine(canvas, xKijun, yKijun, kijunRange.getStart(), kijunRange.getEndExclusive(), context, kijunColor, 2.0f, vp);
+        drawLine(canvas, xTenkan, yTenkan, tenkanRange.getStart(), tenkanRange.getEndExclusive(), context, tenkanColor, 2.0f, vp);
 
         // Draw lagging span
-        drawLine(g, xChikou, yChikou, chikouRange.start(), chikouRange.endExclusive(), context, chikouColor, 1.5f, vp);
+        drawLine(canvas, xChikou, yChikou, chikouRange.getStart(), chikouRange.getEndExclusive(), context, chikouColor, 1.5f, vp);
     }
 
-    private void drawCloud(Graphics2D g, PlotContext context, Color bullishColor, Color bearishColor, IndicatorRendererSupport.Viewport vp) {
+    private void drawCloud(ArberCanvas canvas, PlotContext context, ArberColor bullishColor, ArberColor bearishColor, IndicatorRendererSupport.Viewport vp) {
         if (nSpanA < 2 || nSpanB < 2) return;
         final int n = Math.min(nSpanA, nSpanB);
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, n, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, n, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive - start < 2) return;
 
         for (int i = start; i < endExclusive - 1; i++) {
@@ -160,55 +161,62 @@ public final class IchimokuRenderer extends BaseRenderer {
             double maxX = Math.max(Math.max(pxA[0], pxB[0]), Math.max(pxC[0], pxD[0]));
             double minY = Math.min(Math.min(pxA[1], pxB[1]), Math.min(pxC[1], pxD[1]));
             double maxY = Math.max(Math.max(pxA[1], pxB[1]), Math.max(pxC[1], pxD[1]));
-            if (maxX < vp.x() || minX > vp.maxX() || maxY < vp.y() || minY > vp.maxY()) {
+            if (maxX < vp.getX() || minX > vp.getMaxX() || maxY < vp.getY() || minY > vp.getMaxY()) {
                 continue;
             }
 
-            cloudSegmentPath.reset();
-            cloudSegmentPath.moveTo(pxA[0], pxA[1]);
-            cloudSegmentPath.lineTo(pxB[0], pxB[1]);
-            cloudSegmentPath.lineTo(pxD[0], pxD[1]);
-            cloudSegmentPath.lineTo(pxC[0], pxC[1]);
-            cloudSegmentPath.closePath();
+            quadX[0] = (float) pxA[0];
+            quadY[0] = (float) pxA[1];
+            quadX[1] = (float) pxB[0];
+            quadY[1] = (float) pxB[1];
+            quadX[2] = (float) pxD[0];
+            quadY[2] = (float) pxD[1];
+            quadX[3] = (float) pxC[0];
+            quadY[3] = (float) pxC[1];
 
             // Color based on which span is on top
             boolean bullish = ySpanA[i] > ySpanB[i];
-            g.setColor(bullish ? bullishColor : bearishColor);
-            g.fill(cloudSegmentPath);
+            canvas.setColor(bullish ? bullishColor : bearishColor);
+            canvas.fillPolygon(quadX, quadY, 4);
         }
     }
 
-    private void drawLine(Graphics2D g,
+    private void drawLine(ArberCanvas canvas,
                           double[] xs,
                           double[] ys,
                           int start,
                           int endExclusive,
                           PlotContext context,
-                          Color color,
+                          ArberColor color,
                           float width,
                           IndicatorRendererSupport.Viewport vp) {
         if (endExclusive - start < 2) return;
+        int count = endExclusive - start;
+        ensurePathCapacity(count);
 
-        linePath.reset();
-
-        context.mapToPixel(xs[start], ys[start], pxA);
-        linePath.moveTo(pxA[0], pxA[1]);
-
-        final double minX = vp.x() - 2.0;
-        final double maxX = vp.maxX() + 2.0;
-
-        for (int i = start + 1; i < endExclusive; i++) {
+        final double minX = vp.getX() - 2.0;
+        final double maxX = vp.getMaxX() + 2.0;
+        int outCount = 0;
+        for (int i = start; i < endExclusive; i++) {
             context.mapToPixel(xs[i], ys[i], pxA);
             if (pxA[0] < minX || pxA[0] > maxX) {
-                linePath.moveTo(pxA[0], pxA[1]);
                 continue;
             }
-            linePath.lineTo(pxA[0], pxA[1]);
+            pathX[outCount] = (float) pxA[0];
+            pathY[outCount] = (float) pxA[1];
+            outCount++;
         }
+        if (outCount < 2) return;
+        canvas.setColor(color);
+        canvas.setStroke(ChartScale.scale(width));
+        canvas.drawPolyline(pathX, pathY, outCount);
+    }
 
-        g.setColor(color);
-        g.setStroke(getCachedStroke(ChartScale.scale(width)));
-        g.draw(linePath);
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
+        }
     }
 
     private void ensureCache(ChartModel model) {
@@ -225,16 +233,24 @@ public final class IchimokuRenderer extends BaseRenderer {
         // cache highs/lows once
         final double[] hs = highs;
         final double[] ls = lows;
-        for (int i = 0; i < n; i++) {
-            hs[i] = model.getMax(i);
-            ls[i] = model.getMin(i);
+        final FinancialChartModel fin = (model instanceof FinancialChartModel) ? (FinancialChartModel) model : null;
+        if (fin != null) {
+            for (int i = 0; i < n; i++) {
+                hs[i] = fin.getHigh(i);
+                ls[i] = fin.getLow(i);
+            }
+        } else {
+            for (int i = 0; i < n; i++) {
+                hs[i] = model.getMax(i);
+                ls[i] = model.getMin(i);
+            }
         }
 
         // --- Tenkan (9) ---
         nTenkan = 0;
         for (int i = TENKAN_PERIOD - 1; i < n; i++) {
             xTenkan[nTenkan] = model.getX(i);
-            yTenkan[nTenkan] = calculateMidpoint(hs, ls, i - TENKAN_PERIOD + 1, i);
+            yTenkan[nTenkan] = getCalculatedMidpoint(hs, ls, i - TENKAN_PERIOD + 1, i);
             nTenkan++;
         }
 
@@ -242,15 +258,15 @@ public final class IchimokuRenderer extends BaseRenderer {
         nKijun = 0;
         for (int i = KIJUN_PERIOD - 1; i < n; i++) {
             xKijun[nKijun] = model.getX(i);
-            yKijun[nKijun] = calculateMidpoint(hs, ls, i - KIJUN_PERIOD + 1, i);
+            yKijun[nKijun] = getCalculatedMidpoint(hs, ls, i - KIJUN_PERIOD + 1, i);
             nKijun++;
         }
 
         // --- Span A (forward displaced) ---
         nSpanA = 0;
         for (int i = KIJUN_PERIOD - 1; i < n; i++) {
-            double tenkan = calculateMidpoint(hs, ls, i - TENKAN_PERIOD + 1, i);
-            double kijun = calculateMidpoint(hs, ls, i - KIJUN_PERIOD + 1, i);
+            double tenkan = getCalculatedMidpoint(hs, ls, i - TENKAN_PERIOD + 1, i);
+            double kijun = getCalculatedMidpoint(hs, ls, i - KIJUN_PERIOD + 1, i);
             double spanA = (tenkan + kijun) * 0.5;
 
             int displacedIndex = i + DISPLACEMENT;
@@ -264,7 +280,7 @@ public final class IchimokuRenderer extends BaseRenderer {
         // --- Span B (52 forward displaced) ---
         nSpanB = 0;
         for (int i = SENKOU_B_PERIOD - 1; i < n; i++) {
-            double spanB = calculateMidpoint(hs, ls, i - SENKOU_B_PERIOD + 1, i);
+            double spanB = getCalculatedMidpoint(hs, ls, i - SENKOU_B_PERIOD + 1, i);
             int displacedIndex = i + DISPLACEMENT;
             if (displacedIndex < n) {
                 xSpanB[nSpanB] = model.getX(displacedIndex);
@@ -278,7 +294,7 @@ public final class IchimokuRenderer extends BaseRenderer {
         for (int i = DISPLACEMENT; i < n; i++) {
             int laggedIndex = i - DISPLACEMENT;
             xChikou[nChikou] = model.getX(laggedIndex);
-            yChikou[nChikou] = model.getY(i);
+            yChikou[nChikou] = (fin != null) ? fin.getClose(i) : model.getY(i);
             nChikou++;
         }
     }

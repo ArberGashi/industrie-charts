@@ -1,15 +1,14 @@
 package com.arbergashi.charts.render.medical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.CircularFastMedicalModel;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.function.Function;
-
 /**
  * Abstract base class for medical sweep renderers (ECG, PPG, IBP, NIRS).
  * Eliminates redundancy and encapsulates sweep-erase logic.
@@ -24,16 +23,17 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
      * Default: Returns the key directly (no translation).
      */
     private static Function<String, String> nameTranslator = key -> key;
-    protected final Path2D.Double renderPath = new Path2D.Double();
     protected final double[] sharedCoord = new double[2];
-    private final Color fallbackColor;
-    private final BasicStroke stroke;
+    private final ArberColor fallbackColor;
+    private final float strokeWidth;
     private final int gapWidth;
+    private transient float[] pathX = new float[0];
+    private transient float[] pathY = new float[0];
 
-    protected AbstractMedicalSweepRenderer(Color color, float strokeWidth, int gapWidth) {
+    protected AbstractMedicalSweepRenderer(ArberColor color, float strokeWidth, int gapWidth) {
         super("medicalSweep");
         this.fallbackColor = color;
-        this.stroke = new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        this.strokeWidth = strokeWidth;
         this.gapWidth = gapWidth;
     }
 
@@ -46,7 +46,7 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
     }
 
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof CircularFastMedicalModel circleModel)) return;
         double[] rawX = circleModel.getXData();
         double[] rawY = circleModel.getRawChannelArray(getChannelIndex());
@@ -54,38 +54,49 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
         int capacity = circleModel.getRawCapacity();
         int gapEnd = (head + gapWidth) % capacity;
         boolean wrap = head > gapEnd;
-        renderPath.reset();
+        ensureBufferCapacity(capacity);
         boolean firstPointAfterGap = true;
+        int count = 0;
         for (int i = 0; i < capacity; i++) {
             if (wrap ? (i >= head || i < gapEnd) : (i >= head && i < gapEnd)) {
+                if (count > 1) {
+                    canvas.setColor(getResolvedWaveColor(model, context));
+                    canvas.setStroke(strokeWidth);
+                    canvas.drawPolyline(pathX, pathY, count);
+                }
+                count = 0;
                 firstPointAfterGap = true;
                 continue;
             }
             context.mapToPixel(rawX[i], rawY[i], sharedCoord);
             if (firstPointAfterGap) {
-                renderPath.moveTo(sharedCoord[0], sharedCoord[1]);
+                pathX[count] = (float) sharedCoord[0];
+                pathY[count] = (float) sharedCoord[1];
+                count++;
                 firstPointAfterGap = false;
             } else {
-                renderPath.lineTo(sharedCoord[0], sharedCoord[1]);
+                pathX[count] = (float) sharedCoord[0];
+                pathY[count] = (float) sharedCoord[1];
+                count++;
             }
         }
-        setupQualityHints(g);
-        g.setColor(resolveWaveColor(model, context));
-        g.setStroke(stroke);
-        g.draw(renderPath);
+        if (count > 1) {
+            canvas.setColor(getResolvedWaveColor(model, context));
+            canvas.setStroke(strokeWidth);
+            canvas.drawPolyline(pathX, pathY, count);
+        }
     }
 
-    protected Color resolveWaveColor(ChartModel model, PlotContext context) {
+    protected ArberColor getResolvedWaveColor(ChartModel model, PlotContext context) {
         if (model != null && model.getColor() != null) return model.getColor();
         if (context != null) {
-            return resolveTheme(context).getSeriesColor(getLayerIndex());
+            return getResolvedTheme(context).getSeriesColor(getLayerIndex());
         }
         return fallbackColor;
     }
-
     /**
-     * Defaults to channel 0, can be overridden by subclasses.
-     */
+         * Defaults to channel 0, can be overridden by subclasses.
+    */
     protected int getChannelIndex() {
         return 0;
     }
@@ -98,7 +109,7 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         if (!(model instanceof CircularFastMedicalModel circleModel)) return Optional.empty();
         double[] rawX = circleModel.getXData();
         double[] rawY = circleModel.getRawChannelArray(getChannelIndex());
@@ -113,8 +124,8 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
         for (int i = 0; i < size; i++) {
             int idx = (head - size + i + capacity) % capacity;
             context.mapToPixel(rawX[idx], rawY[idx], coord);
-            double dx = coord[0] - pixel.getX();
-            double dy = coord[1] - pixel.getY();
+            double dx = coord[0] - pixel.x();
+            double dy = coord[1] - pixel.y();
             double distSq = dx * dx + dy * dy;
             if (distSq < minDistSq) {
                 minDistSq = distSq;
@@ -126,5 +137,14 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
             return Optional.of(bestIdx);
         }
         return Optional.empty();
+    }
+
+    private void ensureBufferCapacity(int capacity) {
+        if (pathX.length >= capacity) return;
+        int next = 1;
+        while (next < capacity && next > 0) next <<= 1;
+        if (next <= 0) next = capacity;
+        pathX = new float[next];
+        pathY = new float[next];
     }
 }

@@ -1,7 +1,6 @@
 package com.arbergashi.charts.util;
 
-import java.awt.*;
-
+import com.arbergashi.charts.api.types.ArberColor;
 /**
  * Color utilities.
  * @author Arber Gashi
@@ -23,30 +22,33 @@ public final class ColorUtils {
      * @param alpha Alpha (0.0 - 1.0)
      * @return New Color instance
      */
-    public static Color withAlpha(Color c, float alpha) {
-        return ColorRegistry.withAlpha(c, alpha);
+    public static ArberColor applyAlpha(ArberColor c, float alpha) {
+        if (c == null) return null;
+        return ColorRegistry.applyAlpha(c, alpha);
     }
 
     /**
      * Adjust brightness by multiplying RGB channels by factor (>0). Clamps to 0-255.
      */
-    public static Color adjustBrightness(Color c, double factor) {
+    public static ArberColor adjustBrightness(ArberColor c, double factor) {
+        if (c == null) return null;
         return ColorRegistry.adjustBrightness(c, factor);
     }
 
     /**
      * Returns BLACK or WHITE depending on which contrasts better with the input color.
      */
-    public static Color getContrastColor(Color c) {
-        // Perceived luminance (Rec. 709)
-        double lum = (0.2126 * c.getRed() + 0.7152 * c.getGreen() + 0.0722 * c.getBlue()) / 255.0;
-        return (lum > 0.5) ? Color.BLACK : Color.WHITE;
+    public static ArberColor getContrastColor(ArberColor c) {
+        if (c == null) return null;
+        double lum = (0.2126 * c.red() + 0.7152 * c.green() + 0.0722 * c.blue()) / 255.0;
+        return (lum > 0.5) ? ColorRegistry.ofArgb(0xFFFFFFFF) : ColorRegistry.ofArgb(0xFF000000);
     }
 
     /**
      * Linearly interpolate between two colors in RGBA space.
      */
-    public static Color interpolate(Color a, Color b, float t) {
+    public static ArberColor interpolate(ArberColor a, ArberColor b, float t) {
+        if (a == null && b == null) return null;
         return ColorRegistry.interpolate(a, b, t);
     }
 }

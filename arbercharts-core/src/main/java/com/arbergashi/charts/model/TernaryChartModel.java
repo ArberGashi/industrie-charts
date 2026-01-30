@@ -1,7 +1,6 @@
 package com.arbergashi.charts.model;
 
 import java.util.List;
-
 /**
  * An extension of ChartModel for 3-component data, required for Ternary Plots.
  * Each data point represents a composition of three parts that sum to a constant.

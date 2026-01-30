@@ -1,19 +1,14 @@
 package com.arbergashi.charts.render.circular;
 
-import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import java.util.Optional;
-
 /**
  * <h1>Modern Stacked Polar Renderer</h1>
  * <p>
@@ -31,6 +26,8 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class PolarAdvancedRenderer extends BaseRenderer {
 
@@ -41,8 +38,10 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
         super("polarAdvanced");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         // This renderer expects to be used in a multi-layer setup.
         // It draws one layer (one series) at a time.
         // The `ArberChartPanel` is responsible for calling this for each series.
@@ -52,10 +51,10 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
         int n = model.getPointCount();
         if (n <= 0) return;
 
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
-        double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.85;
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
+        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
         double angleStep = 360.0 / n;
 
         double[] yData = model.getYData();
@@ -66,50 +65,58 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
             // The 'x' value is used to get the previous layer's value for stacking
             double previousValue = xData[i]; 
             
-            double startRadius = maxRadius * (previousValue / context.maxY());
-            double endRadius = maxRadius * ((previousValue + value) / context.maxY());
+            double startRadius = maxRadius * (previousValue / context.getMaxY());
+            double endRadius = maxRadius * ((previousValue + value) / context.getMaxY());
             
             double startAngle = i * angleStep - 90;
             
-            Color color = getSeriesColor(model);
+            ArberColor color = getSeriesColor(model);
             if (i == hoverCategory) {
-                 color = color.brighter();
+                 // no brighten in core
             }
 
-            drawSegment(g2, cx, cy, startRadius, endRadius, startAngle, angleStep, color);
+            drawSegment(canvas, cx, cy, startRadius, endRadius, startAngle, angleStep, color);
         }
     }
 
-    private void drawSegment(Graphics2D g2, double cx, double cy, double r1, double r2, double startAngle, double extent, Color color) {
-        // Create a shape for the segment (outer arc, line, inner arc, line)
-        Arc2D outerArc = getArc(cx - r2, cy - r2, r2 * 2, r2 * 2, -startAngle, -extent, Arc2D.OPEN);
-        Arc2D innerArc = getArc(cx - r1, cy - r1, r1 * 2, r1 * 2, -(startAngle + extent), extent, Arc2D.OPEN);
-        
-        Path2D path = getPathCache();
-        path.reset();
-        path.append(outerArc, false);
-        path.append(innerArc, true);
-        path.closePath();
-        
-        g2.setColor(ColorUtils.withAlpha(color, 0.75f));
-        g2.fill(path);
-        g2.setColor(color);
-        g2.draw(path);
+    private void drawSegment(ArberCanvas canvas, double cx, double cy, double r1, double r2, double startAngle, double extent, ArberColor color) {
+        int segs = 24;
+        int total = (segs + 1) * 2;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarAdv.seg.x", total);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarAdv.seg.y", total);
+        int idx = 0;
+        double start = Math.toRadians(startAngle);
+        double end = Math.toRadians(startAngle + extent);
+        for (int i = 0; i <= segs; i++) {
+            double t = start + (end - start) * (i / (double) segs);
+            xs[idx] = (float) (cx + Math.cos(t) * r2);
+            ys[idx] = (float) (cy + Math.sin(t) * r2);
+            idx++;
+        }
+        for (int i = segs; i >= 0; i--) {
+            double t = start + (end - start) * (i / (double) segs);
+            xs[idx] = (float) (cx + Math.cos(t) * r1);
+            ys[idx] = (float) (cy + Math.sin(t) * r1);
+            idx++;
+        }
+        canvas.setColor(color);
+        canvas.fillPolygon(xs, ys, idx);
+        canvas.drawPolyline(xs, ys, idx);
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         // This renderer requires a more complex hit-testing logic that is aware of all layers.
         // For now, we provide a simplified version that finds the category.
         int n = model.getPointCount();
         if (n <= 0) return Optional.empty();
 
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
         
-        double dx = pixel.getX() - cx;
-        double dy = pixel.getY() - cy;
+        double dx = pixel.x() - cx;
+        double dy = pixel.y() - cy;
         
         double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90;
         if (angle < 0) angle += 360;

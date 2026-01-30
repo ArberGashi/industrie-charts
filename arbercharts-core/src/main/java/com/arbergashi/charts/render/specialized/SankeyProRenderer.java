@@ -1,22 +1,25 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Rectangle2D;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Sankey Pro: improved flow diagram with smoother ribbons and label caching.
+ * Sankey Pro: improved flow diagram with smoother ribbons.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class SankeyProRenderer extends BaseRenderer {
 
@@ -28,20 +31,23 @@ public final class SankeyProRenderer extends BaseRenderer {
         super("sankey_pro");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle2D bounds = context.plotBounds();
-        double left = bounds.getX() + 40;
-        double right = bounds.getX() + bounds.getWidth() - 40;
-        double top = bounds.getY() + 40;
-        double h = bounds.getHeight() - 80;
+        ArberRect bounds = context.getPlotBounds();
+        double left = bounds.x() + 40;
+        double right = bounds.x() + bounds.width() - 40;
+        double top = bounds.y() + 40;
+        double h = bounds.height() - 80;
 
         // map node names to y positions (reuse map to avoid allocations)
-        java.util.Map<String, Double> nodeY = com.arbergashi.charts.tools.RendererAllocationCache.getMap(this, "sankeypro.nodeY");
-        java.util.Map<String, Integer> nodeIndex = com.arbergashi.charts.tools.RendererAllocationCache.getMap(this, "sankeypro.nodeIndex");
+        Map<String, Double> nodeY = RendererAllocationCache.getMap(this, "sankeypro.nodeY");
+        Map<String, Integer> nodeIndex = RendererAllocationCache.getMap(this, "sankeypro.nodeIndex");
         int idx = 0;
         for (int i = 0; i < count; i++) {
             String lbl = model.getLabel(i);
@@ -58,10 +64,7 @@ public final class SankeyProRenderer extends BaseRenderer {
             }
         }
 
-        Color baseColor = getSeriesColor(model);
-        if (!isMultiColor()) {
-            g2.setColor(baseColor);
-        }
+        ArberColor baseColor = getSeriesColor(model);
 
         // draw smooth ribbons via cubic curves between source and destination nodes
         for (int i = 0; i < count; i++) {
@@ -72,28 +75,36 @@ public final class SankeyProRenderer extends BaseRenderer {
             Double y1 = nodeY.get(parts[0]);
             Double y2 = nodeY.get(parts[1]);
             if (y1 == null || y2 == null) continue;
-            // JDK 25: Use Math.clamp() for weight bounds
             double weight = Math.clamp(model.getY(i), 1.0, 20.0);
-            Color linkColor = baseColor;
+            ArberColor linkColor = baseColor;
             if (isMultiColor()) {
                 Integer srcIdx = nodeIndex.get(parts[0]);
                 linkColor = themeSeries(context, srcIdx == null ? 0 : srcIdx);
                 if (linkColor == null) linkColor = baseColor;
-                g2.setColor(linkColor);
             }
 
-            // control points to smooth the flow
-            double x1 = left, x2 = right;
+            double x1 = left;
+            double x2 = right;
             double cx1 = left + (right - left) * 0.35;
             double cx2 = left + (right - left) * 0.65;
 
-            g2.setStroke(getCachedStroke((float) weight, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2.draw(getCubicCurve(x1, y1, cx1, y1, cx2, y2, x2, y2));
-        }
+            int segments = 24;
+            float[] xs = RendererAllocationCache.getFloatArray(this, "sankeypro.link.x", segments + 1);
+            float[] ys = RendererAllocationCache.getFloatArray(this, "sankeypro.link.y", segments + 1);
+            for (int j = 0; j <= segments; j++) {
+                float t = j / (float) segments;
+                float u = 1f - t;
+                float tt = t * t;
+                float uu = u * u;
+                float uuu = uu * u;
+                float ttt = tt * t;
+                xs[j] = (float) (uuu * x1 + 3f * uu * t * cx1 + 3f * u * tt * cx2 + ttt * x2);
+                ys[j] = (float) (uuu * y1 + 3f * uu * t * y1 + 3f * u * tt * y2 + ttt * y2);
+            }
 
-        // draw node labels using BaseRenderer infrastructure
-        for (Map.Entry<String, Double> e : nodeY.entrySet()) {
-            drawLabel(g2, e.getKey(), g2.getFont(), themeAxisLabel(context), (float) (left - 30), e.getValue().floatValue());
+            canvas.setStroke((float) weight);
+            canvas.setColor(ColorUtils.applyAlpha(linkColor, 0.28f));
+            canvas.drawPolyline(xs, ys, segments + 1);
         }
     }
 }

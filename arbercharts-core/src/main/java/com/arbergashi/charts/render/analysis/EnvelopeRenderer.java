@@ -1,13 +1,11 @@
 package com.arbergashi.charts.render.analysis;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-import java.awt.*;
-import java.awt.geom.Path2D;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.ChartScale;
 /**
  * Envelope renderer.
  *
@@ -17,14 +15,16 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class EnvelopeRenderer extends BaseRenderer {
 
     private final double[] pBuffer = new double[2];
     // Buffers for Monotonic Queues (indices)
     // Window is capped at 201, so 256 is safe capacity
-    private final int[] minQ = new int[256];
-    private final int[] maxQ = new int[256];
+    private int[] minQ = new int[256];
+    private int[] maxQ = new int[256];
     private double[] lowerX = new double[256];
     private double[] lowerY = new double[256];
 
@@ -32,27 +32,35 @@ public final class EnvelopeRenderer extends BaseRenderer {
         super("envelope");
     }
 
+    /**
+     * Renders the envelope band using a sliding window min/max.
+     *
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-        int count = model.getPointCount();
-        if (count < 3) return;
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        int count = Math.min(model.getPointCount(), Math.min(xData.length, yData.length));
+        if (count < 3) return;
 
         int window = Math.max(3, Math.min(201, (int) Math.round(Math.sqrt(count))));
         int half = window / 2;
 
-        Path2D upper = getPathCache();
-
-        // Ensure capacity for lower buffer
+        // Ensure capacity for buffers
         if (lowerX.length < count) {
-            int newCap = Math.max(count, lowerX.length * 2);
-            lowerX = RendererAllocationCache.getDoubleArray(this, "lowerX", newCap);
-            lowerY = RendererAllocationCache.getDoubleArray(this, "lowerY", newCap);
+            lowerX = RendererAllocationCache.getDoubleArray(this, "lowerX", count);
+            lowerY = RendererAllocationCache.getDoubleArray(this, "lowerY", count);
+        }
+        if (minQ.length < count) {
+            minQ = RendererAllocationCache.getIntArray(this, "env.minQ", count);
+            maxQ = RendererAllocationCache.getIntArray(this, "env.maxQ", count);
         }
 
-        boolean started = false;
         int lowerCount = 0;
+        float[] upperX = RendererAllocationCache.getFloatArray(this, "env.upper.x", count);
+        float[] upperY = RendererAllocationCache.getFloatArray(this, "env.upper.y", count);
+        int upperCount = 0;
 
         // Monotonic Queue State
         int minH = 0, minT = 0; // Head, Tail
@@ -89,54 +97,58 @@ public final class EnvelopeRenderer extends BaseRenderer {
 
             // Upper path
             context.mapToPixel(x, max, pBuffer);
-            if (!started) {
-                upper.moveTo(pBuffer[0], pBuffer[1]);
-                started = true;
-            } else {
-                upper.lineTo(pBuffer[0], pBuffer[1]);
-            }
+            upperX[upperCount] = (float) pBuffer[0];
+            upperY[upperCount] = (float) pBuffer[1];
+            upperCount++;
 
             // Store lower path points
             context.mapToPixel(x, min, pBuffer);
+            if (lowerCount >= lowerX.length) {
+                lowerX = RendererAllocationCache.getDoubleArray(this, "lowerX", lowerCount + 1);
+                lowerY = RendererAllocationCache.getDoubleArray(this, "lowerY", lowerCount + 1);
+            }
             lowerX[lowerCount] = pBuffer[0];
             lowerY[lowerCount] = pBuffer[1];
             lowerCount++;
         }
 
-        Color base = seriesOrBase(model, context, 0);
-        Color strokeBase = isMultiColor() ? themeSeries(context, 1) : base;
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor strokeBase = isMultiColor() ? themeSeries(context, 1) : base;
         if (strokeBase == null) strokeBase = base;
-        Color fill = ColorUtils.withAlpha(base, 0.12f);
-        Color stroke = ColorUtils.withAlpha(strokeBase, 0.65f);
+        ArberColor fill = base;
+        ArberColor stroke = strokeBase;
 
-        g2.setStroke(getCachedStroke((float) ChartScale.scale(1.5)));
-        g2.setColor(stroke);
-        if (started) g2.draw(upper);
+        canvas.setStroke((float) ChartScale.scale(1.5));
+        canvas.setColor(stroke);
+        if (upperCount > 1) canvas.drawPolyline(upperX, upperY, upperCount);
 
         // Draw lower line (reusing buffer)
         if (lowerCount > 1) {
-            Path2D lowerPath = getPathCache(); // We can reuse this if we draw upper first
-            // Actually upper is already drawn. But we need upper for the fill.
-            // Strategy: Draw upper. Append lower (reversed) to upper. Fill. Draw lower.
-
-            // 1. Append lower points to upper to form the band
+            int bandCount = upperCount + lowerCount;
+            float[] bandX = RendererAllocationCache.getFloatArray(this, "env.band.x", bandCount);
+            float[] bandY = RendererAllocationCache.getFloatArray(this, "env.band.y", bandCount);
+            int idx = 0;
+            for (int i = 0; i < upperCount; i++) {
+                bandX[idx] = upperX[i];
+                bandY[idx] = upperY[i];
+                idx++;
+            }
             for (int i = lowerCount - 1; i >= 0; i--) {
-                upper.lineTo(lowerX[i], lowerY[i]);
+                bandX[idx] = (float) lowerX[i];
+                bandY[idx] = (float) lowerY[i];
+                idx++;
             }
-            upper.closePath();
-            g2.setColor(fill);
-            g2.fill(upper);
+            canvas.setColor(fill);
+            canvas.fillPolygon(bandX, bandY, idx);
 
-            // 2. Draw lower stroke (optional, but consistent)
-            g2.setColor(stroke);
-            // We can't reuse 'upper' anymore as it is closed.
-            // We can reuse the path cache if we reset it, but 'upper' IS the path cache.
-            // Since we need to draw the lower line, we can just iterate and drawLine for Zero-GC
-            // or use a second path cache if available. 
-            // For strict Zero-GC without second cache:
-            for (int i = 0; i < lowerCount - 1; i++) {
-                g2.draw(getLine(lowerX[i], lowerY[i], lowerX[i + 1], lowerY[i + 1]));
+            canvas.setColor(stroke);
+            float[] lowerXF = RendererAllocationCache.getFloatArray(this, "env.lower.x", lowerCount);
+            float[] lowerYF = RendererAllocationCache.getFloatArray(this, "env.lower.y", lowerCount);
+            for (int i = 0; i < lowerCount; i++) {
+                lowerXF[i] = (float) lowerX[i];
+                lowerYF[i] = (float) lowerY[i];
             }
+            canvas.drawPolyline(lowerXF, lowerYF, lowerCount);
         }
     }
 }

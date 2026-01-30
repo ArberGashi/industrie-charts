@@ -1,0 +1,13 @@
+[
+  {
+    "name": "com.arbergashi.charts.spring.autoconfigure.ArberChartsAutoConfiguration",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.arbergashi.charts.spring.autoconfigure.ArberChartsProperties",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  }
+]

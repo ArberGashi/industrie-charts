@@ -3,7 +3,6 @@ package com.arbergashi.charts.api;
 import com.arbergashi.charts.model.DefaultChartModel;
 import java.util.Collection;
 import java.util.function.ToDoubleFunction;
-
 /**
  * Utility for binding plain Java objects (POJOs) into chart models.
  *
@@ -37,7 +36,7 @@ public final class ChartModelBinder {
                                             ToDoubleFunction<T> yExtractor) {
         DefaultChartModel model = new DefaultChartModel(name);
         for (T item : data) {
-            model.addPoint(xExtractor.applyAsDouble(item), yExtractor.applyAsDouble(item), 0, null);
+            model.setPoint(xExtractor.applyAsDouble(item), yExtractor.applyAsDouble(item), 0, null);
         }
         return model;
     }

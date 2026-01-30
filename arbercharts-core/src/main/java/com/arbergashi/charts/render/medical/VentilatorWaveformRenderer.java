@@ -2,14 +2,13 @@ package com.arbergashi.charts.render.medical;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.FastMedicalModel;
 import com.arbergashi.charts.render.BaseRenderer;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
 import java.util.function.Function;
-
 /**
  * Ventilator waveform renderer: visualizes pressure, volume, and flow curves.
  * Renders three synchronized traces with zero-allocation hot paths.
@@ -17,6 +16,8 @@ import java.util.function.Function;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class VentilatorWaveformRenderer extends BaseRenderer {
     /**
@@ -24,9 +25,9 @@ public class VentilatorWaveformRenderer extends BaseRenderer {
      * Default returns the key unchanged (no translation).
      */
     private static Function<String, String> nameTranslator = key -> key;
-    private final Path2D.Double[] renderPaths = {new Path2D.Double(), new Path2D.Double(), new Path2D.Double()};
-    private final Color[] colors = new Color[3];
-    private final BasicStroke stroke = new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+    private final ArberColor[] colors = new ArberColor[3];
+    private final float[][] pathX = {new float[0], new float[0], new float[0]};
+    private final float[][] pathY = {new float[0], new float[0], new float[0]};
     // Cached coordinate arrays as members to avoid allocations in the render loop.
     private final double[] sharedPixelCoord = new double[2];
     private transient int themeKey;
@@ -43,14 +44,16 @@ public class VentilatorWaveformRenderer extends BaseRenderer {
         nameTranslator = translator != null ? translator : key -> key;
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof FastMedicalModel fastModel)) return;
-        ChartTheme theme = resolveTheme(context);
+        ChartTheme theme = getResolvedTheme(context);
         ensureColors(theme);
         int totalPoints = fastModel.getPointCount();
         if (totalPoints < 2) return;
-        for (Path2D.Double p : renderPaths) p.reset();
+        ensureBufferCapacity(totalPoints);
         for (int i = 0; i < totalPoints; i++) {
             double x = fastModel.getX(i);
             for (int c = 0; c < 3; c++) {
@@ -58,21 +61,15 @@ public class VentilatorWaveformRenderer extends BaseRenderer {
                 context.mapToPixel(x, yVal, sharedPixelCoord);
                 double xPix = sharedPixelCoord[0];
                 double yPix = sharedPixelCoord[1];
-                if (i == 0) {
-                    renderPaths[c].moveTo(xPix, yPix);
-                } else {
-                    renderPaths[c].lineTo(xPix, yPix);
-                }
+                pathX[c][i] = (float) xPix;
+                pathY[c][i] = (float) yPix;
             }
         }
-        Object oldHint = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         for (int c = 0; c < 3; c++) {
-            g2.setColor(colors[c]);
-            g2.setStroke(stroke);
-            g2.draw(renderPaths[c]);
+            canvas.setColor(colors[c]);
+            canvas.setStroke(1.5f);
+            canvas.drawPolyline(pathX[c], pathY[c], totalPoints);
         }
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, oldHint);
     }
 
     @Override
@@ -87,6 +84,17 @@ public class VentilatorWaveformRenderer extends BaseRenderer {
         themeKey = key;
         for (int i = 0; i < colors.length; i++) {
             colors[i] = theme.getSeriesColor(i);
+        }
+    }
+
+    private void ensureBufferCapacity(int capacity) {
+        for (int i = 0; i < 3; i++) {
+            if (pathX[i].length >= capacity) continue;
+            int next = 1;
+            while (next < capacity && next > 0) next <<= 1;
+            if (next <= 0) next = capacity;
+            pathX[i] = new float[next];
+            pathY[i] = new float[next];
         }
     }
 }

@@ -1,17 +1,15 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.MathUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.MathUtils;
 /**
  * Arc diagram renderer: draws arcs between points laid out on a single axis.
  * Optimized to reuse Path2D and avoid allocations in the draw loop.
@@ -19,6 +17,8 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ArcDiagramRenderer extends BaseRenderer {
 
@@ -27,76 +27,83 @@ public final class ArcDiagramRenderer extends BaseRenderer {
     }
 
     private final double[] pBuffer = new double[2];
-    private transient Path2D.Double arcPath;
 
     public ArcDiagramRenderer() {
         super("arc_diagram");
     }
 
-    private Path2D.Double getArcPath() {
-        if (arcPath == null) arcPath = new Path2D.Double(Path2D.WIND_NON_ZERO);
-        return arcPath;
-    }
-
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        int limit = Math.min(count, Math.min(xData.length, yData.length));
+        if (limit == 0) return;
 
-        Rectangle2D bounds = context.plotBounds();
-        Rectangle clip = g2.getClipBounds();
-        double baseY = bounds.getY() + bounds.getHeight() * 0.7;
+        ArberRect bounds = context.getPlotBounds();
+        double baseY = bounds.y() + bounds.height() * 0.7;
 
         // Precompute pixel x positions
-        double[] xs = RendererAllocationCache.getDoubleArray(this, "xs", count);
-        for (int i = 0; i < count; i++) {
+        double[] xs = RendererAllocationCache.getDoubleArray(this, "xs", limit);
+        for (int i = 0; i < limit; i++) {
             context.mapToPixel(xData[i], yData[i], pBuffer);
             xs[i] = pBuffer[0];
         }
 
-        g2.setStroke(getSeriesStroke());
-        Color baseColor = getSeriesColor(model);
+        canvas.setStroke(getSeriesStrokeWidth());
+        ArberColor baseColor = getSeriesColor(model);
         if (!isMultiColor()) {
-            g2.setColor(baseColor);
+            canvas.setColor(baseColor);
         }
-
-        Path2D.Double path = getArcPath();
         // Draw arcs limited to a small neighbor window and clip visibility test
-        int neighborLimit = Math.min(30, Math.max(1, count / 15));
+        int neighborLimit = Math.min(30, Math.max(1, limit / 15));
         // adapt neighbor window based on density: reduce work for very large n
-        if (count > 2000) neighborLimit = Math.min(neighborLimit, 5);
-        if (count > 8000) neighborLimit = 2;
+        if (limit > 2000) neighborLimit = Math.min(neighborLimit, 5);
+        if (limit > 8000) neighborLimit = 2;
         // decimation: skip points when extremely dense
         int decimation = 1;
-        if (count > 3000) decimation = (int) Math.ceil(count / 2000.0);
-        for (int i = 0; i < count; i++) {
+        if (limit > 3000) decimation = (int) Math.ceil(limit / 2000.0);
+        for (int i = 0; i < limit; i++) {
             if ((i % decimation) != 0) continue;
-            int maxJ = Math.min(count - 1, i + neighborLimit);
+            int maxJ = Math.min(limit - 1, i + neighborLimit);
             for (int j = i + 1; j <= maxJ; j++) {
                 double x1 = xs[i];
                 double x2 = xs[j];
                 double minX = Math.min(x1, x2);
                 double maxX = Math.max(x1, x2);
-                if (clip != null && (maxX < clip.getX() || minX > (clip.getX() + clip.getWidth()))) continue;
-
                 // skip very short arcs when many points
-                if (count > 3000 && Math.abs(maxX - minX) < 2.0) continue;
+                if (limit > 3000 && Math.abs(maxX - minX) < 2.0) continue;
                 double mid = (x1 + x2) / 2.0;
                 // JDK 25: Use Math.clamp() for arc height calculation
-                double height = MathUtils.clamp((maxX - minX) / 2.0, 6, bounds.getHeight() / 2.0);
+                double height = MathUtils.clamp((maxX - minX) / 2.0, 6, bounds.height() / 2.0);
 
                 if (isMultiColor()) {
-                    Color arcColor = themeSeries(context, i);
+                    ArberColor arcColor = themeSeries(context, i);
                     if (arcColor == null) arcColor = baseColor;
-                    g2.setColor(arcColor);
+                    canvas.setColor(arcColor);
                 }
-                path.reset();
-                path.moveTo(x1, baseY);
-                path.quadTo(mid, baseY - height, x2, baseY);
-                g2.draw(path);
+                drawArcPolyline(canvas, x1, baseY, mid, baseY - height, x2, baseY);
             }
         }
+    }
+
+    private void drawArcPolyline(ArberCanvas canvas, double x1, double y1, double cx, double cy, double x2, double y2) {
+        double span = Math.abs(x2 - x1);
+        int steps = (int) MathUtils.clamp(Math.ceil(span / 8.0), 8, 60);
+        int count = steps + 1;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "arc.poly.x", count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "arc.poly.y", count);
+        for (int i = 0; i <= steps; i++) {
+            double t = (double) i / (double) steps;
+            double inv = 1.0 - t;
+            double x = inv * inv * x1 + 2.0 * inv * t * cx + t * t * x2;
+            double y = inv * inv * y1 + 2.0 * inv * t * cy + t * t * y2;
+            xs[i] = (float) x;
+            ys[i] = (float) y;
+        }
+        canvas.drawPolyline(xs, ys, count);
     }
 }

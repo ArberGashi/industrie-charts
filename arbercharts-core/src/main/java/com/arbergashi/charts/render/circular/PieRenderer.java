@@ -2,23 +2,18 @@ package com.arbergashi.charts.render.circular;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 /**
  * <h1>Modern Pie Renderer</h1>
  * <p>
@@ -36,6 +31,8 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class PieRenderer extends BaseRenderer {
 
@@ -43,11 +40,7 @@ public class PieRenderer extends BaseRenderer {
     private static final double LABEL_THRESHOLD_ANGLE = 8.0;
 
     private final LinkedHashMap<String, Double> perLabel = new LinkedHashMap<>(64);
-    private final Color[] colorCache = new Color[256];
-    private final Arc2D.Double arc = new Arc2D.Double();
-    private final Line2D.Double leaderLine = new Line2D.Double();
-    private final Font labelFont;
-    private final NumberFormat percentFormat;
+    private final ArberColor[] colorCache = new ArberColor[256];
 
     private double[] hitStartDeg = new double[0];
     private double[] hitExtentDeg = new double[0];
@@ -59,22 +52,22 @@ public class PieRenderer extends BaseRenderer {
     public PieRenderer() {
         this("pie");
     }
+    /**
+     * @since 1.5.0
+    */
 
     protected PieRenderer(String key) {
         super(key);
-        Font base = javax.swing.UIManager.getFont("Label.font");
-        if (base == null) base = new Font("SansSerif", Font.PLAIN, 11);
-        this.labelFont = base.deriveFont(Font.PLAIN, ChartScale.uiFontSize(base, 11f));
-        this.percentFormat = NumberFormat.getPercentInstance();
-        this.percentFormat.setMaximumFractionDigits(1);
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle2D plot = context.plotBounds();
+        ArberRect plot = context.getPlotBounds();
         if (plot == null || plot.getWidth() <= 1 || plot.getHeight() <= 1) return;
 
         perLabel.clear();
@@ -88,12 +81,11 @@ public class PieRenderer extends BaseRenderer {
         hitCy = plot.getCenterY();
         hitOuterR = diameter * 0.5;
 
-        this.renderTheme = resolveTheme(context);
-        drawSegments(g2, total, diameter);
-        drawLabels(g2, total, renderTheme);
+        this.renderTheme = getResolvedTheme(context);
+        drawSegments(canvas, total, diameter);
     }
 
-    private void drawSegments(Graphics2D g2, double total, double diameter) {
+    private void drawSegments(ArberCanvas canvas, double total, double diameter) {
         ensureHitCapacity(perLabel.size());
         hitN = 0;
         double startAngle = 90.0;
@@ -104,73 +96,16 @@ public class PieRenderer extends BaseRenderer {
             double angle = 360.0 * (value / total);
             if (angle <= 0.0) continue;
 
-            Color color = getSegmentColor(idx);
+            ArberColor color = getSegmentColor(idx);
             if (idx == hoverIndex) {
-                color = color.brighter();
+                // no brighten in core
             }
-            g2.setColor(color);
-
-            arc.setArc(hitCx - hitOuterR, hitCy - hitOuterR, diameter, diameter, startAngle, -angle, Arc2D.PIE);
-            g2.fill(arc);
+            canvas.setColor(color);
+            fillArcSegment(canvas, hitCx, hitCy, hitOuterR, startAngle, angle);
 
             hitStartDeg[hitN] = startAngle;
             hitExtentDeg[hitN] = angle;
             hitN++;
-            startAngle -= angle;
-            idx++;
-        }
-    }
-
-    private void drawLabels(Graphics2D g2, double total, ChartTheme theme) {
-        g2.setFont(labelFont);
-        g2.setColor(theme.getAxisLabelColor());
-        FontMetrics fm = g2.getFontMetrics();
-
-        double startAngle = 90.0;
-        int idx = 0;
-        List<String> labels = new ArrayList<>(perLabel.keySet());
-
-        for (Double value : perLabel.values()) {
-            if (value <= 0.0) {
-                idx++;
-                continue;
-            }
-            double angle = 360.0 * (value / total);
-            if (angle < LABEL_THRESHOLD_ANGLE) {
-                startAngle -= angle;
-                idx++;
-                continue;
-            }
-
-            double midAngleRad = Math.toRadians(startAngle - angle / 2.0);
-            double labelRadius = hitOuterR * LABEL_OFFSET;
-            double ex = hitCx + Math.cos(midAngleRad) * labelRadius;
-            double ey = hitCy - Math.sin(midAngleRad) * labelRadius;
-
-            String labelText = labels.get(idx);
-            String percentText = percentFormat.format(value / total);
-            String fullText = labelText + " (" + percentText + ")";
-
-            float textWidth = fm.stringWidth(fullText);
-            float tx = (float) ex;
-            if (ex < hitCx) {
-                tx -= textWidth;
-            }
-
-            g2.drawString(fullText, tx, (float) ey + fm.getAscent() / 2f);
-
-            // Draw leader line
-            double lineStartX = hitCx + Math.cos(midAngleRad) * (hitOuterR + 2);
-            double lineStartY = hitCy - Math.sin(midAngleRad) * (hitOuterR + 2);
-            double lineEndX = ex;
-            if (ex < hitCx) {
-                lineEndX += textWidth;
-            }
-            leaderLine.setLine(lineStartX, lineStartY, lineEndX, ey);
-            g2.setStroke(getCachedStroke(1.0f));
-            g2.setColor(ColorUtils.withAlpha(theme.getAxisLabelColor(), 0.5f));
-            g2.draw(leaderLine);
-
             startAngle -= angle;
             idx++;
         }
@@ -192,11 +127,11 @@ public class PieRenderer extends BaseRenderer {
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         if (hitN <= 0 || !(hitOuterR > 0)) return Optional.empty();
 
-        final double px = pixel.getX();
-        final double py = pixel.getY();
+        final double px = pixel.x();
+        final double py = pixel.y();
         final double dx = px - hitCx;
         final double dy = py - hitCy;
 
@@ -235,12 +170,12 @@ public class PieRenderer extends BaseRenderer {
     }
 
     // Package-private for tests in the same package.
-    Color getSegmentColor(int idx) {
+    ArberColor getSegmentColor(int idx) {
         int i = Math.floorMod(idx, colorCache.length);
-        Color c = colorCache[i];
+        ArberColor c = colorCache[i];
         if (c != null) return c;
 
-        ChartTheme theme = (renderTheme != null) ? renderTheme : resolveTheme(null);
+        ChartTheme theme = (renderTheme != null) ? renderTheme : getResolvedTheme(null);
         c = theme.getSeriesColor(i);
 
         colorCache[i] = c;
@@ -253,9 +188,25 @@ public class PieRenderer extends BaseRenderer {
         renderTheme = null;
     }
 
-    public void setHoverIndex(int index) {
+    public PieRenderer setHoverIndex(int index) {
         if (this.hoverIndex != index) {
             this.hoverIndex = index;
         }
+        return this;
+    }
+
+    private void fillArcSegment(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double extentDeg) {
+        int segments = Math.max(6, (int) Math.ceil(Math.abs(extentDeg) / 7.5));
+        int total = segments + 2;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "pie.seg.x", total);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "pie.seg.y", total);
+        xs[0] = (float) cx;
+        ys[0] = (float) cy;
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg - (extentDeg * i / (double) segments));
+            xs[i + 1] = (float) (cx + Math.cos(a) * r);
+            ys[i + 1] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, total);
     }
 }

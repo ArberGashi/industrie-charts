@@ -1,22 +1,24 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
 import java.util.Arrays;
-
 /**
  * Professional, zero-allocation ECDF (Empirical CDF) Renderer.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ECDFRenderer extends BaseRenderer {
 
@@ -29,8 +31,10 @@ public final class ECDFRenderer extends BaseRenderer {
         return new double[]{0.0, 1.02};
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
@@ -41,30 +45,25 @@ public final class ECDFRenderer extends BaseRenderer {
         java.util.Arrays.sort(values, 0, n);
 
         double[] buf = pBuffer();
-        Color c = seriesOrBase(model, context, 0);
+        ArberColor c = seriesOrBase(model, context, 0);
         float alpha = ChartAssets.getFloat("chart.render.ecdf.alpha", 0.9f);
         float w = ChartAssets.getFloat("chart.render.ecdf.width", 2.0f);
-        Stroke stroke = getCachedStroke(ChartScale.scale(w), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-
-        g2.setStroke(stroke);
+        canvas.setStroke(ChartScale.scale(w));
         if (!isMultiColor()) {
-            Path2D path = getPathCache();
-            boolean moved = false;
-            path.reset();
+            float[] xs = RendererAllocationCache.getFloatArray(this, "ecdf.xs", n);
+            float[] ys = RendererAllocationCache.getFloatArray(this, "ecdf.ys", n);
+            int count = 0;
             for (int i = 0; i < n; i++) {
                 double x = values[i];
                 double y = (double) (i + 1) / n;
 
                 context.mapToPixel(x, y, buf);
-                if (!moved) {
-                    path.moveTo(buf[0], buf[1]);
-                    moved = true;
-                } else {
-                    path.lineTo(buf[0], buf[1]);
-                }
+                xs[count] = (float) buf[0];
+                ys[count] = (float) buf[1];
+                count++;
             }
-            g2.setColor(ColorUtils.withAlpha(c, alpha));
-            g2.draw(path);
+            canvas.setColor(ColorUtils.applyAlpha(c, alpha));
+            canvas.drawPolyline(xs, ys, count);
             return;
         }
 
@@ -75,13 +74,23 @@ public final class ECDFRenderer extends BaseRenderer {
             double y = (double) (i + 1) / n;
             context.mapToPixel(x, y, buf);
             if (i > 0) {
-                Color segColor = themeSeries(context, i);
+                ArberColor segColor = themeSeries(context, i);
                 if (segColor == null) segColor = c;
-                g2.setColor(ColorUtils.withAlpha(segColor, alpha));
-                g2.draw(getLine(prevX, prevY, buf[0], buf[1]));
+                canvas.setColor(ColorUtils.applyAlpha(segColor, alpha));
+                drawLine(canvas, prevX, prevY, buf[0], buf[1]);
             }
             prevX = buf[0];
             prevY = buf[1];
         }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "ecdf.lineX", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "ecdf.lineY", 2);
+        xs[0] = (float) x0;
+        ys[0] = (float) y0;
+        xs[1] = (float) x1;
+        ys[1] = (float) y1;
+        canvas.drawPolyline(xs, ys, 2);
     }
 }

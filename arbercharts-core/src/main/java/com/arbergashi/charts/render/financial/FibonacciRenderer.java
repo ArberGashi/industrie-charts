@@ -3,14 +3,12 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import javax.swing.*;
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>FibonacciRenderer - Fibonacci Retracement Levels</h1>
  *
@@ -42,6 +40,8 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class FibonacciRenderer extends BaseRenderer {
 
@@ -55,7 +55,8 @@ public final class FibonacciRenderer extends BaseRenderer {
 
     private final double[] pxL = new double[2];
     private final double[] pxR = new double[2];
-    private final Rectangle labelBounds = new Rectangle();
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
     private transient ChartModel cachedModel;
     private transient int cachedPointCount;
     private transient SwingPoints cachedSwing;
@@ -72,8 +73,10 @@ public final class FibonacciRenderer extends BaseRenderer {
         return whole + "." + frac + "%";
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
@@ -84,14 +87,11 @@ public final class FibonacciRenderer extends BaseRenderer {
         final double range = swing.high - swing.low;
         if (!(range > 0.0)) return;
 
-        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(g, context);
+        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(context);
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color baseColor = theme.getAccentColor();
-        final Color keyLevelColor = ColorUtils.adjustBrightness(baseColor, 1.2f);
-
-        final Font baseFont = (g.getFont() != null) ? g.getFont() : UIManager.getFont("Label.font");
-        final Font labelFont = baseFont.deriveFont(Font.BOLD, ChartScale.uiFontSize(baseFont, 10.0f));
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor baseColor = theme.getAccentColor();
+        final ArberColor keyLevelColor = ColorRegistry.adjustBrightness(baseColor, 1.2f);
 
         final double xLeft = model.getX(0);
         final double xRight = model.getX(n - 1);
@@ -101,9 +101,9 @@ public final class FibonacciRenderer extends BaseRenderer {
             final double price = swing.low + (range * (1.0 - level));
             final boolean isKeyLevel = level == 0.382 || level == 0.5 || level == 0.618;
 
-            drawFibLevel(g, context, xLeft, xRight, price, level,
+            drawFibLevel(canvas, context, xLeft, xRight, price, level,
                     isKeyLevel ? keyLevelColor : baseColor,
-                    isKeyLevel, labelFont, vp);
+                    isKeyLevel, vp);
         }
 
         // Draw extension levels (only if within current plot Y-range)
@@ -111,63 +111,60 @@ public final class FibonacciRenderer extends BaseRenderer {
             final double price = swing.low + (range * (1.0 - level));
             context.mapToPixel(xLeft, price, pxL);
             final double y = pxL[1];
-            if (y >= vp.y() && y <= vp.maxY()) {
-                drawFibLevel(g, context, xLeft, xRight, price, level,
-                        ColorUtils.withAlpha(baseColor, 0.5f), false, labelFont, vp);
+            if (y >= vp.getY() && y <= vp.getMaxY()) {
+                drawFibLevel(canvas, context, xLeft, xRight, price, level,
+                        ColorRegistry.applyAlpha(baseColor, 0.5f), false, vp);
             }
         }
 
         // Draw reference lines for swing high and low
-        g.setColor(theme.getForeground());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.5f)));
+        canvas.setColor(theme.getForeground());
+        canvas.setStroke(ChartScale.scale(1.5f));
 
         context.mapToPixel(xLeft, swing.high, pxL);
         context.mapToPixel(xRight, swing.high, pxR);
-        g.draw(getLine(pxL[0], pxL[1], pxR[0], pxR[1]));
+        lineX[0] = (float) pxL[0];
+        lineY[0] = (float) pxL[1];
+        lineX[1] = (float) pxR[0];
+        lineY[1] = (float) pxR[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         context.mapToPixel(xLeft, swing.low, pxL);
         context.mapToPixel(xRight, swing.low, pxR);
-        g.draw(getLine(pxL[0], pxL[1], pxR[0], pxR[1]));
+        lineX[0] = (float) pxL[0];
+        lineY[0] = (float) pxL[1];
+        lineX[1] = (float) pxR[0];
+        lineY[1] = (float) pxR[1];
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
-    private void drawFibLevel(Graphics2D g,
+    private void drawFibLevel(ArberCanvas canvas,
                               PlotContext context,
                               double xLeft,
                               double xRight,
                               double price,
                               double level,
-                              Color color,
+                              ArberColor color,
                               boolean isKeyLevel,
-                              Font labelFont,
                               IndicatorRendererSupport.Viewport vp) {
         context.mapToPixel(xLeft, price, pxL);
         context.mapToPixel(xRight, price, pxR);
 
         // quick y-clip rejection
         final double y = pxL[1];
-        if (y < vp.y() - 2.0 || y > vp.maxY() + 2.0) {
+        if (y < vp.getY() - 2.0 || y > vp.getMaxY() + 2.0) {
             return;
         }
 
         // Draw horizontal line
-        g.setColor(color);
+        canvas.setColor(color);
         float width = isKeyLevel ? 2.0f : 1.0f;
-        g.setStroke(getCachedStroke(ChartScale.scale(width)));
-        g.draw(getLine(pxL[0], pxL[1], pxR[0], pxR[1]));
-
-        // Draw label
-        final String label = formatPercent(level);
-        final float labelX = (float) (pxR[0] - ChartScale.scale(8));
-        final float labelY = (float) (pxL[1] - ChartScale.scale(4));
-
-        // fixed-size chip (no FontMetrics; stable for short % labels)
-        final int chipW = Math.round(ChartScale.scale(44));
-        final int chipH = Math.round(ChartScale.scale(14));
-        labelBounds.setBounds((int) (labelX - chipW), (int) (labelY - chipH), chipW, chipH);
-        g.setColor(ColorUtils.withAlpha(getTheme().getBackground(), 0.75f));
-        g.fill(labelBounds);
-
-        drawLabel(g, label, labelFont, color, labelX - ChartScale.scale(40), labelY);
+        canvas.setStroke(ChartScale.scale(width));
+        lineX[0] = (float) pxL[0];
+        lineY[0] = (float) pxL[1];
+        lineX[1] = (float) pxR[0];
+        lineY[1] = (float) pxR[1];
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
     private void ensureCache(ChartModel model, int n) {

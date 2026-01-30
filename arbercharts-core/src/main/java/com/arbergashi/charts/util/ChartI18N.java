@@ -1,10 +1,10 @@
 package com.arbergashi.charts.util;
 
+import com.arbergashi.charts.util.ChartAssets;
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 /**
  * Internationalization (public API) facade.
  * <p>
@@ -27,12 +27,12 @@ public final class ChartI18N {
      * Returns the localized string for the current default locale.
      */
     public static String getString(String key) {
-        return getString(key, resolveLocale(null));
+        return getString(key, getResolvedLocale(null));
     }
 
     public static String getString(String key, Locale locale) {
         if (key == null || key.isBlank()) return "";
-        Locale loc = resolveLocale(locale);
+        Locale loc = getResolvedLocale(locale);
         try {
             return ChartAssets.getTranslation(key, loc);
         } catch (Exception e) {
@@ -49,7 +49,7 @@ public final class ChartI18N {
     }
 
     public static String format(String key, Object... args) {
-        return format(key, resolveLocale(null), args);
+        return format(key, getResolvedLocale(null), args);
     }
 
     public static String format(String key, Locale locale, Object... args) {
@@ -90,7 +90,7 @@ public final class ChartI18N {
         return defaultLocale;
     }
 
-    private static Locale resolveLocale(Locale locale) {
+    private static Locale getResolvedLocale(Locale locale) {
         if (locale != null) return locale;
         if (defaultLocale != null) return defaultLocale;
         return Locale.getDefault();

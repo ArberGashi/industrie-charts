@@ -1,15 +1,16 @@
 package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 
-import java.awt.*;
 import java.util.List;
-
 /**
  * Point &amp; Figure advanced renderer.
  *
@@ -19,6 +20,8 @@ import java.util.List;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
 
@@ -30,8 +33,10 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
         super("point_and_figure_advanced");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
@@ -60,19 +65,19 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
             }
         }
 
-        Rectangle bounds = context.plotBounds().getBounds();
-        double w = bounds.getWidth();
+        ArberRect bounds = context.getPlotBounds();
+        double w = bounds.width();
         double colW = Math.max(6.0, w / Math.max(1, columns.size()));
 
         int i = 0;
         double[] buf = pBuffer();
         for (int v : columns) {
-            double x = bounds.getX() + i * colW;
+            double x = bounds.x() + i * colW;
             context.mapToPixel(0, (v > 0) ? 1 : -1, buf);
             double y = buf[1];
-            Shape rect = getRect(x, y - colW / 2.0, colW, colW);
-            g2.setColor(v > 0 ? themeBullish(context) : themeBearish(context));
-            g2.fill(rect);
+            ArberColor color = v > 0 ? themeBullish(context) : themeBearish(context);
+            canvas.setColor(color);
+            canvas.fillRect((float) x, (float) (y - colW / 2.0), (float) colW, (float) colW);
             i++;
         }
     }

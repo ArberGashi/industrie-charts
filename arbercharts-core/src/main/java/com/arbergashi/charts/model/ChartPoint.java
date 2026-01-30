@@ -2,105 +2,144 @@ package com.arbergashi.charts.model;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
- * Enterprise data point representation for the ArberGashi engine.
- * Optimized for JDK 25+: value-object semantics and fluent API.
- * Suitable for high-frequency trading, scientific data and IoT sensor streams.
- *
- * @author Arber Gashi
- * @version 1.0.0
- * @since 2025-12-30
+ * Mutable chart point for rendering and modeling.
+  * @author Arber Gashi
+  * @version 1.7.0
+  * @since 2026-01-30
  */
-public record ChartPoint(
-        double x,
-        double y,
-        double weight,
-        double min,
-        double max,
-        String label
-) implements Serializable, Comparable<ChartPoint> {
-
+public final class ChartPoint implements Comparable<ChartPoint>, Serializable {
     @Serial
-    private static final long serialVersionUID = 4L;
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * Compact canonical constructor with validation for numerical stability.
-     */
-    public ChartPoint {
-        if (!Double.isFinite(x) || !Double.isFinite(y)) {
-            throw new IllegalArgumentException("X and Y coordinates must be finite numbers.");
-        }
-
-        /* Null-safe labeling: intern repeated labels to reduce memory usage */
-        label = (label == null || label.isBlank()) ? "" : label.intern();
-    }
-
-    /* Secondary constructors (overloads) */
+    private double x;
+    private double y;
+    private double weight;
+    private double min;
+    private double max;
+    private String label;
 
     public ChartPoint(double x, double y) {
         this(x, y, 0.0, y, y, "");
     }
 
-    public ChartPoint(double x, double y, String label) {
-        this(x, y, 0.0, y, y, label);
+    public ChartPoint(double x, double y, double weight, double min, double max, String label) {
+        this.x = x;
+        this.y = y;
+        this.weight = weight;
+        this.min = min;
+        this.max = max;
+        this.label = label == null ? "" : label;
     }
-
-    /* Fluent API transformations (immutable pattern) */
 
     public static ChartPoint of(double x, double y) {
         return new ChartPoint(x, y);
     }
 
-    /**
-     * Specialized for candlestick semantics: y==close, weight==open.
-     */
-    public static ChartPoint ofOHLC(double x, double open, double high, double low, double close) {
-        return new ChartPoint(x, close, open, low, high, "");
-    }
-
-    /* Business logic helpers */
-
-    /**
-     * Specialized for error bars or box plots.
-     */
     public static ChartPoint ofRange(double x, double y, double min, double max) {
         return new ChartPoint(x, y, 0.0, min, max, "");
     }
 
-    /**
-     * Returns a copy with the provided weight, original remains unchanged.
-     */
-    public ChartPoint withWeight(double weight) {
-        return new ChartPoint(x, y, weight, min, max, label);
+    public static ChartPoint ofOHLC(double x, double open, double high, double low, double close) {
+        return new ChartPoint(x, close, open, low, high, "");
     }
 
-    /**
-     * Returns a copy with a new label.
-     */
-    public ChartPoint withLabel(String label) {
-        return new ChartPoint(x, y, weight, min, max, label);
+    public double getX() {
+        return x;
     }
 
-    /* Static factory methods (modern style) */
-
-    /**
-     * Checks whether the point lies within its min/max range.
-     */
-    public boolean isWithinRange() {
-        return y >= min && y <= max;
+    public ChartPoint setX(double x) {
+        this.x = x;
+        return this;
     }
 
-    /**
-     * Computes the span between max and min (e.g., volatility).
-     */
-    public double delta() {
-        return max - min;
+    public double getY() {
+        return y;
+    }
+
+    public ChartPoint setY(double y) {
+        this.y = y;
+        return this;
+    }
+
+    public double getWeight() {
+        return weight;
+    }
+
+    public ChartPoint setWeight(double weight) {
+        this.weight = weight;
+        return this;
+    }
+
+    public double getMin() {
+        return min;
+    }
+
+    public ChartPoint setMin(double min) {
+        this.min = min;
+        return this;
+    }
+
+    public double getMax() {
+        return max;
+    }
+
+    public ChartPoint setMax(double max) {
+        this.max = max;
+        return this;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public ChartPoint setLabel(String label) {
+        this.label = label == null ? "" : label;
+        return this;
     }
 
     @Override
     public int compareTo(ChartPoint other) {
         int cmp = Double.compare(this.x, other.x);
-        return (cmp != 0) ? cmp : Double.compare(this.y, other.y);
+        if (cmp != 0) {
+            return cmp;
+        }
+        return Double.compare(this.y, other.y);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ChartPoint)) {
+            return false;
+        }
+        ChartPoint that = (ChartPoint) o;
+        return Double.compare(x, that.x) == 0
+                && Double.compare(y, that.y) == 0
+                && Double.compare(weight, that.weight) == 0
+                && Double.compare(min, that.min) == 0
+                && Double.compare(max, that.max) == 0
+                && Objects.equals(label, that.label);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y, weight, min, max, label);
+    }
+
+    @Override
+    public String toString() {
+        return "ChartPoint{" +
+                "x=" + x +
+                ", y=" + y +
+                ", weight=" + weight +
+                ", min=" + min +
+                ", max=" + max +
+                ", label='" + label + '\'' +
+                '}';
     }
 }

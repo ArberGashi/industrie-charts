@@ -1,5 +1,4 @@
 package com.arbergashi.charts.util;
-
 /**
  * Calculates "nice" numbers for graph axes.
  * <p>
@@ -48,10 +47,11 @@ public class NiceScale {
      * @param min the new minimum data value
      * @param max the new maximum data value
      */
-    public void setRange(double min, double max) {
+    public NiceScale setRange(double min, double max) {
         this.minPoint = min;
         this.maxPoint = max;
         calculate();
+        return this;
     }
 
     /**
@@ -61,9 +61,10 @@ public class NiceScale {
      *
      * @param maxTicks maximum number of ticks to aim for (must be &gt;= 2 for sensible results)
      */
-    public void setMaxTicks(double maxTicks) {
+    public NiceScale setMaxTicks(double maxTicks) {
         this.maxTicks = maxTicks;
         calculate();
+        return this;
     }
 
     private void calculate() {

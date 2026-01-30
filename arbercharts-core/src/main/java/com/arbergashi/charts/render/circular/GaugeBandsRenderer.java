@@ -2,18 +2,16 @@ package com.arbergashi.charts.render.circular;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
+import com.arbergashi.charts.util.ColorRegistry;
 import com.arbergashi.charts.util.MathUtils;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.util.Optional;
+import com.arbergashi.charts.util.PredictiveMath;
 
 /**
  * GaugeBandsRenderer renders a gauge with colored bands (green/yellow/red), suitable for business KPIs.
@@ -34,39 +32,31 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class GaugeBandsRenderer extends BaseRenderer {
 
     private static final double START = 225.0;
     private static final double SWEEP = 270.0;
+    private static final String KEY_JITTER = "Chart.circular.gauge.needleJitter";
+    private static final String KEY_ALERT_PULSE = "Chart.circular.gauge.alertPulse";
+    private static final String KEY_THICKNESS = "Chart.circular.gauge.thickness";
+    private static final String KEY_GHOST_ENABLED = "Chart.circular.ghost.enabled";
+    private static final String KEY_GHOST_ALPHA = "Chart.circular.ghost.alpha";
+    private static final String KEY_LOOKAHEAD = "Chart.predictive.global.lookahead";
+    private static final String KEY_SMOOTHING = "Chart.predictive.global.smoothing";
 
     // hit-test cache
     private double lastCx;
     private double lastCy;
     private double lastOuter;
     private double lastInner;
-    private final java.text.NumberFormat valueFormat = java.text.NumberFormat.getInstance();
-    private final Font valueFont;
-    private final Font labelFont;
+    private double lastValue = Double.NaN;
+    private double jitterEnergy = 0.0;
+    private double smoothedDelta = 0.0;
 
     public GaugeBandsRenderer() {
         super("gaugeBands");
-        valueFormat.setMaximumFractionDigits(1);
-        valueFont = getCachedFont(20f, Font.BOLD);
-        labelFont = getCachedFont(11f, Font.PLAIN);
-    }
-
-    private static Color parseColor(String token, Color fallback) {
-        try {
-            String t = token;
-            if (t.startsWith("#")) t = t.substring(1);
-            if (t.length() == 6) {
-                int rgb = Integer.parseInt(t, 16);
-                return com.arbergashi.charts.util.ColorRegistry.of((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255);
-            }
-        } catch (Exception ignore) {
-        }
-        return fallback;
     }
 
     @Override
@@ -75,17 +65,17 @@ public final class GaugeBandsRenderer extends BaseRenderer {
     }
 
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle2D b = context.plotBounds();
+        ArberRect b = context.getPlotBounds();
         if (b == null || b.getWidth() <= 1 || b.getHeight() <= 1) return;
 
         double value = model.getY(0);
 
-        double min = context.minY();
-        double max = context.maxY();
+        double min = context.getMinY();
+        double max = context.getMaxY();
         if (!(Double.isFinite(min) && Double.isFinite(max) && max > min)) {
             min = Double.POSITIVE_INFINITY;
             max = Double.NEGATIVE_INFINITY;
@@ -118,17 +108,28 @@ public final class GaugeBandsRenderer extends BaseRenderer {
             }
         }
 
-        double t = (value - min) / (max - min);
-        if (!Double.isFinite(t)) t = 0.0;
-        t = MathUtils.clamp(t, 0.0, 1.0);
+        double range = Math.max(1e-9, max - min);
+        if (Double.isFinite(lastValue)) {
+            double jump = Math.min(1.0, Math.abs(value - lastValue) / range);
+            jitterEnergy = Math.max(jitterEnergy * 0.9, jump);
+            double smoothing = ChartAssets.getFloat(KEY_SMOOTHING, 0.85f);
+            smoothedDelta = PredictiveMath.smoothDelta(smoothedDelta, value - lastValue, smoothing);
+        }
+        lastValue = value;
+
+        double rawT = (value - min) / range;
+        boolean alert = ChartAssets.getBoolean(KEY_ALERT_PULSE, true) && (rawT < 0.0 || rawT > 1.0);
+        double t = Double.isFinite(rawT) ? MathUtils.clamp(rawT, 0.0, 1.0) : 0.0;
 
         double size = Math.min(b.getWidth(), b.getHeight()) * 0.85;
         if (!(size > 1)) return;
-        double cx = b.getCenterX();
-        double cy = b.getCenterY() + size * 0.08;
+        double cx = b.centerX();
+        double cy = b.centerY() + size * 0.08;
 
         double outer = size * 0.5;
-        double inner = outer * 0.72;
+        float thickness = ChartAssets.getFloat(KEY_THICKNESS, 0.15f);
+        thickness = (float) MathUtils.clamp(thickness, 0.08, 0.4);
+        double inner = outer * (1.0 - thickness);
 
         // cache for hit-tests
         lastCx = cx;
@@ -140,171 +141,153 @@ public final class GaugeBandsRenderer extends BaseRenderer {
         ringW = Math.max((float) ChartScale.scale(1.0), ringW);
 
         // Draw bands under value arc.
-        drawBands(g2, cx, cy, outer, ringW, bandSpec, min, max, resolveTheme(context));
+        drawBands(canvas, cx, cy, outer, ringW, bandSpec, min, max, getResolvedTheme(context));
 
         // Draw value arc.
-        Color accent = (model.getColor() != null) ? model.getColor() : resolveTheme(context).getAccentColor();
-        g2.setStroke(getCachedStroke(ringW, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.setColor(ColorUtils.withAlpha(accent, 0.95f));
-        g2.draw(getArc(cx - outer, cy - outer, outer * 2, outer * 2, START, -SWEEP * t, Arc2D.OPEN));
+        ArberColor accent = (model.getColor() != null) ? model.getColor() : getResolvedTheme(context).getAccentColor();
+        if (alert) {
+            double seconds = System.nanoTime() * 1.0e-9;
+            float pulse = (float) (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(seconds * 6.0)));
+            accent = ColorRegistry.applyAlpha(accent, pulse);
+        }
+        canvas.setStroke(ringW);
+        canvas.setColor(ColorRegistry.applyAlpha(accent, 0.95f));
+        drawArcPolyline(canvas, cx, cy, outer, START, -SWEEP * t);
+
+        // Ghost needle (predictive)
+        if (ChartAssets.getBoolean(KEY_GHOST_ENABLED, true) && Double.isFinite(smoothedDelta)) {
+            int lookahead = ChartAssets.getInt(KEY_LOOKAHEAD, 32);
+            double ghostValue = PredictiveMath.extrapolate(value, smoothedDelta, lookahead);
+            double ghostT = MathUtils.clamp((ghostValue - min) / range, 0.0, 1.0);
+            double ghostAngle = START - SWEEP * ghostT;
+            double gRad = Math.toRadians(ghostAngle);
+            double gLen = inner * 0.95;
+            double gx = cx + Math.cos(gRad) * gLen;
+            double gy = cy - Math.sin(gRad) * gLen;
+            float ghostAlpha = ChartAssets.getFloat(KEY_GHOST_ALPHA, 0.25f);
+            ArberColor ghostColor = ColorRegistry.applyAlpha(getResolvedTheme(context).getAccentColor(), ghostAlpha);
+            canvas.setStroke((float) ChartScale.scale(2.0));
+            canvas.setColor(ghostColor);
+            drawLine(canvas, cx, cy, gx, gy);
+        }
 
         // Needle and hub (like GaugeRenderer)
         double angle = START - SWEEP * t;
+        if (ChartAssets.getBoolean(KEY_JITTER, true) && jitterEnergy > 0.02) {
+            double seconds = System.nanoTime() * 1.0e-9;
+            angle += Math.sin(seconds * 18.0) * (1.6 * jitterEnergy);
+            jitterEnergy *= 0.96;
+        }
         double needleLen = inner * 0.95;
         double rad = Math.toRadians(angle);
         double nx = cx + Math.cos(rad) * needleLen;
         double ny = cy - Math.sin(rad) * needleLen;
 
-        Color fg = resolveTheme(context).getForeground();
-        g2.setStroke(getCachedStroke((float) ChartScale.scale(2.0)));
-        g2.setColor(ColorUtils.withAlpha(fg, 0.75f));
-        g2.draw(getLine(cx, cy, nx, ny));
+        ArberColor fg = getResolvedTheme(context).getForeground();
+        canvas.setStroke((float) ChartScale.scale(2.0));
+        canvas.setColor(ColorRegistry.applyAlpha(fg, 0.75f));
+        drawLine(canvas, cx, cy, nx, ny);
 
         double hub = ChartScale.scale(8.0);
-        g2.setColor(ColorUtils.withAlpha(fg, 0.25f));
-        g2.fill(getEllipse(cx - hub, cy - hub, hub * 2, hub * 2));
-        g2.setColor(ColorUtils.withAlpha(fg, 0.55f));
-        g2.fill(getEllipse(cx - hub * 0.6, cy - hub * 0.6, hub * 1.2, hub * 1.2));
-
-        drawCenterText(g2, cx, cy, resolveTheme(context), value, min, max, model.getLabel(0));
+        canvas.setColor(ColorRegistry.applyAlpha(fg, 0.25f));
+        drawCircleFill(canvas, cx, cy, hub);
+        canvas.setColor(ColorRegistry.applyAlpha(fg, 0.55f));
+        drawCircleFill(canvas, cx, cy, hub * 0.6);
     }
 
-    private void drawCenterText(Graphics2D g2, double cx, double cy, ChartTheme theme,
-                                double value, double min, double max, String label) {
-        String unit = ChartAssets.getString("chart.gaugeBands.unit", "");
-        if ((unit == null || unit.isBlank()) && min >= 0.0 && max <= 100.0) {
-            unit = "%";
-        }
-        String valueText = valueFormat.format(value) + unit;
+    private void drawBands(ArberCanvas canvas, double cx, double cy, double radius, float ringW,
+                           String bandSpec, double min, double max, ChartTheme theme) {
+        canvas.setStroke(ringW);
+        String[] bands = bandSpec.split(";");
+        for (String band : bands) {
+            String[] parts = band.trim().split(",");
+            if (parts.length < 3) continue;
+            double bStart = parseDouble(parts[0], Double.NaN);
+            double bEnd = parseDouble(parts[1], Double.NaN);
+            if (!Double.isFinite(bStart) || !Double.isFinite(bEnd)) continue;
+            ArberColor c = parseColor(parts[2].trim(), theme.getAccentColor());
 
-        g2.setFont(valueFont);
-        FontMetrics fm = g2.getFontMetrics();
-        g2.setColor(theme.getForeground());
-        float valueY = (float) (cy + ChartScale.scale(22));
-        g2.drawString(valueText, (float) (cx - fm.stringWidth(valueText) / 2.0), valueY);
+            double bandStartT = MathUtils.clamp((bStart - min) / (max - min), 0, 1);
+            double bandEndT = MathUtils.clamp((bEnd - min) / (max - min), 0, 1);
+            double bandStartAngle = START - SWEEP * bandStartT;
+            double bandSweep = -SWEEP * (bandEndT - bandStartT);
 
-        if (label != null && !label.isBlank()) {
-            g2.setFont(labelFont);
-            fm = g2.getFontMetrics();
-            g2.setColor(theme.getAxisLabelColor());
-            float labelY = valueY + fm.getHeight();
-            g2.drawString(label, (float) (cx - fm.stringWidth(label) / 2.0), labelY);
+            canvas.setColor(c);
+            drawArcPolyline(canvas, cx, cy, radius, bandStartAngle, bandSweep);
         }
     }
 
-    private static double[] parseBandRange(String spec) {
-        if (spec == null || spec.isBlank()) return null;
+    private static ArberColor parseColor(String token, ArberColor fallback) {
+        try {
+            String t = token;
+            if (t.startsWith("#")) t = t.substring(1);
+            if (t.length() == 6) {
+                int rgb = Integer.parseInt(t, 16);
+                return ColorRegistry.of((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255);
+            }
+        } catch (Exception ignore) {
+        }
+        return fallback;
+    }
+
+    private static double[] parseBandRange(String bandSpec) {
+        if (bandSpec == null || bandSpec.isBlank()) return null;
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;
-        String[] parts = spec.split(";");
-        for (String p : parts) {
-            String s = p.trim();
-            if (s.isEmpty()) continue;
-            String[] tok = s.split(",");
-            if (tok.length < 2) continue;
-            try {
-                double a = Double.parseDouble(tok[0].trim());
-                double b = Double.parseDouble(tok[1].trim());
-                if (a < min) min = a;
-                if (b < min) min = b;
-                if (a > max) max = a;
-                if (b > max) max = b;
-            } catch (Exception ignore) {
-            }
+        String[] bands = bandSpec.split(";");
+        for (String band : bands) {
+            String[] parts = band.trim().split(",");
+            if (parts.length < 2) continue;
+            double bStart = parseDouble(parts[0], Double.NaN);
+            double bEnd = parseDouble(parts[1], Double.NaN);
+            if (!Double.isFinite(bStart) || !Double.isFinite(bEnd)) continue;
+            min = Math.min(min, Math.min(bStart, bEnd));
+            max = Math.max(max, Math.max(bStart, bEnd));
         }
-        if (min == Double.POSITIVE_INFINITY || max == Double.NEGATIVE_INFINITY || max <= min) return null;
+        if (!Double.isFinite(min) || !Double.isFinite(max) || max <= min) return null;
         return new double[]{min, max};
     }
 
-    private void drawBands(Graphics2D g2, double cx, double cy, double outer, float ringW,
-                           String spec, double min, double max, ChartTheme theme) {
-        g2.setStroke(getCachedStroke(ringW, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-        Color fallbackBg = ColorUtils.withAlpha(theme.getForeground(), 0.12f);
-        if (spec == null || spec.isBlank()) {
-            g2.setColor(fallbackBg);
-            g2.draw(getArc(cx - outer, cy - outer, outer * 2, outer * 2, START, -SWEEP, Arc2D.OPEN));
-            return;
-        }
-
-        // Very small parser to keep it dependency-free.
-        // Format: a,b,#rrggbb;...
-        String[] parts = spec.split(";");
-        boolean drewAny = false;
-        for (String p : parts) {
-            String s = p.trim();
-            if (s.isEmpty()) continue;
-            String[] tok = s.split(",");
-            if (tok.length < 3) continue;
-
-            double a;
-            double b;
-            try {
-                a = Double.parseDouble(tok[0].trim());
-                b = Double.parseDouble(tok[1].trim());
-            } catch (Exception ignore) {
-                continue;
-            }
-
-            Color c = parseColor(tok[2].trim(), fallbackBg);
-
-            double ta = (a - min) / (max - min);
-            double tb = (b - min) / (max - min);
-            if (!Double.isFinite(ta) || !Double.isFinite(tb)) continue;
-            ta = MathUtils.clamp(ta, 0.0, 1.0);
-            tb = MathUtils.clamp(tb, 0.0, 1.0);
-            if (tb <= ta) continue;
-
-            double angA = -SWEEP * ta;
-            double angB = -SWEEP * tb;
-            double extent = (angB - angA);
-
-            g2.setColor(c);
-            g2.draw(getArc(cx - outer, cy - outer, outer * 2, outer * 2, START + angA, extent, Arc2D.OPEN));
-            drewAny = true;
-        }
-
-        if (!drewAny) {
-            g2.setColor(fallbackBg);
-            g2.draw(getArc(cx - outer, cy - outer, outer * 2, outer * 2, START, -SWEEP, Arc2D.OPEN));
+    private static double parseDouble(String raw, double fallback) {
+        try {
+            return Double.parseDouble(raw.trim());
+        } catch (Exception ignore) {
+            return fallback;
         }
     }
 
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = new float[2];
+        float[] ys = new float[2];
+        xs[0] = (float) x1;
+        ys[0] = (float) y1;
+        xs[1] = (float) x2;
+        ys[1] = (float) y2;
+        canvas.drawPolyline(xs, ys, 2);
+    }
 
-    @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
-        if (!(lastOuter > 0)) return Optional.empty();
-
-        double dx = pixel.getX() - lastCx;
-        double dy = pixel.getY() - lastCy;
-        double d2 = dx * dx + dy * dy;
-
-        double outer2 = lastOuter * lastOuter;
-        if (d2 > outer2) return Optional.empty();
-
-        double inner2 = lastInner * lastInner;
-        if (d2 < inner2) {
-            double hub = ChartScale.scale(10.0);
-            if (d2 <= hub * hub) return Optional.of(0);
-            return Optional.empty();
+    private void drawCircleFill(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = Math.max(24, (int) (Math.PI * r / 6.0));
+        float[] xs = new float[segments];
+        float[] ys = new float[segments];
+        for (int i = 0; i < segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
         }
+        canvas.fillPolygon(xs, ys, segments);
+    }
 
-        // check if within sweep
-        double a = Math.toDegrees(Math.atan2(-dy, dx));
-        if (a < 0) a += 360.0;
-
-        // For START=225 and SWEEP=270, the covered arc always wraps across 0°: [end..360) U [0..start]
-        double normStart = ((START % 360.0) + 360.0) % 360.0;
-        double end = ((normStart - SWEEP) % 360.0 + 360.0) % 360.0;
-        boolean inSweep = (a >= end || a <= normStart);
-        if (!inSweep) return Optional.empty();
-
-        // ring thickness tolerance
-        double ringMid = (lastOuter + lastInner) * 0.5;
-        double tol = ChartScale.scale(10.0);
-        double r = Math.sqrt(d2);
-        if (Math.abs(r - ringMid) <= tol) return Optional.of(0);
-
-        return Optional.empty();
+    private void drawArcPolyline(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
+        int segments = Math.max(12, (int) (Math.abs(sweepDeg) / 4.0));
+        float[] xs = new float[segments + 1];
+        float[] ys = new float[segments + 1];
+        double step = sweepDeg / segments;
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg + step * i);
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
     }
 }

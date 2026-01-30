@@ -1,68 +1,92 @@
 package com.arbergashi.charts.render;
 
+import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.geometry.TextAnchor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import org.junit.jupiter.api.Test;
 
-import java.awt.*;
-import java.awt.geom.Line2D;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class BaseRendererTest {
+class BaseRendererTest {
 
     @Test
-    public void pixelBuffersAndCaches() {
-        DummyRenderer r = new DummyRenderer();
-        assertEquals(2, r.exposePBuffer().length);
-        double[] a = r.exposePBuffer4();
-        double[] b = r.exposePBuffer4();
-        assertSame(a, b);
-        assertEquals(4, b.length);
-
-        Stroke s1 = r.exposeCachedStroke(1.5f);
-        Stroke s2 = r.exposeCachedStroke(1.5f);
-        assertSame(s1, s2);
-
-        Font f1 = r.exposeCachedFont(10f, Font.BOLD);
-        Font f2 = r.exposeCachedFont(10f, Font.BOLD);
-        assertSame(f1, f2);
-
-        Line2D l = r.exposeLine(1, 2, 3, 4);
-        assertEquals(1.0, l.getX1(), 1e-6);
-        assertEquals(3.0, l.getX2(), 1e-6);
-        assertEquals(4.0, l.getY2(), 1e-6);
+    void multiColorToggleIsHonored() {
+        TestRenderer renderer = new TestRenderer();
+        assertFalse(renderer.exposeMultiColor());
+        renderer.setMultiColor(true);
+        assertTrue(renderer.exposeMultiColor());
     }
 
-    private static final class DummyRenderer extends BaseRenderer {
-        DummyRenderer() {
-            super("dummy");
+    @Test
+    void anchorPointResolvesCorrectly() {
+        TestRenderer renderer = new TestRenderer();
+        ArberRect bounds = new ArberRect(0, 0, 100, 50);
+        ArberPoint out = new ArberPoint();
+
+        renderer.exposeAnchor(bounds, TextAnchor.TOP_LEFT, out);
+        assertEquals(0.0, out.x(), 0.0001);
+        assertEquals(0.0, out.y(), 0.0001);
+
+        renderer.exposeAnchor(bounds, TextAnchor.BOTTOM_RIGHT, out);
+        assertEquals(100.0, out.x(), 0.0001);
+        assertEquals(50.0, out.y(), 0.0001);
+
+        renderer.exposeAnchor(bounds, TextAnchor.CENTER, out);
+        assertEquals(50.0, out.x(), 0.0001);
+        assertEquals(25.0, out.y(), 0.0001);
+    }
+
+    @Test
+    void resolvedThemeThrowsWhenMissing() {
+        TestRenderer renderer = new TestRenderer();
+        PlotContext context = new PlotContext() {
+            @Override public double getMinX() { return 0; }
+            @Override public double getMaxX() { return 1; }
+            @Override public double getMinY() { return 0; }
+            @Override public double getMaxY() { return 1; }
+            @Override public ArberRect getPlotBounds() { return new ArberRect(0, 0, 10, 10); }
+            @Override public void mapToPixel(double x, double y, double[] out) {}
+            @Override public void mapToData(double pixelX, double pixelY, double[] dest) {}
+            @Override public ChartTheme getTheme() { return null; }
+        };
+        assertThrows(NullPointerException.class, () -> renderer.exposeResolvedTheme(context));
+    }
+
+    private static final class TestRenderer extends BaseRenderer {
+        TestRenderer() {
+            super("test");
         }
 
         @Override
-        protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-            // no-op
+        protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         }
 
-        public double[] exposePBuffer() {
-            return pBuffer();
+        @Override
+        public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
+            return Optional.empty();
         }
 
-        public double[] exposePBuffer4() {
-            return pBuffer4();
+        @Override
+        public String getName() {
+            return "test";
         }
 
-        public Stroke exposeCachedStroke(float w) {
-            return getCachedStroke(w);
+        boolean exposeMultiColor() {
+            return isMultiColor();
         }
 
-        public Font exposeCachedFont(float baseSize, int style) {
-            return getCachedFont(baseSize, style);
+        ArberPoint exposeAnchor(ArberRect bounds, TextAnchor anchor, ArberPoint out) {
+            return anchorPoint(bounds, anchor, out);
         }
 
-        public Line2D exposeLine(double x1, double y1, double x2, double y2) {
-            return getLine(x1, y1, x2, y2);
+        ChartTheme exposeResolvedTheme(PlotContext context) {
+            return getResolvedTheme(context);
         }
     }
 }

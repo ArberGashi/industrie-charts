@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head('ArberCharts Domains')"></head>
+  <body data-theme="dark">
+    <header th:replace="fragments/layout :: header('domains')"></header>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <h1>Domain‑specific visual excellence</h1>
+          <p>Each domain focuses on clarity and trust. Medical waveforms remain readable at high speeds, financial charts stay precise under dense data, and engineering views retain spatial accuracy.</p>
+        </div>
+        <div class="card">
+          <h3>Domains in scope</h3>
+          <div class="grid">
+            <div class="pill">Medical</div>
+            <div class="pill">Financial</div>
+            <div class="pill">Engineering</div>
+            <div class="pill" th:if="${vectorAvailable}">Spatial 3D</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Medical & bio‑tech</h2>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>ECG Sweep‑Erase</h3>
+              <span class="badge">medical</span>
+            </div>
+            <img data-type="ecg" data-domain="medical" data-points="14000" data-width="980" data-height="520" alt="ECG" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Medical Sweep</h3>
+              <span class="badge">medical</span>
+            </div>
+            <img data-type="medical" data-domain="medical" data-points="14000" data-width="980" data-height="520" alt="Medical sweep" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Financial engineering</h2>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Minimal financial dashboard</h3>
+              <span class="badge">financial</span>
+            </div>
+            <img data-type="financial-dashboard" data-domain="financial" data-points="8000" data-width="980" data-height="620" alt="Financial dashboard" />
+            <div class="readout">
+              <div>t: <strong th:text="${dashboardReadout.time}">0</strong></div>
+              <div>O: <strong th:text="${dashboardReadout.open}">0</strong></div>
+              <div>H: <strong th:text="${dashboardReadout.high}">0</strong></div>
+              <div>L: <strong th:text="${dashboardReadout.low}">0</strong></div>
+              <div>C: <strong th:text="${dashboardReadout.close}">0</strong></div>
+              <div>V: <strong th:text="${dashboardReadout.volume}">0</strong></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Candlestick</h3>
+              <span class="badge">financial</span>
+            </div>
+            <img data-type="candlestick" data-domain="financial" data-points="7000" data-width="980" data-height="520" alt="Candlestick" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Multi‑series line</h3>
+              <span class="badge">financial</span>
+            </div>
+            <img data-type="line" data-domain="financial" data-points="22000" data-width="980" data-height="520" alt="Line" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Engineering & analytics</h2>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Heatmap matrix</h3>
+              <span class="badge">analysis</span>
+            </div>
+            <img data-type="heatmap" data-domain="analysis" data-points="4096" data-width="980" data-height="520" alt="Heatmap" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Vector field</h3>
+              <span class="badge">analysis</span>
+            </div>
+            <img data-type="vector" data-domain="analysis" data-points="900" data-width="980" data-height="520" alt="Vector field" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section" th:if="${vectorAvailable}">
+        <h2>3D & spatial</h2>
+        <div class="card" style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+          <div>
+            <label for="rotX">Rotate X</label>
+            <input id="rotX" type="range" min="-90" max="90" value="25" />
+          </div>
+          <div>
+            <label for="rotY">Rotate Y</label>
+            <input id="rotY" type="range" min="-90" max="90" value="35" />
+          </div>
+          <div>
+            <label for="rotZ">Rotate Z</label>
+            <input id="rotZ" type="range" min="-90" max="90" value="0" />
+          </div>
+        </div>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Candlestick 3D</h3>
+              <span class="badge">spatial</span>
+            </div>
+            <img data-type="candlestick3d" data-domain="spatial" data-points="2500" data-width="980" data-height="520" alt="Candlestick 3D" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Voxel cloud</h3>
+              <span class="badge">spatial</span>
+            </div>
+            <img data-type="voxel" data-domain="spatial" data-points="1400" data-width="980" data-height="520" alt="Voxel cloud" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="vector-api-help" th:if="${!vectorAvailable}">
+        <div class="card">
+          <h3>Vector API required for spatial renderers</h3>
+          <p>The 3D and spatial showcase requires the JDK Vector API. Start the verifier with <strong>--add-modules jdk.incubator.vector</strong> to enable spatial charts.</p>
+          <div class="code-block">Maven / CLI:
+JAVA_TOOL_OPTIONS="--add-modules jdk.incubator.vector" mvn -pl arbercharts-visual-verifier spring-boot:run
+
+IntelliJ / IDE:
+Add JVM option: --add-modules jdk.incubator.vector
+</div>
+        </div>
+      </section>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+    <div th:replace="fragments/layout :: scripts"></div>
+  </body>
+</html>

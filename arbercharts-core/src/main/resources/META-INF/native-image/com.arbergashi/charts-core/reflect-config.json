@@ -1,0 +1,33 @@
+[
+  {
+    "name": "com.arbergashi.charts.engine.forensic.DeterministicPlaybackManager",
+    "condition": { "typeReachable": "com.arbergashi.charts.engine.forensic.DeterministicPlaybackManager" },
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.arbergashi.charts.engine.forensic.ChronosPlaybackDrive",
+    "condition": { "typeReachable": "com.arbergashi.charts.engine.forensic.ChronosPlaybackDrive" },
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.arbergashi.charts.engine.forensic.StreamPlaybackDriveImpl",
+    "condition": { "typeReachable": "com.arbergashi.charts.engine.forensic.StreamPlaybackDriveImpl" },
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.apache.pdfbox.pdmodel.PDDocument",
+    "condition": { "typeReachable": "org.apache.pdfbox.pdmodel.PDDocument" },
+    "methods": [
+      { "name": "load", "parameterTypes": [ "java.io.File" ] },
+      { "name": "getDocumentInformation", "parameterTypes": [] },
+      { "name": "close", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "org.apache.pdfbox.pdmodel.PDDocumentInformation",
+    "condition": { "typeReachable": "org.apache.pdfbox.pdmodel.PDDocumentInformation" },
+    "methods": [
+      { "name": "getCustomMetadataValue", "parameterTypes": [ "java.lang.String" ] }
+    ]
+  }
+]

@@ -1,18 +1,17 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.HitTestUtils;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.geom.Point2D;
 import java.util.Optional;
-
 /**
  * Hollow Candlestick renderer: draws hollow (bullish) and filled (bearish) candlesticks optimized for Swing.
  * Reuses shape objects and scaled strokes to avoid allocations in the paint loop. For very dense datasets
@@ -21,6 +20,8 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class CandlestickHollowRenderer extends BaseRenderer {
 
@@ -32,17 +33,19 @@ public class CandlestickHollowRenderer extends BaseRenderer {
     // aggregation buffers when dataset is dense
     private transient boolean[] hasBucket;
     private transient double[] aggOpen, aggClose, aggHigh, aggLow, aggX;
-    private transient Color bullishColor;
-    private transient Color bearishColor;
-    private transient Color outlineColor;
-    private transient int uiKey;
+    private transient ArberColor bullishColor;
+    private transient ArberColor bearishColor;
+    private transient ArberColor outlineColor;
+    private transient int themeKey;
 
     public CandlestickHollowRenderer() {
         super("candlestick_hollow");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n == 0) return;
         double[] xData = model.getXData();
@@ -51,20 +54,17 @@ public class CandlestickHollowRenderer extends BaseRenderer {
         double[] highData = model.getHighData();
         double[] lowData = model.getLowData();
 
-        Rectangle bounds = context.plotBounds().getBounds();
-        double barWidth = Math.max(1.0, bounds.getWidth() / Math.max(10.0, n) * 0.6);
-
-        Stroke prevStroke = g2.getStroke();
-        Color prevColor = g2.getColor();
+        ArberRect bounds = context.getPlotBounds();
+        double barWidth = Math.max(1.0, bounds.width() / Math.max(10.0, n) * 0.6);
 
         ensureUiColors(context);
 
-        g2.setStroke(getSeriesStroke());
+        canvas.setStroke(getSeriesStrokeWidth());
 
         // Decide whether to aggregate by pixel column
-        boolean aggregate = n > Math.max(2000, bounds.width * 2);
+        boolean aggregate = n > Math.max(2000, bounds.width() * 2);
         if (aggregate) {
-            int buckets = Math.max(1, bounds.width);
+            int buckets = Math.max(1, (int) bounds.width());
             ensureAggBuffers(buckets);
             // reset
             for (int i = 0; i < buckets; i++) hasBucket[i] = false;
@@ -84,7 +84,7 @@ public class CandlestickHollowRenderer extends BaseRenderer {
                 context.mapToPixel(xData[i], lowData[i], pBuffer);
                 double l = pBuffer[1];
 
-                int bi = (int) Math.round(x - bounds.getX());
+                int bi = (int) Math.round(x - bounds.x());
                 if (bi < 0) continue;
                 if (bi >= buckets) {
                     bi = buckets - 1;
@@ -118,22 +118,25 @@ public class CandlestickHollowRenderer extends BaseRenderer {
 
                 double highY = aggHigh[bi];
                 double lowY = aggLow[bi];
-                g2.setColor(outlineColor);
-                g2.draw(getLine(cx, highY, cx, lowY));
+                canvas.setColor(outlineColor);
+                drawLine(canvas, cx, highY, cx, lowY);
 
                 double top = Math.min(aggOpen[bi], aggClose[bi]);
                 double height = Math.max(Math.abs(aggOpen[bi] - aggClose[bi]), ChartScale.scale(1.0f));
-                Shape body = getRect(left, top, Math.max(1.0, right - left), height);
+                float rx = (float) left;
+                float ry = (float) top;
+                float rw = (float) Math.max(1.0, right - left);
+                float rh = (float) height;
 
                 boolean bullishCandle = aggClose[bi] < aggOpen[bi];
                 if (bullishCandle) {
-                    g2.setColor(bullishColor);
-                    g2.draw(body);
+                    canvas.setColor(bullishColor);
+                    canvas.drawRect(rx, ry, rw, rh);
                 } else {
-                    g2.setColor(bearishColor);
-                    g2.fill(body);
-                    g2.setColor(outlineColor);
-                    g2.draw(body);
+                    canvas.setColor(bearishColor);
+                    canvas.fillRect(rx, ry, rw, rh);
+                    canvas.setColor(outlineColor);
+                    canvas.drawRect(rx, ry, rw, rh);
                 }
             }
 
@@ -160,31 +163,31 @@ public class CandlestickHollowRenderer extends BaseRenderer {
                 double right = cx + barWidth / 2.0;
 
                 // wick
-                g2.setColor(outlineColor);
-                g2.draw(getLine(highX, highY, lowX, lowY));
+                canvas.setColor(outlineColor);
+                drawLine(canvas, highX, highY, lowX, lowY);
 
                 double top = Math.min(openY, closeY);
                 double height = Math.max(Math.abs(openY - closeY), ChartScale.scale(1.0f));
 
-                Shape body = getRect(left, top, Math.max(1.0, right - left), height);
+                float rx = (float) left;
+                float ry = (float) top;
+                float rw = (float) Math.max(1.0, right - left);
+                float rh = (float) height;
 
                 boolean bullishCandle = closeY < openY; // lower y is higher price
                 if (bullishCandle) {
                     // hollow: stroke only
-                    g2.setColor(bullishColor);
-                    g2.draw(body);
+                    canvas.setColor(bullishColor);
+                    canvas.drawRect(rx, ry, rw, rh);
                 } else {
                     // filled
-                    g2.setColor(bearishColor);
-                    g2.fill(body);
-                    g2.setColor(outlineColor);
-                    g2.draw(body);
+                    canvas.setColor(bearishColor);
+                    canvas.fillRect(rx, ry, rw, rh);
+                    canvas.setColor(outlineColor);
+                    canvas.drawRect(rx, ry, rw, rh);
                 }
             }
         }
-
-        g2.setColor(prevColor);
-        g2.setStroke(prevStroke);
     }
 
     private void ensureAggBuffers(int buckets) {
@@ -199,23 +202,27 @@ public class CandlestickHollowRenderer extends BaseRenderer {
     }
 
     private void ensureUiColors(PlotContext context) {
-        int key = System.identityHashCode(UIManager.getDefaults());
-        if (key == uiKey && bullishColor != null) return;
-        uiKey = key;
+        int key = System.identityHashCode(getResolvedTheme(context));
+        if (key == themeKey && bullishColor != null) return;
+        themeKey = key;
 
-        bullishColor = UIManager.getColor("Chart.candlestick.bullish");
-        if (bullishColor == null) bullishColor = themeBullish(context);
+        bullishColor = themeBullish(context);
+        bearishColor = themeBearish(context);
+        outlineColor = themeForeground(context);
+    }
 
-        bearishColor = UIManager.getColor("Chart.candlestick.bearish");
-        if (bearishColor == null) bearishColor = themeBearish(context);
-
-        outlineColor = UIManager.getColor("Chart.candlestick.outline");
-        if (outlineColor == null) outlineColor = UIManager.getColor("Label.foreground");
-        if (outlineColor == null) outlineColor = themeForeground(context);
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "candleh.line.x", 2);
+        float[] ys = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "candleh.line.y", 2);
+        xs[0] = (float) x1;
+        ys[0] = (float) y1;
+        xs[1] = (float) x2;
+        ys[1] = (float) y2;
+        canvas.drawPolyline(xs, ys, 2);
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         // fallback: nearest point
         return java.util.Optional.ofNullable(HitTestUtils.nearestPointIndex(pixel, model, context).orElse(null));
     }

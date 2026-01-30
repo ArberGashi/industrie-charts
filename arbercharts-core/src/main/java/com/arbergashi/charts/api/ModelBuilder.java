@@ -2,13 +2,13 @@ package com.arbergashi.charts.api;
 
 import com.arbergashi.charts.model.ChartPoint;
 import com.arbergashi.charts.model.DefaultChartModel;
+import com.arbergashi.charts.model.DefaultFinancialChartModel;
 import com.arbergashi.charts.model.ErrorBarPoint;
 import com.arbergashi.charts.model.OHLCBar;
 
-import java.awt.*;
+import com.arbergashi.charts.api.types.ArberColor;
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * <h1>ModelBuilder - Fluent API for Chart Data</h1>
  *
@@ -19,28 +19,28 @@ import java.util.List;
  *
  * <h3>Simple Line Chart:</h3>
  * <pre>{@code
- * ChartModel model = ModelBuilder.series("Temperature")
- *     .addXY(0, 20.5)
- *     .addXY(1, 21.2)
- *     .addXY(2, 19.8)
+ * ChartModel model = ModelBuilder.of("Temperature")
+ *     .setXY(0, 20.5)
+ *     .setXY(1, 21.2)
+ *     .setXY(2, 19.8)
  *     .build();
  * }</pre>
  *
  * <h3>Candlestick Chart:</h3>
  * <pre>{@code
- * ChartModel model = ModelBuilder.series("AAPL")
- *     .color(Color.BLUE)
- *     .addOHLC(0, 100, 105, 98, 103)
- *     .addOHLC(1, 103, 108, 102, 106)
- *     .addOHLC(2, 106, 107, 104, 105)
+ * ChartModel model = ModelBuilder.of("AAPL")
+ *     .setColor(Color.BLUE)
+ *     .setOHLC(0, 100, 105, 98, 103)
+ *     .setOHLC(1, 103, 108, 102, 106)
+ *     .setOHLC(2, 106, 107, 104, 105)
  *     .build();
  * }</pre>
  *
  * <h3>Error Bar Chart:</h3>
  * <pre>{@code
- * ChartModel model = ModelBuilder.series("Measurements")
- *     .addWithError(0, 100, 5)  // symmetric error
- *     .addWithError(1, 105, 98, 110)  // asymmetric error
+ * ChartModel model = ModelBuilder.of("Measurements")
+ *     .setWithError(0, 100, 5)  // symmetric error
+ *     .setWithError(1, 105, 98, 110)  // asymmetric error
  *     .build();
  * }</pre>
  *
@@ -48,8 +48,8 @@ import java.util.List;
  * <pre>{@code
  * double[] x = {0, 1, 2, 3, 4};
  * double[] y = {10, 15, 13, 17, 20};
- * ChartModel model = ModelBuilder.series("Data")
- *     .addXYArrays(x, y)
+ * ChartModel model = ModelBuilder.of("Data")
+ *     .setXYArrays(x, y)
  *     .build();
  * }</pre>
  *
@@ -71,7 +71,7 @@ public final class ModelBuilder {
      * @param name Series name
      * @return new ModelBuilder instance
      */
-    public static ModelBuilder series(String name) {
+    public static ModelBuilder of(String name) {
         return new ModelBuilder(name);
     }
 
@@ -81,9 +81,10 @@ public final class ModelBuilder {
      * @param color Series color
      * @return this builder
      */
-    public ModelBuilder color(Color color) {
+    public ModelBuilder setColor(ArberColor color) {
         model.setColor(color);
         return this;
+        
     }
 
     /**
@@ -92,9 +93,10 @@ public final class ModelBuilder {
      * @param subtitle Series subtitle
      * @return this builder
      */
-    public ModelBuilder subtitle(String subtitle) {
+    public ModelBuilder setSubtitle(String subtitle) {
         model.setSubtitle(subtitle);
         return this;
+        
     }
 
     /**
@@ -104,8 +106,8 @@ public final class ModelBuilder {
      * @param y Y-axis value
      * @return this builder
      */
-    public ModelBuilder addXY(double x, double y) {
-        model.addXY(x, y);
+    public ModelBuilder setXY(double x, double y) {
+        model.setXY(x, y);
         return this;
     }
 
@@ -117,8 +119,8 @@ public final class ModelBuilder {
      * @param label Point label
      * @return this builder
      */
-    public ModelBuilder addXY(double x, double y, String label) {
-        model.addXY(x, y, label);
+    public ModelBuilder setXY(double x, double y, String label) {
+        model.setXY(x, y, label);
         return this;
     }
 
@@ -132,8 +134,8 @@ public final class ModelBuilder {
      * @param close Closing price
      * @return this builder
      */
-    public ModelBuilder addOHLC(double time, double open, double high, double low, double close) {
-        model.addOHLC(time, open, high, low, close);
+    public ModelBuilder setOHLC(double time, double open, double high, double low, double close) {
+        model.setOHLC(time, open, high, low, close);
         return this;
     }
 
@@ -143,8 +145,8 @@ public final class ModelBuilder {
      * @param bar OHLC data bar
      * @return this builder
      */
-    public ModelBuilder addOHLC(OHLCBar bar) {
-        model.addOHLC(bar);
+    public ModelBuilder setOHLC(OHLCBar bar) {
+        model.setOHLC(bar);
         return this;
     }
 
@@ -156,8 +158,8 @@ public final class ModelBuilder {
      * @param error Symmetric error margin (±)
      * @return this builder
      */
-    public ModelBuilder addWithError(double x, double y, double error) {
-        model.addWithError(x, y, error);
+    public ModelBuilder setWithError(double x, double y, double error) {
+        model.setWithError(x, y, error);
         return this;
     }
 
@@ -170,8 +172,8 @@ public final class ModelBuilder {
      * @param errorHigh Upper bound
      * @return this builder
      */
-    public ModelBuilder addWithError(double x, double y, double errorLow, double errorHigh) {
-        model.addWithError(x, y, errorLow, errorHigh);
+    public ModelBuilder setWithError(double x, double y, double errorLow, double errorHigh) {
+        model.setWithError(x, y, errorLow, errorHigh);
         return this;
     }
 
@@ -181,8 +183,8 @@ public final class ModelBuilder {
      * @param point Error bar data point
      * @return this builder
      */
-    public ModelBuilder addWithError(ErrorBarPoint point) {
-        model.addWithError(point);
+    public ModelBuilder setWithError(ErrorBarPoint point) {
+        model.setWithError(point);
         return this;
     }
 
@@ -192,8 +194,8 @@ public final class ModelBuilder {
      * @param points List of chart points
      * @return this builder
      */
-    public ModelBuilder addAll(List<ChartPoint> points) {
-        model.addAll(points);
+    public ModelBuilder setAll(List<ChartPoint> points) {
+        model.setAll(points);
         return this;
     }
 
@@ -204,8 +206,8 @@ public final class ModelBuilder {
      * @param y Array of Y values
      * @return this builder
      */
-    public ModelBuilder addXYArrays(double[] x, double[] y) {
-        model.addXYArrays(x, y);
+    public ModelBuilder setXYArrays(double[] x, double[] y) {
+        model.setXYArrays(x, y);
         return this;
     }
 
@@ -229,17 +231,17 @@ public final class ModelBuilder {
             this.name = name;
         }
 
-        /**
+    /**
          * Start building financial (OHLC) data.
          *
          * @param name Series name
          * @return new FinancialDataBuilder
          */
-        public static FinancialDataBuilder create(String name) {
+        public static FinancialDataBuilder of(String name) {
             return new FinancialDataBuilder(name);
         }
 
-        /**
+    /**
          * Add OHLC bar.
          *
          * @param time X-axis value (timestamp or index)
@@ -249,31 +251,31 @@ public final class ModelBuilder {
          * @param close Closing price
          * @return this builder
          */
-        public FinancialDataBuilder bar(double time, double open, double high, double low, double close) {
+        public FinancialDataBuilder setBar(double time, double open, double high, double low, double close) {
             bars.add(OHLCBar.of(time, open, high, low, close));
             return this;
         }
 
-        /**
+    /**
          * Add OHLC bar from domain object.
          *
          * @param bar OHLC data bar
          * @return this builder
          */
-        public FinancialDataBuilder bar(OHLCBar bar) {
+        public FinancialDataBuilder setBar(OHLCBar bar) {
             bars.add(bar);
             return this;
         }
 
-        /**
+    /**
          * Build and return the chart model.
          *
          * @return configured DefaultChartModel with OHLC data
          */
-        public DefaultChartModel build() {
-            DefaultChartModel model = new DefaultChartModel(name);
+        public DefaultFinancialChartModel build() {
+            DefaultFinancialChartModel model = new DefaultFinancialChartModel(name);
             for (OHLCBar bar : bars) {
-                model.addOHLC(bar);
+                model.setOHLC(bar);
             }
             return model;
         }
@@ -290,17 +292,17 @@ public final class ModelBuilder {
             this.name = name;
         }
 
-        /**
+    /**
          * Start building statistical data with error bars.
          *
          * @param name Series name
          * @return new StatisticalDataBuilder
          */
-        public static StatisticalDataBuilder create(String name) {
+        public static StatisticalDataBuilder of(String name) {
             return new StatisticalDataBuilder(name);
         }
 
-        /**
+    /**
          * Add point with symmetric error bars.
          *
          * @param x X-axis value
@@ -308,12 +310,12 @@ public final class ModelBuilder {
          * @param error Symmetric error margin (±)
          * @return this builder
          */
-        public StatisticalDataBuilder point(double x, double y, double error) {
+        public StatisticalDataBuilder setPoint(double x, double y, double error) {
             points.add(ErrorBarPoint.symmetric(x, y, error));
             return this;
         }
 
-        /**
+    /**
          * Add point with asymmetric error bars.
          *
          * @param x X-axis value
@@ -322,23 +324,23 @@ public final class ModelBuilder {
          * @param errorHigh Upper bound
          * @return this builder
          */
-        public StatisticalDataBuilder point(double x, double y, double errorLow, double errorHigh) {
+        public StatisticalDataBuilder setPoint(double x, double y, double errorLow, double errorHigh) {
             points.add(ErrorBarPoint.of(x, y, errorLow, errorHigh));
             return this;
         }
 
-        /**
+    /**
          * Add point from domain object.
          *
          * @param point Error bar data point
          * @return this builder
          */
-        public StatisticalDataBuilder point(ErrorBarPoint point) {
+        public StatisticalDataBuilder setPoint(ErrorBarPoint point) {
             points.add(point);
             return this;
         }
 
-        /**
+    /**
          * Build and return the chart model.
          *
          * @return configured DefaultChartModel with error bar data
@@ -346,7 +348,7 @@ public final class ModelBuilder {
         public DefaultChartModel build() {
             DefaultChartModel model = new DefaultChartModel(name);
             for (ErrorBarPoint point : points) {
-                model.addWithError(point);
+                model.setWithError(point);
             }
             return model;
         }

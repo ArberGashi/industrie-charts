@@ -1,13 +1,13 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.FlowChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * AlluvialRenderer visualizes changes in structure over time.
  * It expects a FlowChartModel.
@@ -16,10 +16,11 @@ import java.awt.geom.Path2D;
  * @version 1.0.0
  * @since 2026-01-01
  * @see FlowChartModel
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class AlluvialRenderer extends BaseRenderer {
 
-    private final Path2D.Double flowPath = new Path2D.Double();
     private String[] nodeIds = new String[0];
     private int[] nodeX = new int[0];
     private int[] nodeY = new int[0];
@@ -31,10 +32,11 @@ public final class AlluvialRenderer extends BaseRenderer {
         super("alluvial");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof FlowChartModel flowModel)) {
-            drawErrorMessage(g2, context, "AlluvialRenderer requires a FlowChartModel");
             return;
         }
 
@@ -54,17 +56,17 @@ public final class AlluvialRenderer extends BaseRenderer {
         }
 
         // Layout nodes (simple deterministic layout)
-        Rectangle bounds = context.plotBounds().getBounds();
+        ArberRect bounds = context.getPlotBounds();
         int steps = 3;
         int nodesPerStep = Math.max(1, n / steps);
-        int xStep = Math.max(1, bounds.width / (steps));
-        int yStep = bounds.height / (nodesPerStep + 1);
+        int xStep = Math.max(1, (int) (bounds.width() / (steps)));
+        int yStep = (int) (bounds.height() / (nodesPerStep + 1));
 
         for (int i = 0; i < n; i++) {
             int stepIndex = i / nodesPerStep;
             int nodeInStep = i % nodesPerStep;
-            int x = bounds.x + stepIndex * xStep + xStep / 4;
-            int y = bounds.y + (nodeInStep + 1) * yStep;
+            int x = (int) bounds.x() + stepIndex * xStep + xStep / 4;
+            int y = (int) bounds.y() + (nodeInStep + 1) * yStep;
             nodeIds[i] = nodes.get(i).getId();
             nodeX[i] = x;
             nodeY[i] = y;
@@ -85,21 +87,18 @@ public final class AlluvialRenderer extends BaseRenderer {
             }
             if (sIdx == -1 || tIdx == -1) continue;
 
-            drawFlow(g2, model, context, sIdx, tIdx, linkIndex);
+            drawFlow(canvas, model, context, sIdx, tIdx, linkIndex);
             linkIndex++;
         }
 
         // Draw nodes (strata)
-        g2.setColor(themeGrid(context));
+        canvas.setColor(themeGrid(context));
         for (int i = 0; i < n; i++) {
-            g2.fill(getRect(nodeX[i], nodeY[i], nodeW[i], nodeH[i]));
-            g2.setColor(themeForeground(context));
-            g2.drawString(nodes.get(i).getLabel(), nodeX[i] + 5, nodeY[i] + 15);
-            g2.setColor(themeGrid(context));
+            canvas.fillRect(nodeX[i], nodeY[i], nodeW[i], nodeH[i]);
         }
     }
 
-    private void drawFlow(Graphics2D g2, ChartModel model, PlotContext context, int sIdx, int tIdx, int linkIndex) {
+    private void drawFlow(ArberCanvas canvas, ChartModel model, PlotContext context, int sIdx, int tIdx, int linkIndex) {
         int x1 = nodeX[sIdx] + nodeW[sIdx];
         int y1 = nodeY[sIdx];
         int x2 = nodeX[tIdx];
@@ -107,22 +106,13 @@ public final class AlluvialRenderer extends BaseRenderer {
         int y2b = nodeY[tIdx] + nodeH[tIdx];
         int y1b = nodeY[sIdx] + nodeH[sIdx];
 
-        flowPath.reset();
-        flowPath.moveTo(x1, y1);
-        flowPath.lineTo(x2, y2);
-        flowPath.lineTo(x2, y2b);
-        flowPath.lineTo(x1, y1b);
-        flowPath.closePath();
+        float[] xs = new float[] {x1, x2, x2, x1};
+        float[] ys = new float[] {y1, y2, y2b, y1b};
 
-        Color base = seriesOrBase(model, context, 0);
-        Color flowColor = isMultiColor() ? themeSeries(context, linkIndex) : base;
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor flowColor = isMultiColor() ? themeSeries(context, linkIndex) : base;
         if (flowColor == null) flowColor = base;
-        g2.setColor(com.arbergashi.charts.util.ColorUtils.withAlpha(flowColor, 0.28f));
-        g2.fill(flowPath);
-    }
-
-    private void drawErrorMessage(Graphics2D g2, PlotContext context, String message) {
-        g2.setColor(themeAccent(context));
-        g2.drawString(message, context.plotBounds().getBounds().x + 10, context.plotBounds().getBounds().y + 20);
+        canvas.setColor(ColorRegistry.applyAlpha(flowColor, 0.28f));
+        canvas.fillPolygon(xs, ys, xs.length);
     }
 }

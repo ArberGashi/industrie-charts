@@ -9,11 +9,41 @@ import java.util.Objects;
  * @version 1.0.0
  * @since 2026-01-01
  */
-public record RendererDescriptor(String id, String nameKey, String iconPath) {
+public final class RendererDescriptor {
+    private String id;
+    private String nameKey;
+    private String iconPath;
+
     public RendererDescriptor(String id, String nameKey, String iconPath) {
         this.id = Objects.requireNonNull(id);
         this.nameKey = Objects.requireNonNull(nameKey);
         this.iconPath = Objects.requireNonNull(iconPath);
     }
-}
 
+    public String getId() {
+        return id;
+    }
+
+    public RendererDescriptor setId(String id) {
+        this.id = Objects.requireNonNull(id);
+        return this;
+    }
+
+    public String getNameKey() {
+        return nameKey;
+    }
+
+    public RendererDescriptor setNameKey(String nameKey) {
+        this.nameKey = Objects.requireNonNull(nameKey);
+        return this;
+    }
+
+    public String getIconPath() {
+        return iconPath;
+    }
+
+    public RendererDescriptor setIconPath(String iconPath) {
+        this.iconPath = Objects.requireNonNull(iconPath);
+        return this;
+    }
+}

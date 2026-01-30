@@ -1,7 +1,11 @@
 /**
- * Internal implementation details of the ArberCharts framework.
+ * Internal implementation details for ArberCharts.
  *
- * <p>Classes in this package are not considered public API and may change without notice.
- * They exist to support performance, caching, hit-testing, and renderer management.</p>
+ * <p>Not part of the public API. Types may change without notice and are not intended
+ * for direct consumption by applications.</p>
+ *
+ * @author Arber Gashi
+ * @version 1.7.0
+ * @since 2026-01-30
  */
 package com.arbergashi.charts.internal;

@@ -2,15 +2,15 @@ package com.arbergashi.charts.render.circular;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
+import com.arbergashi.charts.util.ColorRegistry;
+import com.arbergashi.charts.util.MathUtils;
 
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Optional;
 
 /**
@@ -19,16 +19,11 @@ import java.util.Optional;
  * A modern, interactive polar area chart where segment radii represent values.
  * Adheres to strict zero-allocation guidelines.
  * </p>
- * <h2>Features:</h2>
- * <ul>
- *     <li><b>Polar Grid:</b> A clean, circular grid for easy value comparison.</li>
- *     <li><b>Hover Effect:</b> Segments are highlighted on mouse hover.</li>
- *     <li><b>Smart Labels:</b> Category labels are placed around the circle.</li>
- * </ul>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class NightingaleRoseRenderer extends BaseRenderer {
 
@@ -39,18 +34,18 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
     }
 
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n == 0) return;
 
-        Rectangle2D b = context.plotBounds();
+        ArberRect b = context.getPlotBounds();
         if (b == null || b.getWidth() <= 1 || b.getHeight() <= 1) return;
 
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
+        double cx = b.centerX();
+        double cy = b.centerY();
         double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.8;
-        
-        drawPolarGrid(g2, context, n, model);
+
+        drawPolarGrid(canvas, context, n);
 
         double angleStep = 360.0 / n;
         double maxValue = getMaxValue(model);
@@ -64,77 +59,56 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
 
             double startAngle = i * angleStep - 90.0;
 
-            Shape arc = getArc(cx - r, cy - r, r * 2, r * 2, -startAngle, -angleStep, Arc2D.PIE);
-
-            Color color = getSeriesColor(model, i, context);
+            ArberColor color = getSeriesColor(model, i, context);
             if (i == hoverIndex) {
-                color = color.brighter();
+                color = ColorRegistry.adjustBrightness(color, 1.1);
             }
-            
-            g2.setColor(ColorUtils.withAlpha(color, 0.75f));
-            g2.fill(arc);
-            g2.setStroke(getCachedStroke(1.5f));
-            g2.setColor(color);
-            g2.draw(arc);
+
+            canvas.setColor(ColorRegistry.applyAlpha(color, 0.75f));
+            fillArcSegment(canvas, cx, cy, r, startAngle, -angleStep);
+            canvas.setStroke(1.5f);
+            canvas.setColor(color);
+            drawArcPolyline(canvas, cx, cy, r, startAngle, -angleStep);
         }
     }
-    
-    private void drawPolarGrid(Graphics2D g, PlotContext context, int segments, ChartModel model) {
-        ChartTheme t = resolveTheme(context);
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
+
+    private void drawPolarGrid(ArberCanvas canvas, PlotContext context, int segments) {
+        ChartTheme t = getResolvedTheme(context);
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
         double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.8;
 
-        g.setColor(t.getGridColor());
-        g.setStroke(getCachedStroke(1.0f));
+        canvas.setColor(t.getGridColor());
+        canvas.setStroke(1.0f);
 
-        // Concentric circles
         int ringCount = 4;
         for (int i = 1; i <= ringCount; i++) {
             double r = maxRadius * ((double) i / ringCount);
-            g.draw(getEllipse(cx - r, cy - r, r * 2, r * 2));
+            drawCirclePolyline(canvas, cx, cy, r, 48);
         }
 
-        // Radial lines and labels
         double angleStep = 360.0 / segments;
-        g.setFont(getCachedFont(10f, Font.PLAIN));
-        FontMetrics fm = g.getFontMetrics();
         for (int i = 0; i < segments; i++) {
             double angleRad = Math.toRadians(i * angleStep - 90);
             double x = cx + Math.cos(angleRad) * maxRadius;
             double y = cy + Math.sin(angleRad) * maxRadius;
-            g.draw(getLine(cx, cy, x, y));
-            
-            String label = model.getLabel(i);
-            if (label != null && !label.isEmpty()) {
-                double labelRadius = maxRadius + ChartScale.scale(10);
-                float tx = (float) (cx + Math.cos(angleRad) * labelRadius);
-                float ty = (float) (cy + Math.sin(angleRad) * labelRadius);
-                
-                if (Math.abs(tx - cx) < 1) tx -= fm.stringWidth(label) / 2.0f;
-                else if (tx < cx) tx -= fm.stringWidth(label);
-                if (Math.abs(ty - cy) > 1 && ty > cy) ty += fm.getAscent() / 2f;
-
-                g.setColor(t.getAxisLabelColor());
-                g.drawString(label, tx, ty);
-            }
+            drawLine(canvas, cx, cy, x, y);
         }
     }
 
-
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n <= 0) return Optional.empty();
 
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
         double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.8;
-        
-        double dx = pixel.getX() - cx;
-        double dy = pixel.getY() - cy;
+
+        double dx = pixel.x() - cx;
+        double dy = pixel.y() - cy;
         double distSq = dx * dx + dy * dy;
 
         if (distSq > maxRadius * maxRadius) {
@@ -151,11 +125,11 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
             hoverIndex = -1;
             return Optional.empty();
         }
-        
+
         double maxValue = getMaxValue(model);
         double valueRatio = model.getY(index) / maxValue;
         double radius = valueRatio * maxRadius;
-        
+
         if (Math.sqrt(distSq) <= radius) {
             hoverIndex = index;
             return Optional.of(index);
@@ -164,7 +138,7 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
         hoverIndex = -1;
         return Optional.empty();
     }
-    
+
     private double getMaxValue(ChartModel model) {
         double max = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < model.getPointCount(); i++) {
@@ -174,12 +148,58 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
         }
         return (Double.isFinite(max) && max > 0) ? max : 1.0;
     }
-    
-    private Color getSeriesColor(ChartModel model, int index, PlotContext context) {
+
+    private ArberColor getSeriesColor(ChartModel model, int index, PlotContext context) {
         if (model.getColor() != null) return model.getColor();
-        return resolveTheme(context).getSeriesColor(index);
+        return getResolvedTheme(context).getSeriesColor(index);
     }
-    
+
+    private void drawCirclePolyline(ArberCanvas canvas, double cx, double cy, double r, int segments) {
+        float[] xs = new float[segments + 1];
+        float[] ys = new float[segments + 1];
+        for (int i = 0; i <= segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
+
+    private void drawArcPolyline(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
+        int segments = Math.max(12, (int) (Math.abs(sweepDeg) / 4.0));
+        float[] xs = new float[segments + 1];
+        float[] ys = new float[segments + 1];
+        double step = sweepDeg / segments;
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg + step * i);
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
+
+    private void fillArcSegment(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
+        int segments = Math.max(12, (int) (Math.abs(sweepDeg) / 4.0));
+        int total = segments + 2;
+        float[] xs = new float[total];
+        float[] ys = new float[total];
+        xs[0] = (float) cx;
+        ys[0] = (float) cy;
+        double step = sweepDeg / segments;
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg + step * i);
+            xs[i + 1] = (float) (cx + Math.cos(a) * r);
+            ys[i + 1] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, total);
+    }
+
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = new float[]{(float) x1, (float) x2};
+        float[] ys = new float[]{(float) y1, (float) y2};
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
     @Override
     public void clearHover() {
         this.hoverIndex = -1;

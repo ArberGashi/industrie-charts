@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head('ArberCharts Renderers')"></head>
+  <body data-theme="dark">
+    <header th:replace="fragments/layout :: header('renderers')"></header>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <h1>Renderer gallery</h1>
+          <p>Browse curated renderer previews by domain. Each tile is rendered live using the same engine customers deploy in production.</p>
+        </div>
+        <div class="card">
+          <h3>Filter focus</h3>
+          <div class="grid">
+            <button class="btn ghost is-active" type="button" data-filter="all">All</button>
+            <button class="btn ghost" type="button" data-filter="medical">Medical</button>
+            <button class="btn ghost" type="button" data-filter="financial">Financial</button>
+            <button class="btn ghost" type="button" data-filter="analysis">Engineering</button>
+            <button class="btn ghost" type="button" data-filter="circular">Circular</button>
+            <button class="btn ghost" type="button" data-filter="network">Network</button>
+            <button class="btn ghost" type="button" data-filter="spatial" th:if="${vectorAvailable}">Spatial 3D</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" th:if="${!vectorAvailable}">
+        <div class="card">
+          <h3>Vector API required for spatial renderers</h3>
+          <p>Enable the JDK Vector API to unlock spatial charts in this gallery.</p>
+          <div class="code-block">JAVA_TOOL_OPTIONS="--add-modules jdk.incubator.vector" mvn -pl arbercharts-visual-verifier spring-boot:run</div>
+        </div>
+      </section>
+
+      <div th:each="group : ${groups}">
+        <section class="section">
+          <h2 th:text="${group.name}">Domain</h2>
+          <div class="grid wide chart-grid">
+            <div class="card" th:each="chart : ${group.charts}" th:attr="data-card-domain=${chart.domain}">
+              <div class="chart-meta">
+                <h3 th:text="${chart.label}">Chart</h3>
+                <span class="badge" th:text="${chart.domain}">domain</span>
+              </div>
+              <img th:attr="data-type=${chart.type}, data-domain=${chart.domain}" data-width="920" data-height="520" alt="chart" />
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+    <div th:replace="fragments/layout :: scripts"></div>
+  </body>
+</html>

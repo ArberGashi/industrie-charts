@@ -1,19 +1,16 @@
 package com.arbergashi.charts.render.financial;
 
 
-import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
 import com.arbergashi.charts.internal.HitTestUtils;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Optional;
-
 /**
  * <h1>CandlestickRenderer - Professional OHLC Visualization</h1>
  *
@@ -39,6 +36,8 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class CandlestickRenderer extends BaseRenderer {
 
@@ -48,6 +47,8 @@ public final class CandlestickRenderer extends BaseRenderer {
     private final double[] pxClose = new double[2];
     private final double[] pxPrev = new double[2];
     private final double[] pxNext = new double[2];
+    private final float[] wickXs = new float[2];
+    private final float[] wickYs = new float[2];
     private boolean compressGaps;
 
     public CandlestickRenderer() {
@@ -57,42 +58,56 @@ public final class CandlestickRenderer extends BaseRenderer {
     /**
      * Enables optional gap compression (e.g., hide non-trading periods).
      */
-    public CandlestickRenderer setCompressGaps(boolean compressGaps) {
+    public CandlestickRenderer setCompressGaps(boolean compressGaps){
         this.compressGaps = compressGaps;
         return this;
+        
     }
 
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        if (canvas == null || model == null || context == null) return;
         int count = model.getPointCount();
         if (count == 0) return;
 
-        final Rectangle2D plotBounds = context.plotBounds();
-        final double uniformWidth = (plotBounds.getWidth() / (double) count) * 0.75;
+        final var plotBounds = context.getPlotBounds();
+        final double uniformWidth = (plotBounds.width() / (double) count) * 0.75;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color colorBullish = theme.getBullishColor();
-        final Color colorBearish = theme.getBearishColor();
-
-        // Use cached font from BaseRenderer to avoid allocations
-        final Font labelFont = getCachedFont(9.0f, Font.PLAIN);
-
-        final Rectangle viewBounds = g.getClipBounds() != null ? g.getClipBounds() : context.plotBounds().getBounds();
+        final var theme = getResolvedTheme(context);
+        final ArberColor colorBullish = theme.getBullishColor();
+        final ArberColor colorBearish = theme.getBearishColor();
+        final ArberColor wickColor = theme.getForeground();
 
         for (int i = 0; i < count; i++) {
             double xVal = model.getX(i);
-            context.mapToPixel(xVal, model.getMax(i), pxHigh);
-            context.mapToPixel(xVal, model.getMin(i), pxLow);
-            context.mapToPixel(xVal, model.getWeight(i), pxOpen);
-            context.mapToPixel(xVal, model.getY(i), pxClose);
+            final double high;
+            final double low;
+            final double open;
+            final double close;
+            if (model instanceof FinancialChartModel fin) {
+                high = fin.getHigh(i);
+                low = fin.getLow(i);
+                open = fin.getOpen(i);
+                close = fin.getClose(i);
+            } else {
+                high = model.getMax(i);
+                low = model.getMin(i);
+                open = model.getWeight(i);
+                close = model.getY(i);
+            }
 
-            boolean bullish = model.getY(i) >= model.getWeight(i);
-            Color candleColor = bullish ? colorBullish : colorBearish;
+            context.mapToPixel(xVal, high, pxHigh);
+            context.mapToPixel(xVal, low, pxLow);
+            context.mapToPixel(xVal, open, pxOpen);
+            context.mapToPixel(xVal, close, pxClose);
+
+            boolean bullish = close >= open;
+            ArberColor candleColor = bullish ? colorBullish : colorBearish;
 
             double candleX = pxOpen[0];
             if (compressGaps) {
-                double step = plotBounds.getWidth() / (double) count;
-                candleX = plotBounds.getX() + (i + 0.5) * step;
+                double step = plotBounds.width() / (double) count;
+                candleX = plotBounds.x() + (i + 0.5) * step;
                 pxHigh[0] = candleX;
                 pxLow[0] = candleX;
                 pxOpen[0] = candleX;
@@ -124,39 +139,28 @@ public final class CandlestickRenderer extends BaseRenderer {
             double bodyH = Math.max(Math.abs(openY - closeY), ChartScale.scale(1.5f));
             float x = (float) Math.round(snappedX - snappedWidth / 2.0);
 
-            // Clipping
-            double wickTop = Math.min(highY, lowY);
-            double wickHeight = Math.abs(lowY - highY);
-            if (!viewBounds.intersects(x, wickTop, snappedWidth, wickHeight)) {
-                continue;
-            }
-
-            // 1. Wicks (Dochte)
-            g.setColor(theme.getForeground());
-            g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-            g.draw(getLine(snappedX, highY, snappedX, lowY));
+            // 1. Wicks
+            canvas.setColor(wickColor);
+            canvas.setStroke(ChartScale.scale(1.0f));
+            wickXs[0] = (float) snappedX;
+            wickXs[1] = (float) snappedX;
+            wickYs[0] = (float) highY;
+            wickYs[1] = (float) lowY;
+            canvas.drawPolyline(wickXs, wickYs, 2);
 
             // 2. Body
-            Shape body = getRoundRectangle(x, (float) bodyY, (float) snappedWidth, (float) bodyH,
-                    ChartScale.scale(1.5f), ChartScale.scale(1.5f));
+            canvas.setColor(candleColor);
+            canvas.fillRect(x, (float) bodyY, (float) snappedWidth, (float) bodyH);
 
-            g.setPaint(getCachedGradient(candleColor, (float) bodyH));
-            g.fill(body);
-
-            g.setColor(ColorUtils.adjustBrightness(candleColor, 0.7f));
-            g.setStroke(getCachedStroke(ChartScale.scale(0.8f)));
-            g.draw(body);
-
-            // 3. Labels
-            String label = model.getLabel(i);
-            if (label != null && !label.isEmpty()) {
-                drawLabel(g, label, labelFont, theme.getForeground(), x, (float) highY - ChartScale.scale(4.0f));
-            }
+            canvas.setColor(com.arbergashi.charts.util.ColorRegistry.adjustBrightness(
+                    bullish ? theme.getBullishColor() : theme.getBearishColor(), 0.7f));
+            canvas.setStroke(ChartScale.scale(0.8f));
+            canvas.drawRect(x, (float) bodyY, (float) snappedWidth, (float) bodyH);
         }
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         return HitTestUtils.nearestPointIndex(pixel, model, context);
     }
 }

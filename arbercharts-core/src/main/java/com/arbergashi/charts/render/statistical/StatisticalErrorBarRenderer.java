@@ -1,36 +1,22 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-
 /**
- * Statistical Error Bar Renderer (JDK 25 Standard).
- * Extends plots with horizontal and vertical error bars.
- * Supports standard deviation, confidence intervals and custom ranges.
- * Data Mapping (ChartPoint):
- * x       → Central X position
- * y       → Central Y position
- * min     → Lower bound (Y) for vertical error
- * max     → Upper bound (Y) for vertical error
- * weight  → Horizontal error extent (+/-) from x
- * Features:
- * - Vertical and horizontal error bars
- * - Customizable cap width
- * - High-DPI support
- * - Clipping optimization
- *
- * @author Arber Gashi
- * @version 1.0.0
- * @since 2025-06-15
+ * Statistical Error Bar Renderer (headless).
+  * @author Arber Gashi
+  * @version 1.7.0
+  * @since 2026-01-30
  */
 public class StatisticalErrorBarRenderer extends BaseRenderer {
 
-    // Buffer fields to avoid per-iteration allocation
     private final double[] centerBuf = new double[2];
     private final double[] topBuf = new double[2];
     private final double[] bottomBuf = new double[2];
@@ -39,53 +25,48 @@ public class StatisticalErrorBarRenderer extends BaseRenderer {
     private boolean showVertical = true;
     private boolean showHorizontal = false;
     private float capWidth = 8.0f;
+
     public StatisticalErrorBarRenderer() {
         super("errorbar");
     }
 
-    /**
-     * Sets whether vertical error bars (using min/max) are rendered.
-     */
-    public void setShowVertical(boolean showVertical) {
+    public StatisticalErrorBarRenderer setShowVertical(boolean showVertical) {
         this.showVertical = showVertical;
+        return this;
     }
 
-    /**
-     * Sets whether horizontal error bars (using weight as +/- x error) are rendered.
-     */
-    public void setShowHorizontal(boolean showHorizontal) {
+    public StatisticalErrorBarRenderer setShowHorizontal(boolean showHorizontal) {
         this.showHorizontal = showHorizontal;
+        return this;
     }
 
-    /**
-     * Sets the cap width in logical pixels (scaled for HiDPI).
-     */
-    public void setCapWidth(float capWidth) {
+    public StatisticalErrorBarRenderer setCapWidth(float capWidth) {
         this.capWidth = capWidth;
+        return this;
     }
 
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-        g2.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         double scaledCap = ChartScale.scale(capWidth) / 2.0;
-        final Color color = getSeriesColor(model);
+        final ArberColor color = getSeriesColor(model);
         int n = model.getPointCount();
         for (int i = 0; i < n; i++) {
             double x = model.getX(i);
             double y = model.getY(i);
             context.mapToPixel(x, y, centerBuf);
-            Color pointColor = isMultiColor() ? themeSeries(context, i) : color;
+            ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : color;
             if (pointColor == null) pointColor = color;
-            g2.setColor(pointColor);
+            canvas.setColor(pointColor);
 
             if (showVertical) {
                 context.mapToPixel(x, model.getMax(i), topBuf);
                 context.mapToPixel(x, model.getMin(i), bottomBuf);
 
-                g2.draw(getLine(centerBuf[0], topBuf[1], centerBuf[0], bottomBuf[1]));
-                g2.draw(getLine(centerBuf[0] - scaledCap, topBuf[1], centerBuf[0] + scaledCap, topBuf[1]));
-                g2.draw(getLine(centerBuf[0] - scaledCap, bottomBuf[1], centerBuf[0] + scaledCap, bottomBuf[1]));
+                drawLine(canvas, centerBuf[0], topBuf[1], centerBuf[0], bottomBuf[1]);
+                drawLine(canvas, centerBuf[0] - scaledCap, topBuf[1], centerBuf[0] + scaledCap, topBuf[1]);
+                drawLine(canvas, centerBuf[0] - scaledCap, bottomBuf[1], centerBuf[0] + scaledCap, bottomBuf[1]);
             }
 
             if (showHorizontal) {
@@ -94,24 +75,46 @@ public class StatisticalErrorBarRenderer extends BaseRenderer {
                     context.mapToPixel(x - errX, y, leftBuf);
                     context.mapToPixel(x + errX, y, rightBuf);
 
-                    g2.draw(getLine(leftBuf[0], centerBuf[1], rightBuf[0], centerBuf[1]));
-                    g2.draw(getLine(leftBuf[0], centerBuf[1] - scaledCap, leftBuf[0], centerBuf[1] + scaledCap));
-                    g2.draw(getLine(rightBuf[0], centerBuf[1] - scaledCap, rightBuf[0], centerBuf[1] + scaledCap));
+                    drawLine(canvas, leftBuf[0], centerBuf[1], rightBuf[0], centerBuf[1]);
+                    drawLine(canvas, leftBuf[0], centerBuf[1] - scaledCap, leftBuf[0], centerBuf[1] + scaledCap);
+                    drawLine(canvas, rightBuf[0], centerBuf[1] - scaledCap, rightBuf[0], centerBuf[1] + scaledCap);
                 }
             }
 
-            // Allocation-free highlight point
             double size = ChartScale.scale(8.0);
-            g2.setColor(ColorUtils.withAlpha(pointColor, 0.5f));
-            g2.fill(getEllipse(centerBuf[0] - size, centerBuf[1] - size, size * 2, size * 2));
+            canvas.setColor(ColorUtils.applyAlpha(pointColor, 0.5f));
+            fillCircle(canvas, centerBuf[0], centerBuf[1], size);
 
-            g2.setColor(pointColor);
-            g2.fill(getEllipse(centerBuf[0] - size / 2, centerBuf[1] - size / 2, size, size));
+            canvas.setColor(pointColor);
+            fillCircle(canvas, centerBuf[0], centerBuf[1], size / 2);
 
-            g2.setColor(themeBackground(context));
-            g2.fill(getEllipse(centerBuf[0] - size / 4, centerBuf[1] - size / 4, size / 2, size / 2));
+            canvas.setColor(themeBackground(context));
+            fillCircle(canvas, centerBuf[0], centerBuf[1], size / 4);
 
-            g2.setColor(pointColor);
+            canvas.setColor(pointColor);
         }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "serr.lineX", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "serr.lineY", 2);
+        xs[0] = (float) x0;
+        ys[0] = (float) y0;
+        xs[1] = (float) x1;
+        ys[1] = (float) y1;
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
+    private void fillCircle(ArberCanvas canvas, double cx, double cy, double d) {
+        double r = d / 2.0;
+        int segments = 10;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "serr.cx", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "serr.cy", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
     }
 }

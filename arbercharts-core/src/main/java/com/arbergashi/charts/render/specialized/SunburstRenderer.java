@@ -1,27 +1,27 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.internal.LabelCache;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ColorRegistry;
 
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
- * Sunburst renderer: hierarchical ring visualization optimized for Swing.
- * Expects ChartPoint.label() to contain paths like "root/child/grandchild" and weight in y.
+ * Sunburst renderer: hierarchical ring visualization.
+ * Expects ChartPoint.getLabel() to contain paths like "root/child/grandchild" and weight in y.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class SunburstRenderer extends BaseRenderer {
 
@@ -55,9 +55,6 @@ public final class SunburstRenderer extends BaseRenderer {
         RendererRegistry.register("sunburst", new RendererDescriptor("sunburst", "renderer.sunburst", "/icons/sunburst.svg"), SunburstRenderer::new);
     }
 
-    private final transient Arc2D.Double arc = new Arc2D.Double();
-    private final transient LabelCache labelCache = new LabelCache();
-    private final transient Path2D.Double ringPath = new Path2D.Double();
     private final transient Node root = new Node("root", "", 0);
     private transient Node[] nodePool;
     private transient int nodePoolSize;
@@ -66,15 +63,18 @@ public final class SunburstRenderer extends BaseRenderer {
         super("sunburst");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle2D bounds = context.plotBounds();
-        double cx = bounds.getCenterX();
-        double cy = bounds.getCenterY();
-        double radius = Math.min(bounds.getWidth(), bounds.getHeight()) * 0.45;
+        ArberRect bounds = context.getPlotBounds();
+        double cx = bounds.centerX();
+        double cy = bounds.centerY();
+        double radius = Math.min(bounds.width(), bounds.height()) * 0.45;
 
         Map<String, Node> nodes = RendererAllocationCache.getMap(this, "nodes");
         root.reset("root", "", 0);
@@ -113,31 +113,15 @@ public final class SunburstRenderer extends BaseRenderer {
 
         if (root.value <= 0 || root.children.isEmpty()) return;
 
-        Object prevAA = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
-        Object prevStroke = g2.getRenderingHint(RenderingHints.KEY_STROKE_CONTROL);
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-
         double start = 0.0;
         int i = 0;
-        var theme = resolveTheme(context);
         for (Node child : root.children.values()) {
             double angle = child.value / root.value * 360.0;
-            Color base = seriesOrBase(model, context, i);
-            drawSegment(g2, child, base, i, root.value, start, angle, cx, cy, radius, maxDepth, context);
-
-            // draw label at mid-angle for top level
-            double mid = Math.toRadians(start + angle / 2.0);
-            double lx = cx + Math.cos(mid) * (radius * 0.62);
-            double ly = cy + Math.sin(mid) * (radius * 0.62);
-            labelCache.drawLabel(g2, child.name, g2.getFont(), themeAxisLabel(context), (float) lx, (float) ly);
-
+            ArberColor base = seriesOrBase(model, context, i);
+            drawSegment(canvas, child, base, i, root.value, start, angle, cx, cy, radius, maxDepth);
             start += angle;
             i++;
         }
-
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, prevAA);
-        g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, prevStroke);
     }
 
     private Node acquireNode(int index, String name, String path, int depth) {
@@ -159,78 +143,67 @@ public final class SunburstRenderer extends BaseRenderer {
         return node;
     }
 
-    private void drawSegment(Graphics2D g2, Node node, Color baseColor, int index, double rootTotal,
+    private void drawSegment(ArberCanvas canvas, Node node, ArberColor baseColor, int index, double rootTotal,
                              double start, double sweep, double cx, double cy, double radius,
-                             int maxDepth, PlotContext context) {
+                             int maxDepth) {
         if (node.value <= 0) return;
         if (node.depth <= 0) return;
 
         double inner = radius * ((node.depth - 1) / (double) maxDepth);
         double outer = radius * (node.depth / (double) maxDepth);
-        Shape segShape = buildRing(cx, cy, inner, outer, start, sweep);
 
-        Color segColor = deriveColor(baseColor, node, index);
-        g2.setColor(segColor);
-        g2.fill(segShape);
+        ArberColor segColor = deriveColor(baseColor, node, index);
+        canvas.setColor(segColor);
+        fillRing(canvas, cx, cy, inner, outer, start, sweep);
 
         if (!node.children.isEmpty()) {
             double childStart = start;
             int childIndex = 0;
             for (Node child : node.children.values()) {
                 double childSweep = sweep * (child.value / node.value);
-                Color childBase = deriveChildBase(segColor, childIndex, node.children.size());
-                drawSegment(g2, child, childBase, childIndex, rootTotal, childStart, childSweep, cx, cy, radius, maxDepth, context);
+                ArberColor childBase = deriveChildBase(segColor, childIndex, node.children.size());
+                drawSegment(canvas, child, childBase, childIndex, rootTotal, childStart, childSweep, cx, cy, radius, maxDepth);
                 childStart += childSweep;
                 childIndex++;
             }
         }
     }
 
-    private Shape buildRing(double cx, double cy, double inner, double outer, double start, double sweep) {
-        if (inner <= 1.0) {
-            arc.setFrame(cx - outer, cy - outer, outer * 2, outer * 2);
-            arc.setAngleStart(start);
-            arc.setAngleExtent(sweep);
-            arc.setArcType(Arc2D.PIE);
-            return arc;
+    private void fillRing(ArberCanvas canvas, double cx, double cy, double inner, double outer, double startDeg, double sweepDeg) {
+        double startRad = Math.toRadians(startDeg);
+        double endRad = Math.toRadians(startDeg + sweepDeg);
+        double sweep = Math.abs(endRad - startRad);
+        int segs = Math.max(6, Math.min(72, (int) Math.ceil(sweep * outer / 20.0)));
+        int count = segs * 2 + 2;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "sunburst.ring.x", count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "sunburst.ring.y", count);
+
+        int idx = 0;
+        for (int i = 0; i <= segs; i++) {
+            double t = startRad + (endRad - startRad) * (i / (double) segs);
+            xs[idx] = (float) (cx + Math.cos(t) * outer);
+            ys[idx] = (float) (cy + Math.sin(t) * outer);
+            idx++;
         }
-
-        ringPath.reset();
-        arc.setFrame(cx - outer, cy - outer, outer * 2, outer * 2);
-        arc.setAngleStart(start);
-        arc.setAngleExtent(sweep);
-        arc.setArcType(Arc2D.OPEN);
-        ringPath.append(arc, false);
-
-        arc.setFrame(cx - inner, cy - inner, inner * 2, inner * 2);
-        arc.setAngleStart(start + sweep);
-        arc.setAngleExtent(-sweep);
-        arc.setArcType(Arc2D.OPEN);
-        ringPath.append(arc, true);
-        ringPath.closePath();
-        return ringPath;
+        for (int i = segs; i >= 0; i--) {
+            double t = startRad + (endRad - startRad) * (i / (double) segs);
+            xs[idx] = (float) (cx + Math.cos(t) * inner);
+            ys[idx] = (float) (cy + Math.sin(t) * inner);
+            idx++;
+        }
+        canvas.fillPolygon(xs, ys, idx);
     }
 
-    private Color deriveColor(Color base, Node node, int index) {
-        float[] hsb = Color.RGBtoHSB(base.getRed(), base.getGreen(), base.getBlue(), null);
-        float hueShift = (index % 6) * 0.02f;
-        float hue = (hsb[0] + hueShift) % 1.0f;
-        float sat = Math.min(1.0f, hsb[1] * (0.9f - node.depth * 0.03f));
-        float bri = Math.min(1.0f, hsb[2] * (0.9f + node.depth * 0.05f));
-        int rgb = Color.HSBtoRGB(hue, sat, bri);
-        int r = (rgb >> 16) & 0xFF;
-        int g = (rgb >> 8) & 0xFF;
-        int b = rgb & 0xFF;
-        return RendererAllocationCache.getColor(this, "sunburst." + node.path, r, g, b);
+    private ArberColor deriveColor(ArberColor base, Node node, int index) {
+        if (base == null) return ArberColor.TRANSPARENT;
+        float shift = (index % 6) * 0.06f;
+        float factor = 0.9f - (node.depth * 0.05f);
+        return ColorRegistry.adjustBrightness(base, Math.max(0.4, 1.0 - shift) * Math.max(0.4, factor));
     }
 
-    private Color deriveChildBase(Color parent, int index, int total) {
-        float[] hsb = Color.RGBtoHSB(parent.getRed(), parent.getGreen(), parent.getBlue(), null);
-        float shift = (index / (float) Math.max(1, total)) * 0.04f;
-        float hue = (hsb[0] + shift) % 1.0f;
-        float sat = Math.min(1.0f, hsb[1] * 0.95f);
-        float bri = Math.min(1.0f, hsb[2] * 0.98f);
-        int rgb = Color.HSBtoRGB(hue, sat, bri);
-        return com.arbergashi.charts.util.ColorRegistry.ofArgb(0xFF000000 | (rgb & 0xFFFFFF));
+    private ArberColor deriveChildBase(ArberColor base, int childIndex, int childCount) {
+        if (base == null) return ArberColor.TRANSPARENT;
+        double factor = 0.85 - (childIndex / (double) Math.max(1, childCount)) * 0.25;
+        return ColorRegistry.adjustBrightness(base, Math.max(0.35, factor));
     }
 }

@@ -1,10 +1,9 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a multivariate chart model.
  *
@@ -40,18 +39,20 @@ public class DefaultMultiVariateChartModel implements MultiVariateChartModel {
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultMultiVariateChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return null;
     }
 
     @Override
-    public void setColor(Color color) {
+    public DefaultMultiVariateChartModel setColor(ArberColor color) {
+        return this;
     }
 
     @Override
@@ -72,15 +73,11 @@ public class DefaultMultiVariateChartModel implements MultiVariateChartModel {
         return 0;
     }
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException();
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultMultiVariateChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException();
     }
 
@@ -88,7 +85,7 @@ public class DefaultMultiVariateChartModel implements MultiVariateChartModel {
         throw new UnsupportedOperationException();
     }
 
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
     }
 
     public void removeChangeListener(ChartModelListener listener) {

@@ -3,7 +3,6 @@ package com.arbergashi.charts.util;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
-
 /**
  * Utilities for formatting numbers efficiently.
  * Uses ThreadLocal to avoid allocation in render loops.
@@ -14,7 +13,12 @@ import java.util.Locale;
  */
 public final class FormatUtils {
 
-    private static final ThreadLocal<FormatState> AXIS_FORMAT = ThreadLocal.withInitial(FormatState::new);
+    private static final ThreadLocal<FormatState> AXIS_FORMAT = new ThreadLocal<>() {
+        @Override
+        protected FormatState initialValue() {
+            return new FormatState();
+        }
+    };
 
     private static final class FormatState {
         private DecimalFormat format;

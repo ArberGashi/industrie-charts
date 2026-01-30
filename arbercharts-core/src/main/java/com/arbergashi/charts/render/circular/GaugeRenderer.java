@@ -1,27 +1,20 @@
 package com.arbergashi.charts.render.circular;
 
+import com.arbergashi.charts.api.AnimationProfile;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
+import com.arbergashi.charts.util.ColorRegistry;
 import com.arbergashi.charts.util.MathUtils;
+import com.arbergashi.charts.util.PredictiveMath;
 
-import javax.swing.Timer;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.HierarchyEvent;
-import java.awt.event.HierarchyListener;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.text.NumberFormat;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * <h1>Modern Gauge Renderer</h1>
@@ -33,88 +26,84 @@ import java.util.Optional;
  *     <li><b>Configurable Bands:</b> Define colored ranges (e.g., green, yellow, red).</li>
  *     <li><b>Custom Range:</b> Explicitly set the min/max values for the gauge scale.</li>
  *     <li><b>Modern Needle:</b> A sleek, animated needle design.</li>
- *     <li><b>Center Value Display:</b> Prominently displays the current value and unit.</li>
  * </ul>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
-public final class GaugeRenderer extends BaseRenderer implements ActionListener, HierarchyListener {
+public final class GaugeRenderer extends BaseRenderer {
+    private static final String KEY_JITTER = "Chart.circular.gauge.needleJitter";
+    private static final String KEY_ALERT_PULSE = "Chart.circular.gauge.alertPulse";
+    private static final String KEY_THICKNESS = "Chart.circular.gauge.thickness";
+    private static final String KEY_GHOST_ENABLED = "Chart.circular.ghost.enabled";
+    private static final String KEY_GHOST_ALPHA = "Chart.circular.ghost.alpha";
+    private static final String KEY_LOOKAHEAD = "Chart.predictive.global.lookahead";
+    private static final String KEY_SMOOTHING = "Chart.predictive.global.smoothing";
 
     /**
      * Defines a colored value band on the gauge scale.
-     *
-     * @param from start value (inclusive)
-     * @param to end value (inclusive)
-     * @param color band color
      */
-    public record Band(double from, double to, Color color) {}
+    public static final class Band {
+        private double from;
+        private double to;
+        private ArberColor color;
+
+        /**
+         * Creates a band for the given range and color.
+         *
+         * @param from start value (inclusive)
+         * @param to end value (inclusive)
+         * @param color band color
+         */
+        public Band(double from, double to, ArberColor color) {
+            this.from = from;
+            this.to = to;
+            this.color = color;
+        }
+
+        public double getFrom() {
+            return from;
+        }
+
+        public Band setFrom(double from) {
+            this.from = from;
+            return this;
+        }
+
+        public double getTo() {
+            return to;
+        }
+
+        public Band setTo(double to) {
+            this.to = to;
+            return this;
+        }
+
+        public ArberColor getColor() {
+            return color;
+        }
+
+        public Band setColor(ArberColor color) {
+            this.color = color;
+            return this;
+        }
+    }
 
     private double minValue = 0.0;
     private double maxValue = 100.0;
     private double value = 0.0;
-    private String unit = "";
+    private AnimationProfile animationProfile = AnimationProfile.ACADEMIC;
     private List<Band> bands = List.of();
 
-    private final Path2D.Double needleShape = new Path2D.Double();
-    private final Arc2D.Double arc = new Arc2D.Double();
-    private final NumberFormat valueFormat = NumberFormat.getInstance();
-    
-    private final Font valueFont;
-    private final Font unitFont;
-    private final Font tickFont;
-
     private double animatedValue = 0.0;
-    private final Timer animationTimer;
-    private Component repaintTarget;
+    private double jitterEnergy = 0.0;
+    private double lastValue = Double.NaN;
+    private double smoothedDelta = 0.0;
 
     public GaugeRenderer() {
         super("gauge");
-        double needleWidth = ChartScale.scale(4);
-        double needleLength = ChartScale.scale(60);
-        needleShape.moveTo(0, -needleWidth);
-        needleShape.lineTo(needleLength, 0);
-        needleShape.lineTo(0, needleWidth);
-        needleShape.closePath();
-        
-        valueFormat.setMaximumFractionDigits(1);
-        
-        this.valueFont = getCachedFont(24f, Font.BOLD);
-        this.unitFont = getCachedFont(14f, Font.PLAIN);
-        this.tickFont = getCachedFont(10f, Font.PLAIN);
-        
-        animationTimer = new Timer(16, this);
-        animationTimer.setRepeats(true);
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        double diff = value - animatedValue;
-        if (Math.abs(diff) < 0.1) {
-            animatedValue = value;
-            animationTimer.stop();
-        } else {
-            animatedValue += diff * 0.1; // Ease-out
-        }
-        if (repaintTarget != null) {
-            repaintTarget.repaint();
-        }
-    }
-    
-    @Override
-    public void hierarchyChanged(HierarchyEvent e) {
-        if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
-            if (e.getComponent().getParent() == null) {
-                if (animationTimer != null && animationTimer.isRunning()) {
-                    animationTimer.stop();
-                }
-                if (repaintTarget != null) {
-                    repaintTarget.removeHierarchyListener(this);
-                    repaintTarget = null;
-                }
-            }
-        }
     }
 
     @Override
@@ -122,11 +111,35 @@ public final class GaugeRenderer extends BaseRenderer implements ActionListener,
         return false;
     }
 
-    private void drawBands(Graphics2D g2, double cx, double cy, double radius, ChartTheme theme) {
+    @Override
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        if (model != null && model.getPointCount() > 0) {
+            setValue(model.getY(0));
+        }
+
+        ArberRect b = context.getPlotBounds();
+        if (b == null || b.getWidth() <= 1 || b.getHeight() <= 1) return;
+
+        double size = Math.min(b.getWidth(), b.getHeight());
+        double cx = b.centerX();
+        double cy = b.centerY() + size * 0.15;
+        double radius = size * 0.4;
+
+        ChartTheme theme = getResolvedTheme(context);
+
+        drawBands(canvas, cx, cy, radius, theme);
+        drawGhostNeedle(canvas, cx, cy, radius, theme);
+        drawNeedle(canvas, cx, cy, radius, theme);
+        drawHub(canvas, cx, cy, theme);
+    }
+
+    private void drawBands(ArberCanvas canvas, double cx, double cy, double radius, ChartTheme theme) {
         double startAngle = 225;
         double sweepAngle = 270;
-        float bandWidth = (float) (radius * 0.2);
-        g2.setStroke(getCachedStroke(bandWidth, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        float thickness = ChartAssets.getFloat(KEY_THICKNESS, 0.15f);
+        thickness = (float) MathUtils.clamp(thickness, 0.08, 0.4);
+        float bandWidth = (float) (radius * thickness);
+        canvas.setStroke(bandWidth);
 
         if (bands == null || bands.isEmpty()) {
             double lowT = 0.0;
@@ -137,17 +150,14 @@ public final class GaugeRenderer extends BaseRenderer implements ActionListener,
             double midAngle = startAngle - sweepAngle * midT;
             double highAngle = startAngle - sweepAngle * highT;
 
-            g2.setColor(theme.getBearishColor());
-            arc.setArc(cx - radius, cy - radius, radius * 2, radius * 2, lowAngle, -(midT - lowT) * sweepAngle, Arc2D.OPEN);
-            g2.draw(arc);
+            canvas.setColor(theme.getBearishColor());
+            drawArcPolyline(canvas, cx, cy, radius, lowAngle, -(midT - lowT) * sweepAngle);
 
-            g2.setColor(theme.getAccentColor());
-            arc.setArc(cx - radius, cy - radius, radius * 2, radius * 2, midAngle, -(highT - midT) * sweepAngle, Arc2D.OPEN);
-            g2.draw(arc);
+            canvas.setColor(theme.getAccentColor());
+            drawArcPolyline(canvas, cx, cy, radius, midAngle, -(highT - midT) * sweepAngle);
 
-            g2.setColor(theme.getBullishColor());
-            arc.setArc(cx - radius, cy - radius, radius * 2, radius * 2, highAngle, -(1.0 - highT) * sweepAngle, Arc2D.OPEN);
-            g2.draw(arc);
+            canvas.setColor(theme.getBullishColor());
+            drawArcPolyline(canvas, cx, cy, radius, highAngle, -(1.0 - highT) * sweepAngle);
             return;
         }
 
@@ -158,120 +168,108 @@ public final class GaugeRenderer extends BaseRenderer implements ActionListener,
             double bandStartAngle = startAngle - sweepAngle * bandStartT;
             double bandSweep = -sweepAngle * (bandEndT - bandStartT);
 
-            g2.setColor(band.color);
-            arc.setArc(cx - radius, cy - radius, radius * 2, radius * 2, bandStartAngle, bandSweep, Arc2D.OPEN);
-            g2.draw(arc);
+            canvas.setColor(band.color != null ? band.color : themeAccent(null));
+            drawArcPolyline(canvas, cx, cy, radius, bandStartAngle, bandSweep);
         }
     }
 
-    private void drawTicksAndLabels(Graphics2D g2, double cx, double cy, double radius, ChartTheme theme) {
-        g2.setColor(theme.getAxisLabelColor());
-        g2.setFont(tickFont);
-        FontMetrics fm = g2.getFontMetrics();
-
-        int numTicks = 11;
-        for (int i = 0; i < numTicks; i++) {
-            double t = (double) i / (numTicks - 1);
-            double angleRad = Math.toRadians(225 - 270 * t);
-            
-            double x1 = cx + Math.cos(angleRad) * radius;
-            double y1 = cy - Math.sin(angleRad) * radius;
-            double x2 = cx + Math.cos(angleRad) * (radius - ChartScale.scale(5));
-            double y2 = cy - Math.sin(angleRad) * (radius - ChartScale.scale(5));
-            
-            g2.draw(getLine(x1, y1, x2, y2));
-            
-            double val = minValue + t * (maxValue - minValue);
-            String label = valueFormat.format(val);
-            double labelRadius = radius + ChartScale.scale(15);
-            double lx = cx + Math.cos(angleRad) * labelRadius;
-            double ly = cy - Math.sin(angleRad) * labelRadius;
-            
-            g2.drawString(label, (float)(lx - fm.stringWidth(label)/2.0), (float)(ly + fm.getAscent()/2.0));
-        }
-    }
-
-    private void drawNeedle(Graphics2D g2, double cx, double cy, double radius, ChartTheme theme) {
+    private void drawNeedle(ArberCanvas canvas, double cx, double cy, double radius, ChartTheme theme) {
         double range = maxValue - minValue;
         if (range <= 0) return;
-        
-        double t = (animatedValue - minValue) / range;
-        t = MathUtils.clamp(t, 0, 1);
-        
+
+        double rawT = (animatedValue - minValue) / range;
+        boolean alert = ChartAssets.getBoolean(KEY_ALERT_PULSE, true) && (rawT < 0.0 || rawT > 1.0);
+        double t = MathUtils.clamp(rawT, 0, 1);
+
         double angleDeg = 225 - 270 * t;
-        
-        AffineTransform old = g2.getTransform();
-        g2.translate(cx, cy);
-        g2.rotate(Math.toRadians(-angleDeg));
-        
-        g2.setColor(theme.getAccentColor());
-        Path2D transformedNeedle = new Path2D.Double(needleShape, AffineTransform.getScaleInstance(radius / 60, radius / 60));
-        g2.fill(transformedNeedle);
-        
-        g2.setTransform(old);
-        
-        double hubRadius = ChartScale.scale(8);
-        g2.setColor(ColorUtils.withAlpha(theme.getForeground(), 0.2f));
-        g2.fill(getEllipse(cx - hubRadius, cy - hubRadius, hubRadius * 2, hubRadius * 2));
-        g2.setColor(theme.getBackground());
-        g2.fill(getEllipse(cx - hubRadius * 0.6, cy - hubRadius * 0.6, hubRadius * 1.2, hubRadius * 1.2));
-    }
-
-    private void drawCenterText(Graphics2D g2, double cx, double cy, ChartTheme theme) {
-        String valueStr = valueFormat.format(this.value);
-        
-        g2.setFont(valueFont);
-        FontMetrics fm = g2.getFontMetrics();
-        g2.setColor(theme.getForeground());
-        float y = (float) (cy + ChartScale.scale(40));
-        g2.drawString(valueStr, (float)(cx - fm.stringWidth(valueStr)/2.0), y);
-        
-        if (unit != null && !unit.isEmpty()) {
-            g2.setFont(unitFont);
-            fm = g2.getFontMetrics();
-            g2.setColor(theme.getAxisLabelColor());
-            g2.drawString(unit, (float)(cx - fm.stringWidth(unit)/2.0), y + fm.getHeight());
-        }
-    }
-
-
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-        if (context instanceof Component newTarget && this.repaintTarget != newTarget) {
-            if (this.repaintTarget != null) this.repaintTarget.removeHierarchyListener(this);
-            this.repaintTarget = newTarget;
-            this.repaintTarget.addHierarchyListener(this);
+        if (ChartAssets.getBoolean(KEY_JITTER, true) && jitterEnergy > 0.02) {
+            double seconds = System.nanoTime() * 1.0e-9;
+            double jitterDeg = Math.sin(seconds * 18.0) * (1.6 * jitterEnergy);
+            angleDeg += jitterDeg;
+            jitterEnergy *= 0.96;
         }
 
-        if (model != null && model.getPointCount() > 0) {
-            updateValue(model.getY(0));
+        ArberColor needleColor = theme.getAccentColor();
+        if (alert) {
+            double seconds = System.nanoTime() * 1.0e-9;
+            float pulse = (float) (0.55 + 0.45 * (0.5 + 0.5 * Math.sin(seconds * 6.0)));
+            needleColor = ColorRegistry.applyAlpha(needleColor, pulse);
         }
+        canvas.setColor(needleColor);
+        canvas.setStroke((float) ChartScale.scale(2.0));
 
-        Rectangle2D b = context.plotBounds();
-        if (b == null || b.getWidth() <= 1 || b.getHeight() <= 1) return;
-
-        double size = Math.min(b.getWidth(), b.getHeight());
-        double cx = b.getCenterX();
-        double cy = b.getCenterY() + size * 0.15;
-        double radius = size * 0.4;
-
-        ChartTheme theme = resolveTheme(context);
-
-        drawBands(g2, cx, cy, radius, theme);
-        drawTicksAndLabels(g2, cx, cy, radius, theme);
-        drawNeedle(g2, cx, cy, radius, theme);
-        drawCenterText(g2, cx, cy, theme);
+        double rad = Math.toRadians(angleDeg);
+        double nx = cx + Math.cos(rad) * (radius * 0.95);
+        double ny = cy - Math.sin(rad) * (radius * 0.95);
+        drawLine(canvas, cx, cy, nx, ny);
     }
 
-    private void updateValue(double value) {
-        if (Math.abs(this.value - value) > 1e-6) {
-            this.value = value;
-            if (animationTimer != null && !animationTimer.isRunning()) {
-                animationTimer.start();
-            }
-        }
+    private void drawGhostNeedle(ArberCanvas canvas, double cx, double cy, double radius, ChartTheme theme) {
+        if (!ChartAssets.getBoolean(KEY_GHOST_ENABLED, true)) return;
+        double range = maxValue - minValue;
+        if (range <= 0) return;
+        if (!Double.isFinite(smoothedDelta)) return;
+
+        int lookahead = ChartAssets.getInt(KEY_LOOKAHEAD, 32);
+        double ghostValue = PredictiveMath.extrapolate(value, smoothedDelta, lookahead);
+        double t = MathUtils.clamp((ghostValue - minValue) / range, 0, 1);
+
+        double angleDeg = 225 - 270 * t;
+        double rad = Math.toRadians(angleDeg);
+        double nx = cx + Math.cos(rad) * (radius * 0.95);
+        double ny = cy - Math.sin(rad) * (radius * 0.95);
+
+        float ghostAlpha = ChartAssets.getFloat(KEY_GHOST_ALPHA, 0.25f);
+        ArberColor needleColor = ColorRegistry.applyAlpha(theme.getAccentColor(), ghostAlpha);
+        canvas.setColor(needleColor);
+        canvas.setStroke((float) ChartScale.scale(2.0));
+        drawLine(canvas, cx, cy, nx, ny);
     }
-    
+
+    private void drawHub(ArberCanvas canvas, double cx, double cy, ChartTheme theme) {
+        double hubRadius = ChartScale.scale(8.0);
+        ArberColor fg = theme.getForeground();
+        canvas.setColor(ColorRegistry.applyAlpha(fg, 0.25f));
+        drawCircleFill(canvas, cx, cy, hubRadius);
+        canvas.setColor(ColorRegistry.applyAlpha(fg, 0.55f));
+        drawCircleFill(canvas, cx, cy, hubRadius * 0.6);
+    }
+
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = new float[2];
+        float[] ys = new float[2];
+        xs[0] = (float) x1;
+        ys[0] = (float) y1;
+        xs[1] = (float) x2;
+        ys[1] = (float) y2;
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
+    private void drawCircleFill(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = Math.max(24, (int) (Math.PI * r / 6.0));
+        float[] xs = new float[segments];
+        float[] ys = new float[segments];
+        for (int i = 0; i < segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
+    }
+
+    private void drawArcPolyline(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
+        int segments = Math.max(12, (int) (Math.abs(sweepDeg) / 4.0));
+        float[] xs = new float[segments + 1];
+        float[] ys = new float[segments + 1];
+        double step = sweepDeg / segments;
+        for (int i = 0; i <= segments; i++) {
+            double a = Math.toRadians(startDeg + step * i);
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy - Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
+
     // --- Public API ---
 
     public GaugeRenderer setRange(double min, double max) {
@@ -279,22 +277,23 @@ public final class GaugeRenderer extends BaseRenderer implements ActionListener,
         this.maxValue = max;
         return this;
     }
-    
+
     public GaugeRenderer setValue(double value) {
         if (Math.abs(this.value - value) > 1e-6) {
             this.value = value;
-            if (animationTimer != null && !animationTimer.isRunning()) {
-                animationTimer.start();
-            }
+            animatedValue = value;
         }
         return this;
     }
-    
-    public GaugeRenderer setUnit(String unit) {
-        this.unit = unit;
+
+    public GaugeRenderer setAnimationProfile(AnimationProfile profile) {
+        this.animationProfile = (profile != null) ? profile : AnimationProfile.ACADEMIC;
+        if (!this.animationProfile.animatesData()) {
+            animatedValue = value;
+        }
         return this;
     }
-    
+
     public GaugeRenderer setBands(List<Band> bands) {
         this.bands = bands;
         return this;

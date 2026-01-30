@@ -1,15 +1,13 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
  * Polynomial regression renderer (degree 2).
  *
@@ -20,6 +18,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class PolynomialRegressionRenderer extends BaseRenderer {
 
@@ -83,8 +83,10 @@ public final class PolynomialRegressionRenderer extends BaseRenderer {
         return true;
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 3) return;
         double[] xData = model.getXData();
@@ -117,38 +119,37 @@ public final class PolynomialRegressionRenderer extends BaseRenderer {
         if (!solve3x3(A, B, solveBuffer)) return;
         double a = solveBuffer[0], b = solveBuffer[1], c = solveBuffer[2];
 
-        double xMin = context.minX();
-        double xMax = context.maxX();
+        double xMin = context.getMinX();
+        double xMax = context.getMaxX();
 
         int segments = 64;
         double step = (xMax - xMin) / segments;
         if (step == 0) return;
 
-        float lw = (UIManager.get("Chart.analysis.lineWidth") instanceof Number nn) ? nn.floatValue() : 2.0f;
-        g2.setStroke(getCachedStroke(ChartScale.scale(lw)));
-
-        Path2D path = getPathCache();
-        path.reset();
+        float lw = ChartAssets.getFloat("chart.analysis.lineWidth", 2.0f);
+        canvas.setStroke(ChartScale.scale(lw));
+        int points = segments + 1;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "poly.line.x", points);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "poly.line.y", points);
+        int outCount = 0;
 
         for (int i = 0; i <= segments; i++) {
             double x = xMin + i * step;
             double y = a + b * x + c * x * x;
             context.mapToPixel(x, y, pBuffer);
-            if (i == 0) {
-                path.moveTo(pBuffer[0], pBuffer[1]);
-            } else {
-                path.lineTo(pBuffer[0], pBuffer[1]);
-            }
+            xs[outCount] = (float) pBuffer[0];
+            ys[outCount] = (float) pBuffer[1];
+            outCount++;
         }
 
-        Color base = seriesOrBase(model, context, 0);
-        Color accent = isMultiColor() ? themeSeries(context, 1) : base;
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor accent = isMultiColor() ? themeSeries(context, 1) : base;
         if (accent == null) accent = base;
         if (isMultiColor() && accent != base) {
-            g2.setColor(ColorUtils.withAlpha(accent, 0.45f));
-            g2.draw(path);
+            canvas.setColor(accent);
+            canvas.drawPolyline(xs, ys, outCount);
         }
-        g2.setColor(ColorUtils.withAlpha(base, 0.85f));
-        g2.draw(path);
+        canvas.setColor(base);
+        canvas.drawPolyline(xs, ys, outCount);
     }
 }

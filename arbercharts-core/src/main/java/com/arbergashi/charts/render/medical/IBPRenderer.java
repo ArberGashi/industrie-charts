@@ -1,7 +1,6 @@
 package com.arbergashi.charts.render.medical;
 
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * IBP renderer: visualizes invasive blood pressure (IBP) waveforms with systolic,
  * diastolic, and mean arterial pressure (MAP) emphasis.
@@ -9,10 +8,12 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class IBPRenderer extends AbstractMedicalSweepRenderer {
     public IBPRenderer() {
-        super(new Color(220, 20, 60), 2.5f, 20);
+        super(ColorRegistry.of(220, 20, 60, 255), 2.5f, 20);
     }
 
     @Override

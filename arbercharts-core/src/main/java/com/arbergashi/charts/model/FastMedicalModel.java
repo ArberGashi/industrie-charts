@@ -3,7 +3,6 @@ package com.arbergashi.charts.model;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 /**
  * Optimized model for real-time medical data (ECG, EEG).
  *
@@ -17,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class FastMedicalModel implements ChartModel {
 
-    private final String name;
+    private String name;
     private final Object lock = new Object();
     private final List<ChartModelListener> listeners = new CopyOnWriteArrayList<>();
     private double[] xData;
@@ -38,7 +37,7 @@ public class FastMedicalModel implements ChartModel {
      * Adds a new point.
      * Thread-safe.
      */
-    public void addPoint(double x, double y) {
+    public void setPoint(double x, double y) {
         synchronized (lock) {
             ensureCapacity(size + 1);
             xData[size] = x;
@@ -51,7 +50,7 @@ public class FastMedicalModel implements ChartModel {
     /**
      * Adds multiple points efficiently (bulk operation).
      */
-    public void addPoints(double[] x, double[] y) {
+    public void setPoints(double[] x, double[] y) {
         if (x.length != y.length) throw new IllegalArgumentException("Array lengths differ");
         synchronized (lock) {
             int len = x.length;
@@ -84,6 +83,12 @@ public class FastMedicalModel implements ChartModel {
     }
 
     @Override
+    public FastMedicalModel setName(String name) {
+        this.name = name;
+        return this;
+    }
+
+    @Override
     public int getPointCount() {
         return size;
     }
@@ -105,7 +110,7 @@ public class FastMedicalModel implements ChartModel {
     }
 
     @Override
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
         listeners.add(listener);
     }
 
@@ -113,6 +118,9 @@ public class FastMedicalModel implements ChartModel {
     public void removeChangeListener(ChartModelListener listener) {
         listeners.remove(listener);
     }
+    /**
+     * @since 1.5.0
+    */
 
     protected void fireDataChanged() {
         for (ChartModelListener listener : listeners) {

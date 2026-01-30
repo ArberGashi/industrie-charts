@@ -5,6 +5,7 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Objects;
 
+import com.arbergashi.charts.core.geometry.TextAnchor;
 /**
  * Axis configuration.
  * <p>
@@ -26,6 +27,8 @@ public final class AxisConfig {
     private Double fixedMin = null;
     private Double fixedMax = null;
     private Double unitsPerPixel = null;
+    private Double medicalMmPerUnit = null;
+    private TextAnchor labelAnchor = null;
 
     private transient NumberFormat cachedNumberFormat;
     private transient DecimalFormat cachedDecimalFormat;
@@ -42,7 +45,7 @@ public final class AxisConfig {
      * @param value The value to format.
      * @return The formatted value as a string.
      */
-    public String formatValue(double value) {
+    public String getFormattedValue(double value) {
         if (labelFormatPattern != null && !labelFormatPattern.isEmpty()) {
             DecimalFormat df = getDecimalFormat();
             return df.format(value) + (unitSuffix.isEmpty() ? "" : " " + unitSuffix);
@@ -98,11 +101,11 @@ public final class AxisConfig {
      * Enables or disables grid rendering for this axis.
      *
      * @param showGrid true to show the grid
-     * @return this config for chaining
      */
-    public AxisConfig setShowGrid(boolean showGrid) {
+    public AxisConfig setShowGrid(boolean showGrid){
         this.showGrid = showGrid;
         return this;
+        
     }
 
     /**
@@ -118,7 +121,6 @@ public final class AxisConfig {
      * Sets the requested tick count for this axis.
      *
      * @param count desired tick count
-     * @return this config for chaining
      */
     public AxisConfig setRequestedTickCount(int count) {
         this.requestedTickCount = count;
@@ -129,10 +131,10 @@ public final class AxisConfig {
      * Alias for {@link #setRequestedTickCount(int)}.
      *
      * @param count desired tick count
-     * @return this config for chaining
      */
     public AxisConfig setTicks(int count) {
-        return setRequestedTickCount(count);
+        setRequestedTickCount(count);
+        return this;
     }
 
     /**
@@ -148,11 +150,11 @@ public final class AxisConfig {
      * Sets the label format pattern for axis values.
      *
      * @param pattern DecimalFormat pattern (null clears the pattern)
-     * @return this config for chaining
      */
-    public AxisConfig setLabelFormatPattern(String pattern) {
+    public AxisConfig setLabelFormatPattern(String pattern){
         this.labelFormatPattern = pattern;
         return this;
+        
     }
 
     /**
@@ -168,11 +170,33 @@ public final class AxisConfig {
      * Sets the unit suffix appended to formatted values.
      *
      * @param unitSuffix unit suffix (null becomes empty)
-     * @return this config for chaining
      */
-    public AxisConfig setUnitSuffix(String unitSuffix) {
+    public AxisConfig setUnitSuffix(String unitSuffix){
         this.unitSuffix = Objects.requireNonNullElse(unitSuffix, "");
         return this;
+        
+    }
+
+    /**
+     * Returns the preferred label anchor for axis tick labels, or null if unset.
+     */
+    public TextAnchor getLabelAnchor() {
+        return labelAnchor;
+    }
+
+    /**
+     * Sets the preferred label anchor for axis tick labels.
+     */
+    public AxisConfig setLabelAnchor(TextAnchor labelAnchor) {
+        this.labelAnchor = labelAnchor;
+        return this;
+    }
+
+    /**
+     * Returns the preferred label anchor or a provided default if unset.
+     */
+    public TextAnchor getLabelAnchorOrDefault(TextAnchor fallback) {
+        return labelAnchor != null ? labelAnchor : fallback;
     }
 
     /**
@@ -188,11 +212,11 @@ public final class AxisConfig {
      * Enables or disables auto-scaling for this axis.
      *
      * @param autoScale true to enable auto-scaling
-     * @return this config for chaining
      */
-    public AxisConfig setAutoScale(boolean autoScale) {
+    public AxisConfig setAutoScale(boolean autoScale){
         this.autoScale = autoScale;
         return this;
+        
     }
 
     /**
@@ -200,18 +224,18 @@ public final class AxisConfig {
      *
      * @param min fixed minimum value
      * @param max fixed maximum value
-     * @return this config for chaining
      */
-    public AxisConfig setFixedRange(double min, double max) {
+    public AxisConfig setFixedRange(double min, double max){
         this.fixedMin = min;
         this.fixedMax = max;
         return this;
+        
     }
 
     /**
      * Returns whether a fixed range is configured.
      */
-    public boolean hasFixedRange() {
+    public boolean isFixedRange() {
         return fixedMin != null && fixedMax != null;
     }
 
@@ -233,12 +257,15 @@ public final class AxisConfig {
      * Sets the data units per pixel for a fixed physical scale (e.g., mm/s).
      * A null value disables fixed scale behavior.
      *
+     * <p>See {@link com.arbergashi.charts.util.ChartScale} for the physical scaling
+     * contract used to keep millimeter measurements stable on screen.</p>
+     *
      * @param unitsPerPixel data units per pixel
-     * @return this config for chaining
      */
-    public AxisConfig setUnitsPerPixel(Double unitsPerPixel) {
+    public AxisConfig setUnitsPerPixel(Double unitsPerPixel){
         this.unitsPerPixel = unitsPerPixel;
         return this;
+        
     }
 
     /**
@@ -249,16 +276,42 @@ public final class AxisConfig {
     }
 
     /**
+     * Returns the medical millimeter-per-unit scale if configured.
+     */
+    public Double getMedicalMmPerUnit() {
+        return medicalMmPerUnit;
+    }
+
+    /**
+     * Resolves the effective units-per-pixel value using the provided physical density.
+     *
+     * <p>If a medical scale is configured, it takes precedence and is converted to
+     * units-per-pixel based on the physical pixels-per-millimeter value.</p>
+     */
+    public Double getResolvedUnitsPerPixel(double pixelsPerMillimeter) {
+        if (medicalMmPerUnit != null
+                && Double.isFinite(medicalMmPerUnit)
+                && medicalMmPerUnit > 0.0
+                && Double.isFinite(pixelsPerMillimeter)
+                && pixelsPerMillimeter > 0.0) {
+            double unitsPerMm = 1.0 / medicalMmPerUnit;
+            return unitsPerMm / pixelsPerMillimeter;
+        }
+        return unitsPerPixel;
+    }
+
+    /**
      * Convenience for medical/physical scaling. This sets units-per-pixel using
      * a mm-per-unit ratio (e.g., 25 mm/s or 10 mm/mV).
      *
      * @param mmPerUnit millimeters per data unit
-     * @return this config for chaining
      */
-    public AxisConfig medicalScale(double mmPerUnit) {
-        if (mmPerUnit == 0) {
+    public AxisConfig setMedicalScale(double mmPerUnit) {
+        if (!Double.isFinite(mmPerUnit) || mmPerUnit <= 0.0) {
+            this.medicalMmPerUnit = null;
             this.unitsPerPixel = null;
         } else {
+            this.medicalMmPerUnit = mmPerUnit;
             this.unitsPerPixel = 1.0 / mmPerUnit;
         }
         return this;
@@ -268,7 +321,6 @@ public final class AxisConfig {
      * Sets whether this axis is inverted.
      *
      * @param inverted true to invert the axis direction
-     * @return this config for chaining
      */
     public AxisConfig setInverted(boolean inverted) {
         this.inverted = inverted;
@@ -286,7 +338,6 @@ public final class AxisConfig {
      * Sets the locale for the axis.
      *
      * @param locale the locale to use for formatting
-     * @return this
      */
     public AxisConfig setLocale(Locale locale) {
         this.locale = Objects.requireNonNull(locale);

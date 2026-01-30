@@ -1,7 +1,8 @@
 package com.arbergashi.charts.util;
 
-import javax.swing.UIManager;
-import java.awt.Color;
+import com.arbergashi.charts.util.ChartAssets;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberFont;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.MissingResourceException;
@@ -9,7 +10,6 @@ import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * Central configuration registry for ArberCharts.
  *
@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * (e.g., default line widths, alpha values, thresholds). Reads are optimized via internal
  * caches for parsed primitives.</p>
  *
- * <p><b>Theme Integration:</b> Methods prefixed with "getUI" read from {@link UIManager},
- * enabling seamless integration with FlatLaf and other pluggable Look&amp;Feel themes.</p>
+ * <p><b>Headless note:</b> UI integration lives in bridge modules. The core registry
+ * is platform-agnostic.</p>
  *
  * @author Arber Gashi
  * @version 1.0.0
@@ -29,7 +29,7 @@ public final class ChartAssets {
     private static final Map<String, Float> floatCache = new ConcurrentHashMap<>();
     private static final Map<String, Integer> intCache = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> boolCache = new ConcurrentHashMap<>();
-    private static final Map<String, Color> colorCache = new ConcurrentHashMap<>();
+    private static final Map<String, ArberColor> colorCache = new ConcurrentHashMap<>();
     private static final Map<Locale, ResourceBundle> bundleCache = new ConcurrentHashMap<>();
     private static volatile String i18nBaseName = "i18n.charts";
 
@@ -109,6 +109,17 @@ public final class ChartAssets {
     }
 
     /**
+     * Returns a monospace font descriptor suitable for metric alignment.
+     *
+     * @param base fallback font (nullable)
+     * @return monospace font descriptor
+     */
+    public static ArberFont getMonospaceFont(ArberFont base) {
+        float size = (base != null) ? base.size() : 12f;
+        return new ArberFont("Monospace", ArberFont.PLAIN, size);
+    }
+
+    /**
      * Removes a property key.
      *
      * <p>After removal, callers will observe default values again (because the property is no longer present).
@@ -139,22 +150,6 @@ public final class ChartAssets {
         handleI18nConfigChange(key, null);
     }
 
-    /**
-     * Returns a scaled icon by name.
-     *
-     * <p><b>Framework note:</b> This is a stub that exists for API completeness.
-     * Swing-based applications should provide their own icon loading strategy.</p>
-     *
-     * @param name  icon identifier
-     * @param scale scaling factor (e.g., 1.0 for 100%)
-     * @return the icon, or {@code null} if not available
-     */
-    public static javax.swing.Icon getScaledIcon(String name, float scale) {
-        // Stub API: parameters are intentionally unused today.
-        unused(name);
-        unused(scale);
-        return null;
-    }
 
     /**
      * Returns a string property.
@@ -241,13 +236,15 @@ public final class ChartAssets {
      * @param defaultColor value returned when the key is not present or cannot be parsed
      * @return parsed color value
      */
-    public static java.awt.Color getColor(String key, java.awt.Color defaultColor) {
+    public static ArberColor getColor(String key, ArberColor defaultColor) {
         String val = properties.getProperty(key);
         if (val == null || val.isBlank()) return defaultColor;
         return colorCache.computeIfAbsent(key, _k -> parseColor(val, defaultColor));
     }
 
-    private static java.awt.Color parseColor(String raw, java.awt.Color fallback) {
+    // AWT color helpers are provided by swing-bridge.
+
+    private static ArberColor parseColor(String raw, ArberColor fallback) {
         String val = raw.trim();
         if (val.isEmpty()) return fallback;
 
@@ -340,76 +337,20 @@ public final class ChartAssets {
     // UIManager-based lookups (for FlatLaf theme properties integration)
     // ========================================================================
 
-    /**
-     * Returns a float value from UIManager.
-     *
-     * @param key          UIManager key (e.g., "Chart.analysisGrid.minorAlpha")
-     * @param defaultValue fallback if key is missing or not a number
-     * @return the float value
-     */
     public static float getUIFloat(String key, float defaultValue) {
-        Object val = UIManager.get(key);
-        if (val instanceof Number num) {
-            return num.floatValue();
-        }
-        if (val instanceof String s && !s.isBlank()) {
-            try {
-                return Float.parseFloat(s);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return defaultValue;
+        return getFloat(key, defaultValue);
     }
 
-    /**
-     * Returns an int value from UIManager.
-     *
-     * @param key          UIManager key
-     * @param defaultValue fallback if key is missing or not a number
-     * @return the int value
-     */
     public static int getUIInt(String key, int defaultValue) {
-        Object val = UIManager.get(key);
-        if (val instanceof Number num) {
-            return num.intValue();
-        }
-        if (val instanceof String s && !s.isBlank()) {
-            try {
-                return Integer.parseInt(s);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        return defaultValue;
+        return getInt(key, defaultValue);
     }
 
-    /**
-     * Returns a Color from UIManager.
-     *
-     * @param key          UIManager key
-     * @param defaultColor fallback if key is missing
-     * @return the Color value
-     */
-    public static Color getUIColor(String key, Color defaultColor) {
-        Color c = UIManager.getColor(key);
-        return c != null ? c : defaultColor;
+    public static ArberColor getUIColor(String key, ArberColor defaultColor) {
+        return getColor(key, defaultColor);
     }
 
-    /**
-     * Returns a boolean from UIManager.
-     *
-     * @param key          UIManager key
-     * @param defaultValue fallback if key is missing
-     * @return the boolean value
-     */
     public static boolean getUIBoolean(String key, boolean defaultValue) {
-        Object val = UIManager.get(key);
-        if (val instanceof Boolean b) {
-            return b;
-        }
-        if (val instanceof String s && !s.isBlank()) {
-            return Boolean.parseBoolean(s);
-        }
-        return defaultValue;
+        return getBoolean(key, defaultValue);
     }
 
     private static void unused(Object ignored) {

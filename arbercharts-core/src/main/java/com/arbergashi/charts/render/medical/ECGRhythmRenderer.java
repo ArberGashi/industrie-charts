@@ -1,13 +1,10 @@
 package com.arbergashi.charts.render.medical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
  * <h1>ECGRhythmRenderer</h1>
  * <p>
@@ -19,40 +16,49 @@ import java.awt.geom.Path2D;
  * @version 1.0.0
  * @since 2025-06-01
  *
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ECGRhythmRenderer extends BaseRenderer {
 
     private final double[] p = new double[2];
+    private transient float[] pathX = new float[0];
+    private transient float[] pathY = new float[0];
 
     public ECGRhythmRenderer() {
         super("ecg");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n < 2) return;
 
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Path2D path = getPathCache();
-        boolean moved = false;
+        ensureBufferCapacity(n);
 
         // ECG is typically a continuous line
-        g2.setStroke(getCachedStroke(ChartScale.scale(1.5f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.setColor(themeForeground(context));
+        canvas.setStroke(ChartScale.scale(1.5f));
+        canvas.setColor(themeForeground(context));
 
         for (int i = 0; i < n; i++) {
             context.mapToPixel(xData[i], yData[i], p);
-            
-            if (!moved) {
-                path.moveTo(p[0], p[1]);
-                moved = true;
-            } else {
-                path.lineTo(p[0], p[1]);
-            }
+            pathX[i] = (float) p[0];
+            pathY[i] = (float) p[1];
         }
-        g2.draw(path);
+        canvas.drawPolyline(pathX, pathY, n);
+    }
+
+    private void ensureBufferCapacity(int capacity) {
+        if (pathX.length >= capacity) return;
+        int next = 1;
+        while (next < capacity && next > 0) next <<= 1;
+        if (next <= 0) next = capacity;
+        pathX = new float[next];
+        pathY = new float[next];
     }
 }

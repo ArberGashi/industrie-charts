@@ -2,15 +2,15 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 
-import java.awt.*;
-import java.awt.geom.Line2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 
 /**
@@ -27,7 +27,7 @@ import java.util.Arrays;
  *
  * <p>Performance policy:</p>
  * <ul>
- *   <li>No allocations in the hot drawing loop (no Point2D creation).</li>
+ *   <li>No allocations in the hot drawing loop (no ArberPoint creation).</li>
  *   <li>For very dense datasets, switches to a level-of-detail (LOD) representation by aggregating
  *       into per-pixel OHLC buckets.</li>
  * </ul>
@@ -35,6 +35,7 @@ import java.util.Arrays;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class CandlestickHollowRenderer extends BaseRenderer {
 
@@ -46,13 +47,13 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
         );
     }
 
-    private final Line2D.Double wickLine = new Line2D.Double();
-    private final Rectangle2D.Double bodyRect = new Rectangle2D.Double();
-
     private final double[] px = new double[2];
     private final double[] px2 = new double[2];
     private final double[] px3 = new double[2];
     private final double[] px4 = new double[2];
+
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     // Reusable buffers for LOD aggregation (sized to plot width)
     private int[] lodCount = new int[0];
@@ -66,39 +67,31 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
     }
 
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color bullish = theme.getBullishColor();
-        final Color bearish = theme.getBearishColor();
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor bullish = theme.getBullishColor();
+        final ArberColor bearish = theme.getBearishColor();
 
-        final Rectangle2D bounds2 = context.plotBounds();
-        final Rectangle bounds = bounds2.getBounds();
-        final Rectangle clip = g2.getClipBounds();
+        final ArberRect bounds = context.getPlotBounds();
+        if (bounds == null || bounds.getWidth() <= 1 || bounds.getHeight() <= 1) return;
 
-        // width per candle in pixels
         final double candleW = Math.max(2.0, bounds.getWidth() / (double) Math.max(1, n) * 0.8);
-        g2.setStroke(getCachedStroke(ChartScale.scale(1.1f)));
+        canvas.setStroke((float) ChartScale.scale(1.1f));
 
-        // Dense datasets: render per-column aggregated OHLC (this is fast and deterministic)
-        if (n > Math.max(2000, bounds.width)) {
-            renderLod(g2, model, context, bounds, clip, candleW, bullish, bearish);
+        if (n > Math.max(2000, bounds.getWidth())) {
+            renderLod(canvas, model, context, bounds, candleW, bullish, bearish);
             return;
         }
 
-        // Per-point rendering (no Point2D allocations; reuse buffers and shapes)
         for (int i = 0; i < n; i++) {
             final double xVal = model.getX(i);
             final double close = model.getY(i);
 
             context.mapToPixel(xVal, close, px);
             final double x = px[0];
-
-            if (clip != null) {
-                if (x + candleW / 2 < clip.getX() || x - candleW / 2 > clip.getX() + clip.getWidth()) continue;
-            }
 
             final double open = model.getWeight(i);
             final double high = model.getMax(i);
@@ -117,40 +110,28 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
             final double yTop = px4[1];
             final double yBottom = px[1];
 
-            g2.setColor(close >= open ? bullish : bearish);
+            canvas.setColor(close >= open ? bullish : bearish);
 
-            // upper wick
-            wickLine.x1 = x;
-            wickLine.y1 = yHigh;
-            wickLine.x2 = x;
-            wickLine.y2 = yTop;
-            g2.draw(wickLine);
+            drawLine(canvas, x, yHigh, x, yTop);
+            drawLine(canvas, x, yBottom, x, yLow);
 
-            // lower wick
-            wickLine.x1 = x;
-            wickLine.y1 = yBottom;
-            wickLine.x2 = x;
-            wickLine.y2 = yLow;
-            g2.draw(wickLine);
+            float rx = (float) (x - candleW / 2.0);
+            float ry = (float) yTop;
+            float rw = (float) candleW;
+            float rh = (float) Math.max(1.0, yBottom - yTop);
 
-            bodyRect.x = x - candleW / 2.0;
-            bodyRect.y = yTop;
-            bodyRect.width = candleW;
-            bodyRect.height = Math.max(1.0, yBottom - yTop);
-
-            if (close >= open) g2.draw(bodyRect);
-            else g2.fill(bodyRect);
+            if (close >= open) canvas.drawRect(rx, ry, rw, rh);
+            else canvas.fillRect(rx, ry, rw, rh);
         }
     }
 
-    private void renderLod(Graphics2D g2, ChartModel model, PlotContext context, Rectangle bounds, Rectangle clip,
-                           double candleW, Color bullish, Color bearish) {
-        final int w = Math.max(1, bounds.width);
+    private void renderLod(ArberCanvas canvas, ChartModel model, PlotContext context, ArberRect bounds,
+                           double candleW, ArberColor bullish, ArberColor bearish) {
+        final int w = Math.max(1, (int) Math.round(bounds.getWidth()));
         ensureLodCapacity(w);
 
         Arrays.fill(lodCount, 0);
 
-        // compute x mapping for bucket selection
         double minX = Double.POSITIVE_INFINITY;
         double maxX = Double.NEGATIVE_INFINITY;
         final int n = model.getPointCount();
@@ -161,7 +142,6 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
         }
         final double span = Math.max(1e-12, maxX - minX);
 
-        // aggregate into buckets
         for (int i = 0; i < n; i++) {
             final double pxv = model.getX(i);
             final int xiRaw = (int) ((pxv - minX) / span * (w - 1));
@@ -178,8 +158,6 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
                 lodLow[xi] = l;
                 lodClose[xi] = c;
             } else {
-                // Keep extremes and smooth open/close very lightly for stability.
-                // (We still want visible OHLC identity in dense mode.)
                 lodOpen[xi] = (lodOpen[xi] + o) * 0.5;
                 lodClose[xi] = (lodClose[xi] + c) * 0.5;
                 if (h > lodHigh[xi]) lodHigh[xi] = h;
@@ -189,15 +167,12 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
         }
 
         final double pixelStep = bounds.getWidth() / (double) w;
-        final double x0 = bounds.getX();
-        final double clipLeft = (clip != null) ? clip.getX() : Double.NEGATIVE_INFINITY;
-        final double clipRight = (clip != null) ? clip.getMaxX() : Double.POSITIVE_INFINITY;
+        final double x0 = bounds.x();
 
         for (int xi = 0; xi < w; xi++) {
             if (lodCount[xi] == 0) continue;
 
             final double cx = x0 + xi * pixelStep + pixelStep * 0.5;
-            if (cx + candleW / 2 < clipLeft || cx - candleW / 2 > clipRight) continue;
 
             final double open = lodOpen[xi];
             final double close = lodClose[xi];
@@ -216,28 +191,27 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
             final double yTop = px3[1];
             final double yBottom = px4[1];
 
-            g2.setColor(close >= open ? bullish : bearish);
+            canvas.setColor(close >= open ? bullish : bearish);
 
-            wickLine.x1 = cx;
-            wickLine.y1 = yHigh;
-            wickLine.x2 = cx;
-            wickLine.y2 = yTop;
-            g2.draw(wickLine);
+            drawLine(canvas, cx, yHigh, cx, yTop);
+            drawLine(canvas, cx, yBottom, cx, yLow);
 
-            wickLine.x1 = cx;
-            wickLine.y1 = yBottom;
-            wickLine.x2 = cx;
-            wickLine.y2 = yLow;
-            g2.draw(wickLine);
+            float rx = (float) (cx - candleW / 2.0);
+            float ry = (float) yTop;
+            float rw = (float) candleW;
+            float rh = (float) Math.max(1.0, yBottom - yTop);
 
-            bodyRect.x = cx - candleW / 2.0;
-            bodyRect.y = yTop;
-            bodyRect.width = candleW;
-            bodyRect.height = Math.max(1.0, yBottom - yTop);
-
-            if (close >= open) g2.draw(bodyRect);
-            else g2.fill(bodyRect);
+            if (close >= open) canvas.drawRect(rx, ry, rw, rh);
+            else canvas.fillRect(rx, ry, rw, rh);
         }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        lineX[0] = (float) x1;
+        lineX[1] = (float) x2;
+        lineY[0] = (float) y1;
+        lineY[1] = (float) y2;
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
     private void ensureLodCapacity(int w) {

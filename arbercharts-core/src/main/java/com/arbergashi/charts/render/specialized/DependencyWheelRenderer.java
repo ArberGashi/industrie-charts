@@ -1,15 +1,15 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Rectangle2D;
-import java.util.Map;
 import com.arbergashi.charts.tools.RendererAllocationCache;
+
+import java.util.Map;
+
 /**
  * Dependency wheel: visualizes dependencies among modules in a circular layout.
  * Input: label "src:dst" and weight in y.
@@ -17,24 +17,26 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class DependencyWheelRenderer extends BaseRenderer {
-
-    
 
     public DependencyWheelRenderer() {
         super("dependency_wheel");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle2D bounds = context.plotBounds();
-        double cx = bounds.getCenterX();
-        double cy = bounds.getCenterY();
-        double r = Math.min(bounds.getWidth(), bounds.getHeight()) * 0.35;
+        ArberRect bounds = context.getPlotBounds();
+        double cx = bounds.centerX();
+        double cy = bounds.centerY();
+        double r = Math.min(bounds.width(), bounds.height()) * 0.35;
 
         Map<String, Double> angles = RendererAllocationCache.getMap(this, "angles");
         int idx = 0;
@@ -47,7 +49,11 @@ public final class DependencyWheelRenderer extends BaseRenderer {
             if (!angles.containsKey(parts[1])) angles.put(parts[1], idx++ * (2 * Math.PI / Math.max(1, count)));
         }
 
-        g2.setStroke(getSeriesStroke());
+        float[] lineX = RendererAllocationCache.getFloatArray(this, "dep.line.x", 2);
+        float[] lineY = RendererAllocationCache.getFloatArray(this, "dep.line.y", 2);
+        canvas.setStroke(getSeriesStrokeWidth());
+
+        // draw links
         for (int i = 0; i < count; i++) {
             String lbl = model.getLabel(i);
             if (lbl == null) continue;
@@ -56,29 +62,37 @@ public final class DependencyWheelRenderer extends BaseRenderer {
             Double a1 = angles.get(parts[0]);
             Double a2 = angles.get(parts[1]);
             if (a1 == null || a2 == null) continue;
-            Color linkColor = seriesOrBase(model, context, i);
-            g2.setColor(linkColor);
+            ArberColor linkColor = seriesOrBase(model, context, i);
+            canvas.setColor(linkColor);
             double x1 = cx + r * Math.cos(a1);
             double y1 = cy + r * Math.sin(a1);
             double x2 = cx + r * Math.cos(a2);
             double y2 = cy + r * Math.sin(a2);
-            g2.draw(getLine(x1, y1, x2, y2));
+            lineX[0] = (float) x1;
+            lineY[0] = (float) y1;
+            lineX[1] = (float) x2;
+            lineY[1] = (float) y2;
+            canvas.drawPolyline(lineX, lineY, 2);
         }
 
-        // draw nodes arc segments
-        g2.setColor(themeAxisLabel(context));
+        // draw nodes arc segments (polyline approximation)
+        ArberColor axisColor = themeAxisLabel(context);
+        canvas.setColor(axisColor);
+        int segs = Math.max(6, Math.min(32, angles.size() * 2));
+        float[] arcX = RendererAllocationCache.getFloatArray(this, "dep.arc.x", segs + 1);
+        float[] arcY = RendererAllocationCache.getFloatArray(this, "dep.arc.y", segs + 1);
         double start = 0;
-        double seg = 360.0 / Math.max(1, angles.size());
-        for (String k : angles.keySet()) {
-            Shape nodeArc = getArc(cx - r - 20, cy - r - 20, (r + 20) * 2, (r + 20) * 2, start, seg, Arc2D.OPEN);
-            g2.draw(nodeArc);
-
-            // label
-            double mid = Math.toRadians(start + seg / 2.0);
-            double lx = cx + Math.cos(mid) * (r + 30);
-            double ly = cy + Math.sin(mid) * (r + 30);
-            drawLabel(g2, k, g2.getFont(), themeAxisLabel(context), (float) lx, (float) ly);
-
+        double seg = 2 * Math.PI / Math.max(1, angles.size());
+        double rr = r + 20;
+        for (int n = 0; n < angles.size(); n++) {
+            double a0 = start;
+            double a1 = start + seg;
+            for (int i = 0; i <= segs; i++) {
+                double t = a0 + (a1 - a0) * (i / (double) segs);
+                arcX[i] = (float) (cx + Math.cos(t) * rr);
+                arcY[i] = (float) (cy + Math.sin(t) * rr);
+            }
+            canvas.drawPolyline(arcX, arcY, segs + 1);
             start += seg;
         }
     }

@@ -1,7 +1,6 @@
 package com.arbergashi.charts.model;
 
 import java.util.List;
-
 /**
  * An extension of ChartModel for multi-dimensional data, where each data point
  * is an array of values. Required for charts like Parallel Coordinates.

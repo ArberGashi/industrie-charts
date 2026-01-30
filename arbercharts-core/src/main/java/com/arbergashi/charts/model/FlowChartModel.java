@@ -1,7 +1,6 @@
 package com.arbergashi.charts.model;
 
 import java.util.List;
-
 /**
  * An extension of ChartModel for flow-based data, such as that required by
  * Sankey or Alluvial diagrams. It describes a set of nodes and the links

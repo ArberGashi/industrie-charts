@@ -1,10 +1,9 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a matrix-based chart model.
  *
@@ -18,7 +17,7 @@ public class DefaultMatrixChartModel implements MatrixChartModel {
     private final List<String> labels;
     private final AtomicLong updateStamp = new AtomicLong(0);
     private String name;
-    private Color color;
+    private ArberColor color;
 
     public DefaultMatrixChartModel(double[][] matrix, List<String> labels) {
         if (matrix == null || matrix.length == 0 || matrix.length != matrix[0].length) {
@@ -46,20 +45,22 @@ public class DefaultMatrixChartModel implements MatrixChartModel {
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultMatrixChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
     @Override
-    public void setColor(Color color) {
+    public DefaultMatrixChartModel setColor(ArberColor color) {
         this.color = color;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
@@ -82,15 +83,11 @@ public class DefaultMatrixChartModel implements MatrixChartModel {
     }
 
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException("Matrix models do not support direct point addition.");
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException("Matrix models do not support direct point addition.");
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultMatrixChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException("Matrix models do not support direct point addition.");
     }
 
@@ -98,7 +95,7 @@ public class DefaultMatrixChartModel implements MatrixChartModel {
         throw new UnsupportedOperationException("Matrix models cannot be cleared this way.");
     }
 
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
     }
 
     public void removeChangeListener(ChartModelListener listener) {

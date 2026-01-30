@@ -1,23 +1,23 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
 
 /**
  * Joyplot / Ridgeline renderer: draws stacked density-like curves.
- * Optimized to reuse Path2D and avoid allocations in the draw loop.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class JoyplotRenderer extends BaseRenderer {
 
@@ -26,50 +26,48 @@ public final class JoyplotRenderer extends BaseRenderer {
     }
 
     private final double[] pBuffer = new double[2];
-    private transient Path2D.Double path;
+
     public JoyplotRenderer() {
         super("joyplot");
     }
 
-    private Path2D.Double path() {
-        if (path == null) path = new Path2D.Double(Path2D.WIND_NON_ZERO);
-        return path;
-    }
-
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n == 0) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Rectangle2D bounds = context.plotBounds();
-        double baseY = bounds.getY() + bounds.getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double baseY = bounds.y() + bounds.height();
 
-        // Draw several offset ridgelines using same data with slight vertical offsets
         int lines = Math.min(8, n / 20 + 1);
-        Color baseColor = getSeriesColor(model);
+        ArberColor baseColor = getSeriesColor(model);
+
+        int step = Math.max(1, n / 200);
+        float[] xs = RendererAllocationCache.getFloatArray(this, "joy.x", (n / step) + 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "joy.y", (n / step) + 2);
+
         for (int row = 0; row < lines; row++) {
-            Path2D.Double pth = path();
-            pth.reset();
-            boolean first = true;
-            int step = Math.max(1, n / 200);
+            int out = 0;
             int idx = 0;
             for (int i = 0; i < n; i++) {
                 if ((idx++ % step) != 0) continue;
                 context.mapToPixel(xData[i], yData[i], pBuffer);
                 double x = pBuffer[0];
-                double y = baseY - (row * (bounds.getHeight() / (lines * 1.5))) - yData[i] * 0.1;
-                if (first) {
-                    pth.moveTo(x, y);
-                    first = false;
-                } else pth.lineTo(x, y);
+                double y = baseY - (row * (bounds.height() / (lines * 1.5))) - yData[i] * 0.1;
+                xs[out] = (float) x;
+                ys[out] = (float) y;
+                out++;
             }
-            // Use ColorUtils for alpha to avoid new Color(rgb, hasAlpha) if possible, or just cache base
-            Color rowColor = isMultiColor() ? themeSeries(context, row) : baseColor;
+            if (out < 2) continue;
+            ArberColor rowColor = isMultiColor() ? themeSeries(context, row) : baseColor;
             if (rowColor == null) rowColor = baseColor;
-            g2.setColor(ColorUtils.withAlpha(rowColor, 0.9f));
-            g2.draw(pth);
+            canvas.setColor(ColorUtils.applyAlpha(rowColor, 0.9f));
+            canvas.drawPolyline(xs, ys, out);
         }
     }
 

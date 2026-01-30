@@ -1,22 +1,24 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
-
 /**
  * Professional, zero-allocation Kernel Density Estimate (KDE) renderer.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class KDERenderer extends BaseRenderer {
 
@@ -37,7 +39,7 @@ public final class KDERenderer extends BaseRenderer {
         }
         Arrays.sort(values, 0, n);
 
-        double h = bandwidth > 0 ? bandwidth : calculateSilvermanBandwidth(values);
+        double h = bandwidth > 0 ? bandwidth : getCalculatedSilvermanBandwidth(values);
         if (!(h > 0)) h = 1.0;
         double min = values[0];
         double max = values[n - 1];
@@ -63,8 +65,10 @@ public final class KDERenderer extends BaseRenderer {
         return new double[]{0.0, maxDensity * 1.05};
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
@@ -76,36 +80,41 @@ public final class KDERenderer extends BaseRenderer {
         java.util.Arrays.sort(values, 0, n);
 
         // 2. Calculate KDE
-        Path2D kdePath = buildKDEPath(values, context);
-        if (kdePath == null) return;
+        int count = buildKDEPoints(values, context);
+        if (count <= 1) return;
 
-        final Color baseColor = seriesOrBase(model, context, 0);
-        Color lineColor = isMultiColor() ? themeSeries(context, 1) : baseColor;
+        final ArberColor baseColor = seriesOrBase(model, context, 0);
+        ArberColor lineColor = isMultiColor() ? themeSeries(context, 1) : baseColor;
         if (lineColor == null) lineColor = baseColor;
-        final Color fillColor = ColorUtils.withAlpha(baseColor, 0.3f);
+        final ArberColor fillColor = ColorUtils.applyAlpha(baseColor, 0.3f);
 
         // 3. Fill area under curve
-        Path2D fillPath = com.arbergashi.charts.tools.RendererAllocationCache.getPath(this, "kde.fillPath");
-        fillPath.append(kdePath, false);
-        Rectangle2D bounds = context.plotBounds();
-        fillPath.lineTo(bounds.getMaxX(), bounds.getMaxY());
-        fillPath.lineTo(bounds.getMinX(), bounds.getMaxY());
-        fillPath.closePath();
+        ArberRect bounds = context.getPlotBounds();
+        float[] xs = RendererAllocationCache.getFloatArray(this, "kde.xs", count + 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "kde.ys", count + 2);
+        float[] px = RendererAllocationCache.getFloatArray(this, "kde.px", count);
+        float[] py = RendererAllocationCache.getFloatArray(this, "kde.py", count);
+        System.arraycopy(px, 0, xs, 0, count);
+        System.arraycopy(py, 0, ys, 0, count);
+        xs[count] = (float) bounds.maxX();
+        ys[count] = (float) bounds.maxY();
+        xs[count + 1] = (float) bounds.x();
+        ys[count + 1] = (float) bounds.maxY();
 
-        g.setColor(fillColor);
-        g.fill(fillPath);
+        canvas.setColor(fillColor);
+        canvas.fillPolygon(xs, ys, count + 2);
 
         // 4. Draw KDE curve
-        g.setColor(lineColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.5f)));
-        g.draw(kdePath);
+        canvas.setColor(lineColor);
+        canvas.setStroke(ChartScale.scale(2.5f));
+        canvas.drawPolyline(px, py, count);
     }
 
-    private Path2D.Double buildKDEPath(double[] values, PlotContext context) {
+    private int buildKDEPoints(double[] values, PlotContext context) {
         final int n = values.length;
-        if (n == 0) return null;
+        if (n == 0) return 0;
 
-        double h = bandwidth > 0 ? bandwidth : calculateSilvermanBandwidth(values);
+        double h = bandwidth > 0 ? bandwidth : getCalculatedSilvermanBandwidth(values);
         double min = values[0];
         double max = values[n - 1];
         double range = max - min;
@@ -114,10 +123,10 @@ public final class KDERenderer extends BaseRenderer {
         double xMax = max + range * 0.1;
 
         int numPoints = 200;
-        Path2D.Double path = getPathCache();
-        path.reset();
-        boolean moved = false;
         double[] buf = pBuffer();
+        float[] px = RendererAllocationCache.getFloatArray(this, "kde.px", numPoints);
+        float[] py = RendererAllocationCache.getFloatArray(this, "kde.py", numPoints);
+        int count = 0;
 
         for (int i = 0; i < numPoints; i++) {
             double x = xMin + (xMax - xMin) * i / (numPoints - 1);
@@ -128,21 +137,18 @@ public final class KDERenderer extends BaseRenderer {
             density /= (n * h);
 
             context.mapToPixel(x, density, buf);
-            if (!moved) {
-                path.moveTo(buf[0], buf[1]);
-                moved = true;
-            } else {
-                path.lineTo(buf[0], buf[1]);
-            }
+            px[count] = (float) buf[0];
+            py[count] = (float) buf[1];
+            count++;
         }
-        return path;
+        return count;
     }
 
     private double gaussianKernel(double u) {
         return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
     }
 
-    private double calculateSilvermanBandwidth(double[] values) {
+    private double getCalculatedSilvermanBandwidth(double[] values) {
         final int n = values.length;
         if (n < 2) return 1.0;
 
@@ -161,7 +167,8 @@ public final class KDERenderer extends BaseRenderer {
         return 0.9 * Math.min(stdDev, iqr) * Math.pow(n, -0.2);
     }
 
-    public void setBandwidth(double bandwidth) {
+    public KDERenderer setBandwidth(double bandwidth) {
         this.bandwidth = bandwidth;
+        return this;
     }
 }

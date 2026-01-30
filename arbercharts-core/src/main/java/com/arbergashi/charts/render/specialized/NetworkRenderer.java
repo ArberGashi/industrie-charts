@@ -1,12 +1,16 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.FlowChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-
+import java.util.List;
 
 /**
  * NetworkRenderer visualizes graph data (nodes and edges).
@@ -15,56 +19,56 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
- *
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class NetworkRenderer extends BaseRenderer {
 
     private String[] nodeIds = new String[8];
     private int[] nodeX = new int[8];
     private int[] nodeY = new int[8];
-    private Color[] nodeColor = new Color[8];
-    // initial capacity mirrors the backing arrays
+    private ArberColor[] nodeColor = new ArberColor[8];
     private int nodesCap = nodeIds.length;
 
     public NetworkRenderer() {
         super("network");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof FlowChartModel flowModel)) {
-            drawErrorMessage(g2, context, "NetworkRenderer requires a FlowChartModel");
             return;
         }
 
-        java.util.List<? extends FlowChartModel.Node> nodes = flowModel.getNodes();
-        java.util.List<? extends FlowChartModel.Link> links = flowModel.getLinks();
+        List<? extends FlowChartModel.Node> nodes = flowModel.getNodes();
+        List<? extends FlowChartModel.Link> links = flowModel.getLinks();
         if (nodes.isEmpty()) return;
 
         int n = nodes.size();
         if (n > nodesCap) {
             int newCap = Math.max(n, nodesCap * 2);
-            String[] nid = (String[]) com.arbergashi.charts.tools.RendererAllocationCache.getArray(this, "nodeIds", String.class, newCap);
+            String[] nid = (String[]) RendererAllocationCache.getArray(this, "nodeIds", String.class, newCap);
             System.arraycopy(nodeIds, 0, nid, 0, Math.min(nodeIds.length, nid.length));
             nodeIds = nid;
-            int[] nx = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "nodeX", newCap);
+            int[] nx = RendererAllocationCache.getIntArray(this, "nodeX", newCap);
             System.arraycopy(nodeX, 0, nx, 0, Math.min(nodeX.length, nx.length));
             nodeX = nx;
-            int[] ny = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "nodeY", newCap);
+            int[] ny = RendererAllocationCache.getIntArray(this, "nodeY", newCap);
             System.arraycopy(nodeY, 0, ny, 0, Math.min(nodeY.length, ny.length));
             nodeY = ny;
-            Color[] nc = (Color[]) com.arbergashi.charts.tools.RendererAllocationCache.getArray(this, "nodeColor", Color.class, newCap);
+            ArberColor[] nc = (ArberColor[]) RendererAllocationCache.getArray(this, "nodeColor", ArberColor.class, newCap);
             System.arraycopy(nodeColor, 0, nc, 0, Math.min(nodeColor.length, nc.length));
             nodeColor = nc;
             nodesCap = newCap;
         }
 
-        Rectangle bounds = context.plotBounds().getBounds();
-        int w = Math.max(1, bounds.width - 40);
-        int h = Math.max(1, bounds.height - 40);
+        ArberRect bounds = context.getPlotBounds();
+        int w = Math.max(1, (int) bounds.width() - 40);
+        int h = Math.max(1, (int) bounds.height() - 40);
 
-        // Deterministic layout via id hash to avoid Random allocation
-        Color baseColor = getSeriesColor(model);
+        ArberColor baseColor = getSeriesColor(model);
         for (int i = 0; i < n; i++) {
             FlowChartModel.Node node = nodes.get(i);
             String id = node.getId();
@@ -72,15 +76,16 @@ public final class NetworkRenderer extends BaseRenderer {
             int hash = id.hashCode();
             int rx = Math.abs((hash * 31) ^ (hash >>> 16));
             int ry = Math.abs((hash * 17) ^ (hash >>> 8));
-            nodeX[i] = bounds.x + 20 + (rx % w);
-            nodeY[i] = bounds.y + 20 + (ry % h);
-            // Cache color
+            nodeX[i] = (int) bounds.x() + 20 + (rx % w);
+            nodeY[i] = (int) bounds.y() + 20 + (ry % h);
             nodeColor[i] = isMultiColor() ? getColorForId(id, context) : baseColor;
         }
 
-        // Draw links - use linear scan to map ids to indices (nodes usually small)
-        g2.setColor(com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.4f));
-        g2.setStroke(getCachedStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        float[] lineX = RendererAllocationCache.getFloatArray(this, "net.line.x", 2);
+        float[] lineY = RendererAllocationCache.getFloatArray(this, "net.line.y", 2);
+        canvas.setColor(ColorUtils.applyAlpha(themeGrid(context), 0.4f));
+        canvas.setStroke(getSeriesStrokeWidth());
+
         for (FlowChartModel.Link link : links) {
             String s = link.getSource();
             String t = link.getTarget();
@@ -91,29 +96,35 @@ public final class NetworkRenderer extends BaseRenderer {
                 if (si != -1 && ti != -1) break;
             }
             if (si != -1 && ti != -1) {
-                g2.drawLine(nodeX[si], nodeY[si], nodeX[ti], nodeY[ti]);
+                lineX[0] = nodeX[si];
+                lineY[0] = nodeY[si];
+                lineX[1] = nodeX[ti];
+                lineY[1] = nodeY[ti];
+                canvas.drawPolyline(lineX, lineY, 2);
             }
         }
 
-        // Draw nodes
+        float[] nodePolyX = RendererAllocationCache.getFloatArray(this, "net.node.x", 8);
+        float[] nodePolyY = RendererAllocationCache.getFloatArray(this, "net.node.y", 8);
         for (int i = 0; i < n; i++) {
-            g2.setColor(nodeColor[i]);
-            g2.fill(getEllipse(nodeX[i] - 8, nodeY[i] - 8, 16, 16));
-            g2.setColor(nodeColor[i].darker());
-            g2.draw(getEllipse(nodeX[i] - 8, nodeY[i] - 8, 16, 16));
-            g2.setColor(themeForeground(context));
-            g2.drawString(nodes.get(i).getLabel(), nodeX[i] + 10, nodeY[i] + 5);
+            ArberColor c = nodeColor[i];
+            canvas.setColor(c);
+            buildOctagon(nodeX[i], nodeY[i], 8, nodePolyX, nodePolyY);
+            canvas.fillPolygon(nodePolyX, nodePolyY, 8);
         }
     }
 
-    private Color getColorForId(String id, PlotContext context) {
+    private ArberColor getColorForId(String id, PlotContext context) {
         int hash = id.hashCode();
         int idx = Math.abs(hash) % 6;
         return themeSeries(context, idx);
     }
 
-    private void drawErrorMessage(Graphics2D g2, PlotContext context, String message) {
-        g2.setColor(themeAccent(context));
-        g2.drawString(message, context.plotBounds().getBounds().x + 10, context.plotBounds().getBounds().y + 20);
+    private static void buildOctagon(int cx, int cy, int r, float[] xs, float[] ys) {
+        for (int i = 0; i < 8; i++) {
+            double a = i * (Math.PI * 2.0 / 8.0);
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
     }
 }

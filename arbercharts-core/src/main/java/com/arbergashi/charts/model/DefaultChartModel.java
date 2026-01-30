@@ -1,12 +1,11 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
-import java.awt.EventQueue;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default {@link ChartModel} implementation backed by primitive arrays.
  *
@@ -30,14 +29,18 @@ public class DefaultChartModel implements ChartModel {
     private final List<ChartModelListener> listeners = new CopyOnWriteArrayList<>();
     private String name = "Series";
     private String subtitle = null;
-    private Color color = null;
+    private ArberColor color = null;
     private boolean dispatchOnEdt = false;
+    private Executor dispatchExecutor;
     // --- PRIMITIVE BACKING STORES (The Engine) ---
     private double[] xData = new double[1024];
     private double[] yData = new double[1024];
     private double[] minData = new double[1024];
     private double[] maxData = new double[1024];
     private double[] weightData = new double[1024];
+    private byte[] provenanceFlags = new byte[1024];
+    private short[] sourceIds = new short[1024];
+    private long[] timestampNanos = new long[1024];
     private int size = 0;
 
     // Store labels as optional per-point metadata (not used in hot numeric paths).
@@ -63,7 +66,7 @@ public class DefaultChartModel implements ChartModel {
      * @param name series name
      * @param color series color
      */
-    public DefaultChartModel(String name, Color color) {
+    public DefaultChartModel(String name, ArberColor color) {
         this.name = name;
         this.color = color;
     }
@@ -163,6 +166,21 @@ public class DefaultChartModel implements ChartModel {
         return Arrays.copyOf(weightData, size);
     }
 
+    @Override
+    public byte[] getProvenanceFlagsData() {
+        return Arrays.copyOf(provenanceFlags, size);
+    }
+
+    @Override
+    public short[] getSourceIdsData() {
+        return Arrays.copyOf(sourceIds, size);
+    }
+
+    @Override
+    public long[] getTimestampNanosData() {
+        return Arrays.copyOf(timestampNanos, size);
+    }
+
     /**
      * Returns a copy of the min (low) data array.
      *
@@ -187,17 +205,41 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param p point to add
      */
-    public void addPoint(ChartPoint p) {
+    public void setPoint(ChartPoint p) {
         if (p == null) return;
+        setPoint(p.getX(), p.getY(), p.getMin(), p.getMax(), p.getWeight(), p.getLabel(),
+                ProvenanceFlags.ORIGINAL, (short) 0, 0L);
+    }
+
+    /**
+     * Adds a chart point with provenance metadata.
+     */
+    public void setPoint(double x, double y, double min, double max, double weight, String label,
+                         byte provenanceFlag, short sourceId, long timestampNano) {
         ensureCapacity(size + 1);
-        xData[size] = p.x();
-        yData[size] = p.y();
-        weightData[size] = p.weight();
-        minData[size] = p.min();
-        maxData[size] = p.max();
-        labels[size] = p.label();
+        xData[size] = x;
+        yData[size] = y;
+        weightData[size] = weight;
+        minData[size] = min;
+        maxData[size] = max;
+        labels[size] = label;
+        provenanceFlags[size] = provenanceFlag;
+        sourceIds[size] = sourceId;
+        timestampNanos[size] = timestampNano;
         size++;
         invalidate();
+    }
+
+    /**
+     * Updates provenance metadata for an existing index.
+     */
+    public DefaultChartModel setProvenance(int index, byte provenanceFlag, short sourceId, long timestampNano) {
+        if (index < 0 || index >= size) return this;
+        provenanceFlags[index] = provenanceFlag;
+        sourceIds[index] = sourceId;
+        timestampNanos[index] = timestampNano;
+        invalidate();
+        return this;
     }
 
     private void ensureCapacity(int minCap) {
@@ -208,6 +250,9 @@ public class DefaultChartModel implements ChartModel {
             minData = Arrays.copyOf(minData, newCap);
             maxData = Arrays.copyOf(maxData, newCap);
             weightData = Arrays.copyOf(weightData, newCap);
+            provenanceFlags = Arrays.copyOf(provenanceFlags, newCap);
+            sourceIds = Arrays.copyOf(sourceIds, newCap);
+            timestampNanos = Arrays.copyOf(timestampNanos, newCap);
             labels = Arrays.copyOf(labels, newCap);
         }
     }
@@ -224,6 +269,9 @@ public class DefaultChartModel implements ChartModel {
         size = 0;
         // Keep arrays allocated; clear metadata references to avoid retaining large strings.
         Arrays.fill(labels, null);
+        Arrays.fill(provenanceFlags, ProvenanceFlags.ORIGINAL);
+        Arrays.fill(sourceIds, (short) 0);
+        Arrays.fill(timestampNanos, 0L);
         invalidate();
     }
 
@@ -238,9 +286,10 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param name series name
      */
-    public void setName(String name) {
+    public DefaultChartModel setName(String name) {
         this.name = name;
         invalidate();
+        return this;
     }
 
     /**
@@ -257,9 +306,10 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param subtitle subtitle or null
      */
-    public void setSubtitle(String subtitle) {
+    public DefaultChartModel setSubtitle(String subtitle) {
         this.subtitle = subtitle;
         invalidate();
+        return this;
     }
 
     /**
@@ -267,7 +317,7 @@ public class DefaultChartModel implements ChartModel {
      *
      * @return series color or null to use theme defaults
      */
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
@@ -276,24 +326,37 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param color series color (null resets)
      */
-    public void setColor(Color color) {
+    public DefaultChartModel setColor(ArberColor color) {
         this.color = color;
         invalidate();
+        return this;
     }
 
     /**
-     * Controls whether change listeners are notified on the Swing EDT.
+     * Controls whether change listeners are notified via a configured dispatch executor.
      *
      * <p>When enabled, background updates will dispatch listener notifications via
-     * {@link java.awt.EventQueue#invokeLater(Runnable)}. Default is disabled.</p>
+     * the configured executor. Default is disabled.</p>
      */
-    public DefaultChartModel setDispatchOnEdt(boolean enabled) {
+    public DefaultChartModel setDispatchOnEdt(boolean enabled){
         this.dispatchOnEdt = enabled;
+        return this;
+        
+    }
+
+    /**
+     * Sets the executor used when {@code dispatchOnEdt} is enabled.
+     *
+     * @param executor executor for listener dispatch (nullable)
+     * @return this model for chaining
+     */
+    public DefaultChartModel setDispatchExecutor(Executor executor){
+        this.dispatchExecutor = executor;
         return this;
     }
 
     @Override
-    public void addChangeListener(ChartModelListener l) {
+    public void setChangeListener(ChartModelListener l) {
         if (l != null) listeners.add(l);
     }
 
@@ -301,10 +364,13 @@ public class DefaultChartModel implements ChartModel {
     public void removeChangeListener(ChartModelListener l) {
         listeners.remove(l);
     }
+    /**
+     * @since 1.5.0
+    */
 
     protected void fireModelChanged() {
-        if (dispatchOnEdt && !EventQueue.isDispatchThread()) {
-            EventQueue.invokeLater(this::notifyListeners);
+        if (dispatchOnEdt && dispatchExecutor != null) {
+            dispatchExecutor.execute(this::notifyListeners);
             return;
         }
         notifyListeners();
@@ -316,22 +382,14 @@ public class DefaultChartModel implements ChartModel {
 
     // Legacy Support methods remain for compatibility, redirecting to primitive flow
     /**
-     * Adds multiple points from a list.
-     *
-     * @param pts points to add
-     */
-    public void addPoints(List<ChartPoint> pts) {
-        if (pts != null) pts.forEach(this::addPoint);
-    }
-
-    /**
      * Replaces all points with the provided list.
      *
      * @param pts new points
      */
-    public void setPoints(List<ChartPoint> pts) {
+    public DefaultChartModel setPoints(List<ChartPoint> pts) {
         clear();
-        addPoints(pts);
+        setAll(pts);
+        return this;
     }
 
     // Convenience methods for quick demo usage (optional, not hot-path)
@@ -343,8 +401,8 @@ public class DefaultChartModel implements ChartModel {
      * @param weight weight value
      * @param label label text
      */
-    public void addPoint(double x, double y, double weight, String label) {
-        addPoint(new ChartPoint(x, y, weight, y, y, label));
+    public void setPoint(double x, double y, double weight, String label) {
+        setPoint(new ChartPoint(x, y, weight, y, y, label));
     }
 
     /**
@@ -357,9 +415,9 @@ public class DefaultChartModel implements ChartModel {
      * @param weight weight value
      * @param label label text
      */
-    public void addPoint(double x, double y, double min, double max, double weight, String label) {
+    public void setPoint(double x, double y, double min, double max, double weight, String label) {
         // ChartPoint constructor order is: (x, y, weight, min, max, label)
-        addPoint(new ChartPoint(x, y, weight, min, max, label));
+        setPoint(new ChartPoint(x, y, weight, min, max, label));
     }
 
     /**
@@ -368,8 +426,8 @@ public class DefaultChartModel implements ChartModel {
      * @param x X value
      * @param y Y value
      */
-    public void addXY(double x, double y) {
-        addPoint(x, y, 1.0, "");
+    public void setXY(double x, double y) {
+        setPoint(x, y, 1.0, "");
     }
 
     /**
@@ -379,8 +437,8 @@ public class DefaultChartModel implements ChartModel {
      * @param y     Y value
      * @param label Label
      */
-    public void addXY(double x, double y, String label) {
-        addPoint(x, y, 1.0, label);
+    public void setXY(double x, double y, String label) {
+        setPoint(x, y, 1.0, label);
     }
 
     /**
@@ -388,9 +446,9 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param points List of chart points
      */
-    public void addAll(List<ChartPoint> points) {
+    public void setAll(List<ChartPoint> points) {
         if (points != null) {
-            points.forEach(this::addPoint);
+            points.forEach(this::setPoint);
         }
     }
 
@@ -400,11 +458,11 @@ public class DefaultChartModel implements ChartModel {
      * @param x Array of X values
      * @param y Array of Y values
      */
-    public void addXYArrays(double[] x, double[] y) {
+    public void setXYArrays(double[] x, double[] y) {
         if (x == null || y == null) return;
         int n = Math.min(x.length, y.length);
         for (int i = 0; i < n; i++) {
-            addPoint(x[i], y[i], 1.0, "");
+            setPoint(x[i], y[i], 1.0, "");
         }
     }
 
@@ -413,14 +471,14 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param bar OHLC bar
      */
-    public void addOHLC(OHLCBar bar) {
+    public void setOHLC(OHLCBar bar) {
         if (bar == null) return;
         ensureCapacity(size + 1);
-        xData[size] = bar.time();
-        yData[size] = bar.close();
-        weightData[size] = bar.open();
-        minData[size] = bar.low();
-        maxData[size] = bar.high();
+        xData[size] = bar.getTime();
+        yData[size] = bar.getClose();
+        weightData[size] = bar.getOpen();
+        minData[size] = bar.getLow();
+        maxData[size] = bar.getHigh();
         size++;
         invalidate();
     }
@@ -434,8 +492,8 @@ public class DefaultChartModel implements ChartModel {
      * @param low   Low price
      * @param close Close price
      */
-    public void addOHLC(double time, double open, double high, double low, double close) {
-        addOHLC(new OHLCBar(time, open, high, low, close));
+    public void setOHLC(double time, double open, double high, double low, double close) {
+        setOHLC(new OHLCBar(time, open, high, low, close));
     }
 
     /**
@@ -443,13 +501,13 @@ public class DefaultChartModel implements ChartModel {
      *
      * @param point Error bar point
      */
-    public void addWithError(ErrorBarPoint point) {
+    public void setWithError(ErrorBarPoint point) {
         if (point == null) return;
         ensureCapacity(size + 1);
-        xData[size] = point.x();
-        yData[size] = point.y();
-        minData[size] = point.errorLow();
-        maxData[size] = point.errorHigh();
+        xData[size] = point.getX();
+        yData[size] = point.getY();
+        minData[size] = point.getErrorLow();
+        maxData[size] = point.getErrorHigh();
         weightData[size] = 1.0;
         size++;
         invalidate();
@@ -462,8 +520,8 @@ public class DefaultChartModel implements ChartModel {
      * @param y     Y value
      * @param error Symmetric error (±)
      */
-    public void addWithError(double x, double y, double error) {
-        addWithError(new ErrorBarPoint(x, y, y - error, y + error));
+    public void setWithError(double x, double y, double error) {
+        setWithError(new ErrorBarPoint(x, y, y - error, y + error));
     }
 
     /**
@@ -474,8 +532,8 @@ public class DefaultChartModel implements ChartModel {
      * @param errorLow  Lower error bound
      * @param errorHigh Upper error bound
      */
-    public void addWithError(double x, double y, double errorLow, double errorHigh) {
-        addWithError(new ErrorBarPoint(x, y, errorLow, errorHigh));
+    public void setWithError(double x, double y, double errorLow, double errorHigh) {
+        setWithError(new ErrorBarPoint(x, y, errorLow, errorHigh));
     }
 
     @Override

@@ -1,22 +1,22 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-
 /**
- * Heatmap Contour Renderer (JDK 25 Standard).
+ * Heatmap Contour Renderer (headless).
  * Displays temperature or concentration distributions using a grid of colored rectangles.
- * Professional Implementation: Clean code, High-DPI, Zero-Warnings.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public class HeatmapContourRenderer extends BaseRenderer {
 
@@ -34,12 +34,16 @@ public class HeatmapContourRenderer extends BaseRenderer {
         return interpolate;
     }
 
-    public void setInterpolate(boolean interpolate) {
+    public HeatmapContourRenderer setInterpolate(boolean interpolate) {
         this.interpolate = interpolate;
+        return this;
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
@@ -61,8 +65,8 @@ public class HeatmapContourRenderer extends BaseRenderer {
             double x = model.getX(i);
             double y = model.getY(i);
             double intensity = (model.getWeight(i) - minZ) / rangeZ;
-            Color c = getColorForIntensity(intensity, context);
-            g2.setColor(c);
+            ArberColor c = getColorForIntensity(intensity, context);
+            canvas.setColor(c);
 
             double x1 = x - avgStepX / 2.0;
             double y1 = y - avgStepY / 2.0;
@@ -73,26 +77,26 @@ public class HeatmapContourRenderer extends BaseRenderer {
             double w = Math.abs(pSize[0] - pPixel[0]);
             double h = Math.abs(pSize[1] - pPixel[1]);
 
-            g2.fill(getRect(pPixel[0], pPixel[1], Math.max(1.0, w), Math.max(1.0, h)));
+            canvas.fillRect((float) pPixel[0], (float) pPixel[1], (float) Math.max(1.0, w), (float) Math.max(1.0, h));
         }
     }
 
-    private Color getColorForIntensity(double intensity, PlotContext context) {
-        Color c0;
-        Color c1;
-        Color c2;
-        Color c3;
+    private ArberColor getColorForIntensity(double intensity, PlotContext context) {
+        ArberColor c0;
+        ArberColor c1;
+        ArberColor c2;
+        ArberColor c3;
         if (isMultiColor()) {
             c0 = themeSeries(context, 0);
             c1 = themeSeries(context, 1);
             c2 = themeSeries(context, 2);
             c3 = themeSeries(context, 3);
         } else {
-            Color base = themeAccent(context);
-            c0 = ColorUtils.withAlpha(base, 0.25f);
-            c1 = ColorUtils.withAlpha(base, 0.45f);
-            c2 = ColorUtils.withAlpha(base, 0.65f);
-            c3 = ColorUtils.withAlpha(base, 0.85f);
+            ArberColor base = themeAccent(context);
+            c0 = ColorUtils.applyAlpha(base, 0.25f);
+            c1 = ColorUtils.applyAlpha(base, 0.45f);
+            c2 = ColorUtils.applyAlpha(base, 0.65f);
+            c3 = ColorUtils.applyAlpha(base, 0.85f);
         }
         if (intensity <= 0) return c0;
         if (intensity >= 1) return c3;

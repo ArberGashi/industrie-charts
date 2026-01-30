@@ -1,0 +1,5 @@
+module ArberChartsC [system] {
+    header "ArberChartsC.h"
+    link "arbercharts-core"
+    export *
+}

@@ -1,18 +1,18 @@
 package com.arbergashi.charts.render.specialized;
 
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.internal.CompositePool;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-
+import com.arbergashi.charts.util.ColorUtils;
 /**
  * Ternary Contour Renderer - extends ternary plot with contour/heatmap characteristics.
  *
@@ -24,6 +24,8 @@ import java.awt.geom.Point2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class TernaryContourRenderer extends BaseRenderer {
 
@@ -31,42 +33,37 @@ public class TernaryContourRenderer extends BaseRenderer {
         RendererRegistry.register("ternary_contour", new RendererDescriptor("ternary_contour", "renderer.ternary_contour", "/icons/ternary_contour.svg"), TernaryContourRenderer::new);
     }
 
-    private transient final java.awt.geom.Ellipse2D.Double circle = new java.awt.geom.Ellipse2D.Double();
-    // reusable transform output to avoid Point2D allocations
-    private transient final Point2D.Double tmp = new Point2D.Double();
-    // reusable geometry
-    private transient Path2D triangle;
-    private transient Stroke triStroke;
+    // reusable transform output to avoid ArberPoint allocations
+    private transient final ArberPoint tmp = new ArberPoint();
 
     public TernaryContourRenderer() {
         super("ternaryContour");
     }
 
-    private static void transformTernaryInto(double a, double b, double c, PlotContext context, Point2D.Double out) {
+    private static void transformTernaryInto(double a, double b, double c, PlotContext context, ArberPoint out) {
         double sum = a + b + c;
         if (sum == 0) sum = 1.0;
         double na = a / sum;
         double nb = b / sum;
 
-        double side = Math.min(context.plotBounds().getWidth(), context.plotBounds().getHeight() * 1.15);
+        double side = Math.min(context.getPlotBounds().getWidth(), context.getPlotBounds().getHeight() * 1.15);
         double height = side * Math.sqrt(3) / 2.0;
-        double x0 = context.plotBounds().getCenterX() - side / 2.0;
-        double y0 = context.plotBounds().getCenterY() + height / 2.0;
+        double x0 = context.getPlotBounds().getCenterX() - side / 2.0;
+        double y0 = context.getPlotBounds().getCenterY() + height / 2.0;
 
-        out.x = x0 + (nb + na / 2.0) * side;
-        out.y = y0 - na * height;
+        out.setLocation(x0 + (nb + na / 2.0) * side, y0 - na * height);
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n0 = model.getPointCount();
         if (n0 == 0) return;
 
-        drawTernaryTriangle(g2, context);
+        drawTernaryTriangle(canvas, context);
 
-        Color baseColor = seriesOrBase(model, context, 0);
-        Color prevColor = g2.getColor();
-        Composite prevComp = g2.getComposite();
+        ArberColor baseColor = seriesOrBase(model, context, 0);
 
         // Bound work for huge datasets.
         int n = n0;
@@ -96,20 +93,13 @@ public class TernaryContourRenderer extends BaseRenderer {
             float alpha = (float) (0.06 + (r / maxR) * 0.12);
             alpha = Math.clamp(alpha, 0.06f, 0.20f);
 
-            Color pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
+            ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (pointColor == null) pointColor = baseColor;
-            g2.setColor(pointColor);
-            g2.setComposite(CompositePool.get(alpha));
-            circle.x = tmp.x - r;
-            circle.y = tmp.y - r;
-            circle.width = r * 2;
-            circle.height = r * 2;
-            g2.fill(circle);
+            canvas.setColor(ColorUtils.applyAlpha(pointColor, alpha));
+            fillCircle(canvas, tmp.x(), tmp.y(), r);
         }
 
         // Draw the actual points on top (opaque).
-        g2.setComposite(prevComp);
-
         double size = ChartScale.scale(5.0);
         double half = size / 2.0;
 
@@ -118,52 +108,48 @@ public class TernaryContourRenderer extends BaseRenderer {
             double b = model.getY(i);
             double c = model.getWeight(i);
             transformTernaryInto(a, b, c, context, tmp);
-            Color pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
+            ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (pointColor == null) pointColor = baseColor;
-            g2.setColor(pointColor);
-            circle.x = tmp.x - half;
-            circle.y = tmp.y - half;
-            circle.width = size;
-            circle.height = size;
-            g2.fill(circle);
+            canvas.setColor(pointColor);
+            fillCircle(canvas, tmp.x(), tmp.y(), half);
         }
-
-        g2.setColor(prevColor);
-        g2.setComposite(prevComp);
     }
 
-    private void drawTernaryTriangle(Graphics2D g2, PlotContext context) {
-        if (triangle == null) triangle = new Path2D.Double(Path2D.WIND_NON_ZERO);
-
-        double w = context.plotBounds().getWidth();
-        double h = context.plotBounds().getHeight();
+    private void drawTernaryTriangle(ArberCanvas canvas, PlotContext context) {
+        double w = context.getPlotBounds().getWidth();
+        double h = context.getPlotBounds().getHeight();
         double side = Math.min(w, h * 1.15);
         double height = side * Math.sqrt(3) / 2.0;
 
-        double x0 = context.plotBounds().getCenterX() - side / 2.0;
-        double y0 = context.plotBounds().getCenterY() + height / 2.0;
+        double x0 = context.getPlotBounds().getCenterX() - side / 2.0;
+        double y0 = context.getPlotBounds().getCenterY() + height / 2.0;
 
-        triangle.reset();
-        triangle.moveTo(x0, y0);
-        triangle.lineTo(x0 + side, y0);
-        triangle.lineTo(x0 + side / 2.0, y0 - height);
-        triangle.closePath();
+        ChartTheme theme = getResolvedTheme(context);
+        canvas.setColor(theme.getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
+        float[] xs = RendererAllocationCache.getFloatArray(this, "triX", 4);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "triY", 4);
+        xs[0] = (float) x0;
+        ys[0] = (float) y0;
+        xs[1] = (float) (x0 + side);
+        ys[1] = (float) y0;
+        xs[2] = (float) (x0 + side / 2.0);
+        ys[2] = (float) (y0 - height);
+        xs[3] = xs[0];
+        ys[3] = ys[0];
+        canvas.drawPolyline(xs, ys, 4);
+    }
 
-        if (triStroke == null) {
-            triStroke = new BasicStroke((float) ChartScale.scale(1.0));
+    private void fillCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 12;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "ternary.cx", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "ternary.cy", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
         }
-
-        Stroke prev = g2.getStroke();
-        Color prevColor = g2.getColor();
-
-        ChartTheme theme = resolveTheme(context);
-
-        g2.setColor(theme.getGridColor());
-        g2.setStroke(triStroke);
-        g2.draw(triangle);
-
-        g2.setColor(prevColor);
-        g2.setStroke(prev);
+        canvas.fillPolygon(xs, ys, segments);
     }
 
 }

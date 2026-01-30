@@ -1,7 +1,11 @@
 /**
- * Utility and infrastructure classes used across the ArberCharts core.
+ * Utility and support helpers for scaling, colors, and numeric transforms.
  *
- * <p>This package contains helpers for formatting, scaling, rendering performance,
- * animation timing, and configuration keys.</p>
+ * <p>Includes helper classes used by renderers (scales, colors, math helpers) that are
+ * allocation-conscious and suitable for hot paths.</p>
+ *
+ * @author Arber Gashi
+ * @version 1.7.0
+ * @since 2026-01-30
  */
 package com.arbergashi.charts.util;

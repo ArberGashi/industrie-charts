@@ -1,15 +1,16 @@
 package com.arbergashi.charts.render.specialized;
 
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
-
+import com.arbergashi.charts.util.ColorUtils;
 /**
  * Ternary Phase Diagram Renderer.
  * A triangle plot for mixtures of three components (A, B, C). Uses barycentric coordinates.
@@ -17,27 +18,27 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class TernaryPhasediagramRenderer extends BaseRenderer {
 
     // Cached theme resources
     private transient int themeKey;
-    private transient Color sepColor;
-    private transient Color sepColor30;
-    private transient Color labelColor;
-    private transient Stroke gridStroke;
+    private transient ArberColor sepColor;
+    private transient ArberColor sepColor30;
 
     public TernaryPhasediagramRenderer() {
         super("ternary_phase");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-        Rectangle clip = g2.getClipBounds();
-        Rectangle2D bounds = context.plotBounds();
-        if (clip != null && !clip.intersects(bounds.getBounds())) return;
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        ArberRect bounds = context.getPlotBounds();
 
-        ChartTheme theme = resolveTheme(context);
+        ChartTheme theme = getResolvedTheme(context);
         ensureThemeCache(theme);
 
         double margin = ChartScale.scale(40);
@@ -53,20 +54,14 @@ public class TernaryPhasediagramRenderer extends BaseRenderer {
         double rightX = xBase + side;
         double rightY = yBase;
 
-        Path2D pth = getPathCache();
-        pth.moveTo(topX, topY);
-        pth.lineTo(leftX, leftY);
-        pth.lineTo(rightX, rightY);
-        pth.closePath();
-        g2.setColor(sepColor);
-        g2.draw(pth);
-
-        drawGrid(g2, topX, topY, leftX, leftY, rightX, rightY);
+        canvas.setColor(sepColor);
+        drawTriangle(canvas, topX, topY, leftX, leftY, rightX, rightY);
+        drawGrid(canvas, topX, topY, leftX, leftY, rightX, rightY);
 
         // Points
         int count = model.getPointCount();
         if (count > 0) {
-            Color baseColor = getSeriesColor(model);
+            ArberColor baseColor = getSeriesColor(model);
             double r = ChartScale.scale(3.0);
             double d = r * 2.0;
             for (int i = 0; i < count; i++) {
@@ -83,29 +78,21 @@ public class TernaryPhasediagramRenderer extends BaseRenderer {
                 double px = Math.fma(a, topX, Math.fma(b, leftX, c * rightX));
                 double py = Math.fma(a, topY, Math.fma(b, leftY, c * rightY));
 
-                if (clip != null) {
-                    if (px < clip.x - d || px > clip.x + clip.width + d || py < clip.y - d || py > clip.y + clip.height + d)
-                        continue;
-                }
+                if (px < bounds.x() - d || px > bounds.maxX() + d || py < bounds.y() - d || py > bounds.maxY() + d)
+                    continue;
 
-                Color pointColor = isMultiColor() ? theme.getSeriesColor(i) : baseColor;
+                ArberColor pointColor = isMultiColor() ? theme.getSeriesColor(i) : baseColor;
                 if (pointColor == null) pointColor = baseColor;
-                g2.setColor(pointColor);
-                g2.fill(getEllipse(px - r, py - r, d, d));
+                canvas.setColor(pointColor);
+                fillCircle(canvas, px, py, r);
             }
         }
-
-        // Labels (cached in BaseRenderer)
-        Font font = g2.getFont();
-        g2.setColor(labelColor);
-        drawLabel(g2, "Component A", font, labelColor, (float) topX - 30, (float) topY - 10);
-        drawLabel(g2, "Component B", font, labelColor, (float) leftX - 60, (float) leftY + 20);
-        drawLabel(g2, "Component C", font, labelColor, (float) rightX, (float) rightY + 20);
     }
 
-    public TernaryPhasediagramRenderer setMultiColor(boolean enabled) {
+    public TernaryPhasediagramRenderer setMultiColor(boolean enabled){
         super.setMultiColor(enabled);
         return this;
+        
     }
 
     private void ensureThemeCache(ChartTheme theme) {
@@ -114,20 +101,12 @@ public class TernaryPhasediagramRenderer extends BaseRenderer {
         themeKey = k;
 
         sepColor = theme.getGridColor();
-        sepColor30 = com.arbergashi.charts.util.ColorUtils.withAlpha(sepColor, 0.3f);
-        labelColor = theme.getAxisLabelColor();
-
-        float dash = ChartScale.scale(5.0f);
-        float w = ChartScale.scale(1.0f);
-        gridStroke = new BasicStroke(w, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, new float[]{dash}, 0.0f);
+        sepColor30 = ColorUtils.applyAlpha(sepColor, 0.3f);
     }
 
-    private void drawGrid(Graphics2D g2, double topX, double topY, double leftX, double leftY, double rightX, double rightY) {
-        Stroke prev = g2.getStroke();
-        Color prevC = g2.getColor();
-
-        g2.setStroke(gridStroke);
-        g2.setColor(sepColor30);
+    private void drawGrid(ArberCanvas canvas, double topX, double topY, double leftX, double leftY, double rightX, double rightY) {
+        canvas.setStroke(ChartScale.scale(1.0f));
+        canvas.setColor(sepColor30);
 
         int steps = 10;
         for (int i = 1; i < steps; i++) {
@@ -137,23 +116,56 @@ public class TernaryPhasediagramRenderer extends BaseRenderer {
             double y1 = Math.fma(f, (leftY - topY), topY);
             double x2 = Math.fma(f, (rightX - topX), topX);
             double y2 = Math.fma(f, (rightY - topY), topY);
-            g2.draw(getLine(x1, y1, x2, y2));
+            drawLine(canvas, x1, y1, x2, y2);
 
             double x3 = Math.fma(f, (topX - leftX), leftX);
             double y3 = Math.fma(f, (topY - leftY), leftY);
             double x4 = Math.fma(f, (rightX - leftX), leftX);
             double y4 = Math.fma(f, (rightY - leftY), leftY);
-            g2.draw(getLine(x3, y3, x4, y4));
+            drawLine(canvas, x3, y3, x4, y4);
 
             double x5 = Math.fma(f, (topX - rightX), rightX);
             double y5 = Math.fma(f, (topY - rightY), rightY);
             double x6 = Math.fma(f, (leftX - rightX), rightX);
             double y6 = Math.fma(f, (leftY - rightY), rightY);
-            g2.draw(getLine(x5, y5, x6, y6));
+            drawLine(canvas, x5, y5, x6, y6);
         }
+    }
 
-        g2.setColor(prevC);
-        g2.setStroke(prev);
+    private void drawTriangle(ArberCanvas canvas, double topX, double topY, double leftX, double leftY, double rightX, double rightY) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "ternary.triX", 4);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "ternary.triY", 4);
+        xs[0] = (float) topX;
+        ys[0] = (float) topY;
+        xs[1] = (float) leftX;
+        ys[1] = (float) leftY;
+        xs[2] = (float) rightX;
+        ys[2] = (float) rightY;
+        xs[3] = xs[0];
+        ys[3] = ys[0];
+        canvas.drawPolyline(xs, ys, 4);
+    }
+
+    private void drawLine(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "ternary.lineX", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "ternary.lineY", 2);
+        xs[0] = (float) x0;
+        ys[0] = (float) y0;
+        xs[1] = (float) x1;
+        ys[1] = (float) y1;
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
+    private void fillCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 12;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "ternary.pcX", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "ternary.pcY", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
     }
 
 }

@@ -1,13 +1,14 @@
 package com.arbergashi.charts.render.statistical;
 
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-
 /**
  * <h1>QQPlotRenderer - Quantile-Quantile Plot</h1>
  *
@@ -42,6 +43,8 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class QQPlotRenderer extends BaseRenderer {
 
@@ -49,8 +52,10 @@ public final class QQPlotRenderer extends BaseRenderer {
         super("qqplot");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n == 0) return;
 
@@ -59,9 +64,9 @@ public final class QQPlotRenderer extends BaseRenderer {
         for (int i = 0; i < n; i++) values[i] = model.getY(i);
         java.util.Arrays.sort(values, 0, n);
 
-        ChartTheme theme = resolveTheme(context);
-        final Color pointColor = getSeriesColor(model);
-        final Color lineColor = theme.getGridColor();
+        ChartTheme theme = getResolvedTheme(context);
+        final ArberColor pointColor = getSeriesColor(model);
+        final ArberColor lineColor = theme.getGridColor();
         final double dotSize = ChartScale.scale(6.0);
 
         // Compute min/max theoretical quantiles for reference line
@@ -74,12 +79,12 @@ public final class QQPlotRenderer extends BaseRenderer {
         context.mapToPixel(maxVal, maxVal, buf);
         double lx2 = buf[0], ly2 = buf[1];
 
-        g.setColor(lineColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.0f)));
-        g.draw(getLine(lx1, ly1, lx2, ly2));
+        canvas.setColor(lineColor);
+        canvas.setStroke(ChartScale.scale(2.0f));
+        drawLine(canvas, lx1, ly1, lx2, ly2);
 
-        // Draw Q-Q points directly (no intermediary Point2D allocations)
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+        // Draw Q-Q points directly (no intermediary ArberPoint allocations)
+        canvas.setStroke(ChartScale.scale(1.0f));
         for (int i = 0; i < n; i++) {
             double p = (i + 0.5) / n;
             double theoreticalQuantile = inverseNormalCDF(p);
@@ -87,15 +92,14 @@ public final class QQPlotRenderer extends BaseRenderer {
 
             context.mapToPixel(theoreticalQuantile, sampleQuantile, buf);
 
-            Color dotColor = isMultiColor() ? themeSeries(context, i) : pointColor;
+            ArberColor dotColor = isMultiColor() ? themeSeries(context, i) : pointColor;
             if (dotColor == null) dotColor = pointColor;
-            g.setColor(dotColor);
-            g.fill(getEllipse(buf[0] - dotSize / 2, buf[1] - dotSize / 2, dotSize, dotSize));
-            g.setColor(theme.getGridColor());
-            g.draw(getEllipse(buf[0] - dotSize / 2, buf[1] - dotSize / 2, dotSize, dotSize));
+            canvas.setColor(dotColor);
+            fillCircle(canvas, buf[0], buf[1], dotSize * 0.5);
+            canvas.setColor(theme.getGridColor());
+            strokeCircle(canvas, buf[0], buf[1], dotSize * 0.5);
         }
     }
-
 
     /**
      * Approximation of inverse normal CDF (quantile function) using Beasley-Springer-Moro algorithm.
@@ -130,5 +134,39 @@ public final class QQPlotRenderer extends BaseRenderer {
 
             return y < 0 ? -x : x;
         }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "qq.lineX", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "qq.lineY", 2);
+        xs[0] = (float) x0;
+        ys[0] = (float) y0;
+        xs[1] = (float) x1;
+        ys[1] = (float) y1;
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
+    private void fillCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 12;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "qq.cx", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "qq.cy", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
+    }
+
+    private void strokeCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 12;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "qq.sx", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "qq.sy", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
     }
 }

@@ -2,7 +2,6 @@ package com.arbergashi.charts.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 /**
  * Utility for bounded LRU caches.
  *
@@ -30,7 +29,9 @@ public final class CacheUtils {
     public static <K, V> Map<K, V> newBoundedMap(int maxEntries) {
         return new LinkedHashMap<K, V>() {
             private static final long serialVersionUID = 1L;
-            @Override
+            @Override/**
+ * @since 1.5.0
+ */
             protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
                 return size() > maxEntries;
             }

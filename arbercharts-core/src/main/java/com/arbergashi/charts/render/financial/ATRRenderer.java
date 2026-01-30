@@ -3,13 +3,12 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
  * <h1>ATRRenderer - Average True Range</h1>
  *
@@ -43,80 +42,116 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ATRRenderer extends BaseRenderer {
 
     private static final int DEFAULT_PERIOD = 14;
+    private static final String KEY_PERIOD = "Chart.atr.period";
 
     private final double[] pxA = new double[2];
     private final double[] pxB = new double[2];
 
-    private final Path2D atrPath = new Path2D.Double();
+    private transient float[] pathX;
+    private transient float[] pathY;
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     // Cached indicator arrays
     private transient ChartModel cachedModel;
     private transient int cachedPointCount;
+    private transient int cachedPeriod = -1;
     private double[] xValues = new double[0];
     private double[] atrValues = new double[0];
     private final double[] preferredRange = new double[2];
     private boolean preferredRangeValid;
+    private int period = ChartAssets.getInt(KEY_PERIOD, DEFAULT_PERIOD);
 
     public ATRRenderer() {
         super("atr");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
-        if (n <= DEFAULT_PERIOD) return;
+        final int p = getResolvedPeriod();
+        if (n <= p) return;
 
-        ensureCache(model);
+        ensureCache(model, p);
         if (cachedPointCount <= 0) return;
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, cachedPointCount, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, cachedPointCount, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive <= start) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color atrColor = theme.getAccentColor();
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor atrColor = theme.getAccentColor();
 
         // Draw ATR line only for visible slice
-        atrPath.reset();
-        context.mapToPixel(xValues[start], atrValues[start], pxA);
-        atrPath.moveTo(pxA[0], pxA[1]);
-        for (int i = start + 1; i < endExclusive; i++) {
+        int count = endExclusive - start;
+        ensurePathCapacity(count);
+        for (int i = start, pIndex = 0; i < endExclusive; i++, pIndex++) {
             context.mapToPixel(xValues[i], atrValues[i], pxA);
-            atrPath.lineTo(pxA[0], pxA[1]);
+            pathX[pIndex] = (float) pxA[0];
+            pathY[pIndex] = (float) pxA[1];
         }
 
-        g.setColor(atrColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.5f)));
-        g.draw(atrPath);
+        canvas.setColor(atrColor);
+        canvas.setStroke(ChartScale.scale(2.5f));
+        canvas.drawPolyline(pathX, pathY, count);
 
         // Draw zero line for reference (clip-aware)
         context.mapToPixel(xValues[start], 0, pxA);
         context.mapToPixel(xValues[endExclusive - 1], 0, pxB);
-        g.setColor(resolveTheme(context).getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        canvas.setColor(getResolvedTheme(context).getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
-    private void ensureCache(ChartModel model) {
+    private int getResolvedPeriod() {
+        final int configured = Math.max(2, ChartAssets.getInt(KEY_PERIOD, period));
+        if (configured != period) {
+            period = configured;
+            cachedModel = null;
+            cachedPointCount = 0;
+            cachedPeriod = -1;
+            preferredRangeValid = false;
+        }
+        return period;
+    }
+
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
+        }
+    }
+
+    private void ensureCache(ChartModel model, int period) {
         final int n = model.getPointCount();
-        if (n <= DEFAULT_PERIOD) {
+        if (n <= period) {
             cachedModel = model;
             cachedPointCount = 0;
+            cachedPeriod = period;
             preferredRangeValid = false;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n) {
+        if (cachedModel == model && cachedPointCount == n && cachedPeriod == period) {
             return;
         }
 
         cachedModel = model;
         cachedPointCount = n;
+        cachedPeriod = period;
         preferredRangeValid = false;
 
         if (xValues.length < n) {
@@ -129,11 +164,11 @@ public final class ATRRenderer extends BaseRenderer {
         }
 
         // ATR calculation via Wilder smoothing.
-        // ATR is defined from DEFAULT_PERIOD onward; fill early part with first valid result.
+        // ATR is defined from `period` onward; fill early part with first valid result.
         double atr = 0.0;
 
-        // Initial ATR: average of first DEFAULT_PERIOD true ranges (computed from i=1..DEFAULT_PERIOD)
-        for (int i = 1; i <= DEFAULT_PERIOD; i++) {
+        // Initial ATR: average of first `period` true ranges (computed from i=1..period)
+        for (int i = 1; i <= period; i++) {
             final double high = model.getMax(i);
             final double low = model.getMin(i);
             final double prevClose = model.getY(i - 1);
@@ -144,14 +179,14 @@ public final class ATRRenderer extends BaseRenderer {
             final double tr = Math.max(tr1, Math.max(tr2, tr3));
             atr += tr;
         }
-        atr /= DEFAULT_PERIOD;
+        atr /= period;
 
-        // Fill until DEFAULT_PERIOD with first ATR to keep line stable.
-        for (int i = 0; i <= DEFAULT_PERIOD; i++) {
+        // Fill until `period` with first ATR to keep line stable.
+        for (int i = 0; i <= period; i++) {
             atrValues[i] = atr;
         }
 
-        for (int i = DEFAULT_PERIOD + 1; i < n; i++) {
+        for (int i = period + 1; i < n; i++) {
             final double high = model.getMax(i);
             final double low = model.getMin(i);
             final double prevClose = model.getY(i - 1);
@@ -161,7 +196,7 @@ public final class ATRRenderer extends BaseRenderer {
             final double tr3 = Math.abs(low - prevClose);
             final double tr = Math.max(tr1, Math.max(tr2, tr3));
 
-            atr = ((atr * (DEFAULT_PERIOD - 1)) + tr) / DEFAULT_PERIOD;
+            atr = ((atr * (period - 1)) + tr) / period;
             atrValues[i] = atr;
         }
 
@@ -187,7 +222,7 @@ public final class ATRRenderer extends BaseRenderer {
 
     @Override
     public double[] getPreferredYRange(ChartModel model) {
-        ensureCache(model);
+        ensureCache(model, getResolvedPeriod());
         return preferredRangeValid ? preferredRange : null;
     }
 }

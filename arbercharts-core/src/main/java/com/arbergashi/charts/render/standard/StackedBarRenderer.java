@@ -1,25 +1,21 @@
 package com.arbergashi.charts.render.standard;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
-import com.arbergashi.charts.model.ChartPoint;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Rectangle2D;
-
 
 /**
  * StackedBarRenderer.
  *
- * <p>Single-model stacked bar renderer: expects points to represent bar segments for the same x.
- * Uses {@link ChartPoint#label()} as segment key for color variation.</p>
+ * <p>Single-model stacked bar renderer: expects points to represent bar segments for the same x.</p>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
- * @see ChartModel
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class StackedBarRenderer extends BaseRenderer {
 
@@ -30,25 +26,25 @@ public final class StackedBarRenderer extends BaseRenderer {
         super("stackedBar");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Color base = getSeriesColor(model);
+        ArberColor base = getSeriesColor(model);
+        ArberRect viewBounds = context.getPlotBounds();
 
-        double barW = Math.max(2.0, context.plotBounds().getWidth() / Math.max(1, n));
+        double barW = Math.max(2.0, viewBounds.width() / Math.max(1, n));
 
-        final Rectangle2D viewBounds = context.plotBounds();
-
-        // Stacking by identical x values
         int i = 0;
         while (i < n) {
             double currentX = xData[i];
-            // Count group size
             int groupSize = 1;
             for (int j = i + 1; j < n && Double.compare(xData[j], currentX) == 0; j++) {
                 groupSize++;
@@ -65,14 +61,11 @@ public final class StackedBarRenderer extends BaseRenderer {
                 double y = Math.min(p0[1], p1[1]);
                 double h = Math.abs(p1[1] - p0[1]);
                 if (h < 1.0) h = 1.0;
-                if (x + barW < viewBounds.getMinX() || x > viewBounds.getMaxX()) continue;
-                g2.setPaint(getCachedGradient(base, (float) h));
-                g2.fill(getRect(x, y, barW, h));
+                if (x + barW < viewBounds.minX() || x > viewBounds.maxX()) continue;
+                canvas.setColor(base);
+                canvas.fillRect((float) x, (float) y, (float) barW, (float) h);
             }
             i += groupSize;
         }
-
-        g2.setColor(base);
-        g2.setStroke(getCachedStroke((float) ChartScale.scale(1.0)));
     }
 }

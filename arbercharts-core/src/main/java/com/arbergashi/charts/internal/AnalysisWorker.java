@@ -1,5 +1,4 @@
 package com.arbergashi.charts.internal;
-
 /**
  * Internal worker for performing analytical calculations on primitive arrays.
  * This class is designed to be allocation-free in its core methods.
@@ -23,7 +22,7 @@ public final class AnalysisWorker {
      * @param upperOut     Output array for the upper band.
      * @param lowerOut     Output array for the lower band.
      */
-    public static void calculateBollingerBands(double[] values, int period, double stdDevFactor,
+    public static void getCalculatedBollingerBands(double[] values, int period, double stdDevFactor,
                                                double[] smaOut, double[] upperOut, double[] lowerOut) {
         final int n = values.length;
         if (n < period) return;

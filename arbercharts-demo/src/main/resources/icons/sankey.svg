@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M2 4h4v6H2z" opacity="0.8"></path>
-    <path d="M18 2h4v4h-4z" opacity="0.8"></path>
-    <path d="M18 8h4v4h-4z" opacity="0.8"></path>
-    <path d="M18 14h4v6h-4z" opacity="0.8"></path>
-    <path d="M6 7c4 0 8-4 12-4" fill="none" stroke="currentColor" stroke-width="3" opacity="0.4"></path>
-    <path d="M6 7c4 0 8 3 12 3" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"></path>
-    <path d="M6 7c4 0 8 10 12 10" fill="none" stroke="currentColor" stroke-width="4" opacity="0.4"></path>
-</svg>

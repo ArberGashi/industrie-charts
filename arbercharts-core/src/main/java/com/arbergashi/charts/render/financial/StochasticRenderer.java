@@ -2,14 +2,12 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>StochasticRenderer - Stochastic Oscillator (%K and %D)</h1>
  *
@@ -42,6 +40,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class StochasticRenderer extends BaseRenderer {
 
@@ -56,10 +56,12 @@ public final class StochasticRenderer extends BaseRenderer {
     private final double[] pxC = new double[2];
     private final double[] pxD = new double[2];
 
-    private final Path2D overboughtZone = new Path2D.Double();
-    private final Path2D oversoldZone = new Path2D.Double();
-    private final Path2D dPath = new Path2D.Double();
-    private final Path2D kPath = new Path2D.Double();
+    private final float[] zoneX = new float[4];
+    private final float[] zoneY = new float[4];
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
+    private transient float[] pathX;
+    private transient float[] pathY;
 
     // Cached indicator arrays
     private transient ChartModel cachedModel;
@@ -78,8 +80,10 @@ public final class StochasticRenderer extends BaseRenderer {
         super("stochastic");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
@@ -91,16 +95,16 @@ public final class StochasticRenderer extends BaseRenderer {
 
         // Use the correct point count (may differ if cache decides to short-circuit).
         final int pointCount = dataLooksReady ? n : cachedPointCount;
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, pointCount, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, pointCount, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive <= start) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color kColor = theme.getAccentColor();
-        final Color dColor = ColorUtils.adjustBrightness(kColor, 1.3f);
-        final Color overboughtColor = ColorUtils.withAlpha(theme.getBearishColor(), 0.12f);
-        final Color oversoldColor = ColorUtils.withAlpha(theme.getBullishColor(), 0.12f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor kColor = theme.getAccentColor();
+        final ArberColor dColor = ColorRegistry.adjustBrightness(kColor, 1.3f);
+        final ArberColor overboughtColor = ColorRegistry.applyAlpha(theme.getBearishColor(), 0.12f);
+        final ArberColor oversoldColor = ColorRegistry.applyAlpha(theme.getBullishColor(), 0.12f);
 
         final double firstX = (dataLooksReady ? model.getX(0) : xValues[start]);
         final double lastX = (dataLooksReady ? model.getX(n - 1) : xValues[endExclusive - 1]);
@@ -111,86 +115,109 @@ public final class StochasticRenderer extends BaseRenderer {
         context.mapToPixel(firstX, OVERBOUGHT, pxC);
         context.mapToPixel(lastX, OVERBOUGHT, pxD);
 
-        overboughtZone.reset();
-        overboughtZone.moveTo(pxA[0], pxA[1]);
-        overboughtZone.lineTo(pxB[0], pxB[1]);
-        overboughtZone.lineTo(pxD[0], pxD[1]);
-        overboughtZone.lineTo(pxC[0], pxC[1]);
-        overboughtZone.closePath();
-        g.setColor(overboughtColor);
-        g.fill(overboughtZone);
+        zoneX[0] = (float) pxA[0];
+        zoneY[0] = (float) pxA[1];
+        zoneX[1] = (float) pxB[0];
+        zoneY[1] = (float) pxB[1];
+        zoneX[2] = (float) pxD[0];
+        zoneY[2] = (float) pxD[1];
+        zoneX[3] = (float) pxC[0];
+        zoneY[3] = (float) pxC[1];
+        canvas.setColor(overboughtColor);
+        canvas.fillPolygon(zoneX, zoneY, 4);
 
         context.mapToPixel(firstX, 0, pxA);
         context.mapToPixel(lastX, 0, pxB);
         context.mapToPixel(firstX, OVERSOLD, pxC);
         context.mapToPixel(lastX, OVERSOLD, pxD);
 
-        oversoldZone.reset();
-        oversoldZone.moveTo(pxA[0], pxA[1]);
-        oversoldZone.lineTo(pxB[0], pxB[1]);
-        oversoldZone.lineTo(pxD[0], pxD[1]);
-        oversoldZone.lineTo(pxC[0], pxC[1]);
-        oversoldZone.closePath();
-        g.setColor(oversoldColor);
-        g.fill(oversoldZone);
+        zoneX[0] = (float) pxA[0];
+        zoneY[0] = (float) pxA[1];
+        zoneX[1] = (float) pxB[0];
+        zoneY[1] = (float) pxB[1];
+        zoneX[2] = (float) pxD[0];
+        zoneY[2] = (float) pxD[1];
+        zoneX[3] = (float) pxC[0];
+        zoneY[3] = (float) pxC[1];
+        canvas.setColor(oversoldColor);
+        canvas.fillPolygon(zoneX, zoneY, 4);
 
         // Reference lines (20/80)
-        g.setColor(theme.getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+        canvas.setColor(theme.getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         context.mapToPixel(firstX, OVERSOLD, pxA);
         context.mapToPixel(lastX, OVERSOLD, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         context.mapToPixel(firstX, OVERBOUGHT, pxA);
         context.mapToPixel(lastX, OVERBOUGHT, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // %D line (visible slice)
-        dPath.reset();
+        int dCount = 0;
+        ensurePathCapacity(endExclusive - start);
         if (dataLooksReady) {
-            double x0 = model.getX(start);
-            context.mapToPixel(x0, model.getWeight(start), pxA);
-            dPath.moveTo(pxA[0], pxA[1]);
-            for (int i = start + 1; i < endExclusive; i++) {
+            for (int i = start; i < endExclusive; i++) {
                 double x = model.getX(i);
                 context.mapToPixel(x, model.getWeight(i), pxA);
-                dPath.lineTo(pxA[0], pxA[1]);
+                pathX[dCount] = (float) pxA[0];
+                pathY[dCount] = (float) pxA[1];
+                dCount++;
             }
         } else {
-            context.mapToPixel(xValues[start], dValues[start], pxA);
-            dPath.moveTo(pxA[0], pxA[1]);
-            for (int i = start + 1; i < endExclusive; i++) {
+            for (int i = start; i < endExclusive; i++) {
                 context.mapToPixel(xValues[i], dValues[i], pxA);
-                dPath.lineTo(pxA[0], pxA[1]);
+                pathX[dCount] = (float) pxA[0];
+                pathY[dCount] = (float) pxA[1];
+                dCount++;
             }
         }
-        g.setColor(dColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.0f)));
-        g.draw(dPath);
+        if (dCount >= 2) {
+            canvas.setColor(dColor);
+            canvas.setStroke(ChartScale.scale(2.0f));
+            canvas.drawPolyline(pathX, pathY, dCount);
+        }
 
         // %K line (visible slice)
-        kPath.reset();
+        int kCount = 0;
+        ensurePathCapacity(endExclusive - start);
         if (dataLooksReady) {
-            double x0 = model.getX(start);
-            context.mapToPixel(x0, model.getY(start), pxA);
-            kPath.moveTo(pxA[0], pxA[1]);
-            for (int i = start + 1; i < endExclusive; i++) {
+            for (int i = start; i < endExclusive; i++) {
                 double x = model.getX(i);
                 context.mapToPixel(x, model.getY(i), pxA);
-                kPath.lineTo(pxA[0], pxA[1]);
+                pathX[kCount] = (float) pxA[0];
+                pathY[kCount] = (float) pxA[1];
+                kCount++;
             }
         } else {
-            context.mapToPixel(xValues[start], kValues[start], pxA);
-            kPath.moveTo(pxA[0], pxA[1]);
-            for (int i = start + 1; i < endExclusive; i++) {
+            for (int i = start; i < endExclusive; i++) {
                 context.mapToPixel(xValues[i], kValues[i], pxA);
-                kPath.lineTo(pxA[0], pxA[1]);
+                pathX[kCount] = (float) pxA[0];
+                pathY[kCount] = (float) pxA[1];
+                kCount++;
             }
         }
-        g.setColor(kColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.5f)));
-        g.draw(kPath);
+        if (kCount >= 2) {
+            canvas.setColor(kColor);
+            canvas.setStroke(ChartScale.scale(2.5f));
+            canvas.drawPolyline(pathX, pathY, kCount);
+        }
+    }
+
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
+        }
     }
 
     private boolean looksLikeStochastic(ChartModel model) {

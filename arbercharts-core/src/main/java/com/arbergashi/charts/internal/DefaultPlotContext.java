@@ -3,12 +3,10 @@ package com.arbergashi.charts.internal;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.util.NiceScale;
-
-import java.awt.geom.Rectangle2D;
 import java.util.Objects;
-
 /**
  * Default PlotContext implementation.
  * <p>
@@ -19,31 +17,45 @@ import java.util.Objects;
  * @version 1.0.0
  * @since 2025-06-01
  */
-public record DefaultPlotContext(
-        Rectangle2D bounds,
-        double minX,
-        double maxX,
-        double minY,
-        double maxY,
-        boolean logarithmicY,
-        NiceScale.ScaleMode scaleModeX,
-        NiceScale.ScaleMode scaleModeY,
-        ChartTheme theme,
-        com.arbergashi.charts.api.ChartRenderHints renderHints
-) implements PlotContext {
+public final class DefaultPlotContext implements PlotContext {
+    private ArberRect bounds;
+    private double minX;
+    private double maxX;
+    private double minY;
+    private double maxY;
+    private boolean logarithmicY;
+    private NiceScale.ScaleMode scaleModeX;
+    private NiceScale.ScaleMode scaleModeY;
+    private ChartTheme theme;
+    private com.arbergashi.charts.api.ChartRenderHints renderHints;
 
-    public DefaultPlotContext {
+    public DefaultPlotContext(ArberRect bounds,
+                              double minX,
+                              double maxX,
+                              double minY,
+                              double maxY,
+                              boolean logarithmicY,
+                              NiceScale.ScaleMode scaleModeX,
+                              NiceScale.ScaleMode scaleModeY,
+                              ChartTheme theme,
+                              com.arbergashi.charts.api.ChartRenderHints renderHints) {
         Objects.requireNonNull(bounds, "Bounds cannot be null");
-        scaleModeX = (scaleModeX != null) ? scaleModeX : NiceScale.ScaleMode.LINEAR;
-        scaleModeY = (scaleModeY != null) ? scaleModeY : NiceScale.ScaleMode.LINEAR;
-        // Framework contract: theme must never be null during rendering.
-        theme = (theme != null) ? theme : ChartThemes.defaultDark();
+        this.bounds = bounds;
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minY = minY;
+        this.maxY = maxY;
+        this.logarithmicY = logarithmicY;
+        this.scaleModeX = (scaleModeX != null) ? scaleModeX : NiceScale.ScaleMode.LINEAR;
+        this.scaleModeY = (scaleModeY != null) ? scaleModeY : NiceScale.ScaleMode.LINEAR;
+        this.theme = (theme != null) ? theme : ChartThemes.getDarkTheme();
+        this.renderHints = renderHints;
     }
 
     /**
      * Backwards-compatible constructor without theme.
      */
-    public DefaultPlotContext(Rectangle2D bounds,
+    public DefaultPlotContext(ArberRect bounds,
                               double minX,
                               double maxX,
                               double minY,
@@ -57,12 +69,12 @@ public record DefaultPlotContext(
     /**
      * Constructor that derives scaling from the model with optional view overrides.
      */
-    public DefaultPlotContext(Rectangle2D bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY) {
+    public DefaultPlotContext(ArberRect bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY) {
         this(bounds,
-                Double.isNaN(viewMinX) ? calculateMinX(model) : viewMinX,
-                Double.isNaN(viewMaxX) ? calculateMaxX(model) : viewMaxX,
-                Double.isNaN(viewMinY) ? calculateMinY(model) : viewMinY,
-                Double.isNaN(viewMaxY) ? calculateMaxY(model) : viewMaxY,
+                Double.isNaN(viewMinX) ? getCalculatedMinX(model) : viewMinX,
+                Double.isNaN(viewMaxX) ? getCalculatedMaxX(model) : viewMaxX,
+                Double.isNaN(viewMinY) ? getCalculatedMinY(model) : viewMinY,
+                Double.isNaN(viewMaxY) ? getCalculatedMaxY(model) : viewMaxY,
                 false,
                 NiceScale.ScaleMode.LINEAR,
                 NiceScale.ScaleMode.LINEAR,
@@ -73,12 +85,12 @@ public record DefaultPlotContext(
     /**
      * Theme-aware constructor that derives scaling from the model with optional view overrides.
      */
-    public DefaultPlotContext(Rectangle2D bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY, ChartTheme theme) {
+    public DefaultPlotContext(ArberRect bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY, ChartTheme theme) {
         this(bounds,
-                Double.isNaN(viewMinX) ? calculateMinX(model) : viewMinX,
-                Double.isNaN(viewMaxX) ? calculateMaxX(model) : viewMaxX,
-                Double.isNaN(viewMinY) ? calculateMinY(model) : viewMinY,
-                Double.isNaN(viewMaxY) ? calculateMaxY(model) : viewMaxY,
+                Double.isNaN(viewMinX) ? getCalculatedMinX(model) : viewMinX,
+                Double.isNaN(viewMaxX) ? getCalculatedMaxX(model) : viewMaxX,
+                Double.isNaN(viewMinY) ? getCalculatedMinY(model) : viewMinY,
+                Double.isNaN(viewMaxY) ? getCalculatedMaxY(model) : viewMaxY,
                 false,
                 NiceScale.ScaleMode.LINEAR,
                 NiceScale.ScaleMode.LINEAR,
@@ -86,13 +98,13 @@ public record DefaultPlotContext(
                 null);
     }
 
-    public DefaultPlotContext(Rectangle2D bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY,
+    public DefaultPlotContext(ArberRect bounds, ChartModel model, double viewMinX, double viewMaxX, double viewMinY, double viewMaxY,
                               ChartTheme theme, com.arbergashi.charts.api.ChartRenderHints renderHints) {
         this(bounds,
-                Double.isNaN(viewMinX) ? calculateMinX(model) : viewMinX,
-                Double.isNaN(viewMaxX) ? calculateMaxX(model) : viewMaxX,
-                Double.isNaN(viewMinY) ? calculateMinY(model) : viewMinY,
-                Double.isNaN(viewMaxY) ? calculateMaxY(model) : viewMaxY,
+                Double.isNaN(viewMinX) ? getCalculatedMinX(model) : viewMinX,
+                Double.isNaN(viewMaxX) ? getCalculatedMaxX(model) : viewMaxX,
+                Double.isNaN(viewMinY) ? getCalculatedMinY(model) : viewMinY,
+                Double.isNaN(viewMaxY) ? getCalculatedMaxY(model) : viewMaxY,
                 false,
                 NiceScale.ScaleMode.LINEAR,
                 NiceScale.ScaleMode.LINEAR,
@@ -101,36 +113,26 @@ public record DefaultPlotContext(
     }
 
 
-    private static double calculateMinX(ChartModel m) {
+    private static double getCalculatedMinX(ChartModel m) {
         if (m == null) return 0.0;
         return m.getDataRange()[0];
     }
 
-    private static double calculateMaxX(ChartModel m) {
+    private static double getCalculatedMaxX(ChartModel m) {
         if (m == null) return 1.0;
         return m.getDataRange()[1];
     }
 
-    private static double calculateMinY(ChartModel m) {
+    private static double getCalculatedMinY(ChartModel m) {
         if (m == null) return 0.0;
         double min = m.getDataRange()[2];
         return min > 0 ? 0.0 : min; /* baseline 0 for positive-only datasets */
     }
 
-    private static double calculateMaxY(ChartModel m) {
+    private static double getCalculatedMaxY(ChartModel m) {
         if (m == null) return 1.0;
         double max = m.getDataRange()[3];
         return max * 1.1; /* 10% headroom for aesthetics */
-    }
-
-    @Override
-    public NiceScale.ScaleMode scaleModeX() {
-        return scaleModeX;
-    }
-
-    @Override
-    public NiceScale.ScaleMode scaleModeY() {
-        return scaleModeY;
     }
 
     @Override
@@ -143,10 +145,10 @@ public record DefaultPlotContext(
     @Override
     public void mapToPixel(double dataX, double dataY, double[] dest) {
         // Fast, allocation-free write into dest.
-        double bx = bounds.getX();
-        double by = bounds.getY();
-        double bw = bounds.getWidth();
-        double bh = bounds.getHeight();
+        double bx = bounds.x();
+        double by = bounds.y();
+        double bw = bounds.width();
+        double bh = bounds.height();
 
         /* Guard against division by zero when min and max are identical */
         double dx = (maxX - minX == 0) ? 1.0 : (maxX - minX);
@@ -180,15 +182,100 @@ public record DefaultPlotContext(
         double effectiveMaxY2 = transformY(maxY);
         double dy = (effectiveMaxY2 - effectiveMinY2 == 0) ? 1.0 : (effectiveMaxY2 - effectiveMinY2);
 
-        double dataX = minX + ((pixelX - bounds.getX()) / bounds.getWidth()) * dx;
-        double transformedY = effectiveMaxY2 - ((pixelY - bounds.getY()) / bounds.getHeight()) * dy;
+        double dataX = minX + ((pixelX - bounds.x()) / bounds.width()) * dx;
+        double transformedY = effectiveMaxY2 - ((pixelY - bounds.y()) / bounds.height()) * dy;
 
         dest[0] = dataX;
         dest[1] = isLogarithmicY() ? Math.pow(10, transformedY) : transformedY;
     }
 
     @Override
-    public Rectangle2D plotBounds() {
+    public ArberRect getPlotBounds() {
         return bounds;
+    }
+
+    public DefaultPlotContext setPlotBounds(ArberRect bounds) {
+        this.bounds = Objects.requireNonNull(bounds, "Bounds cannot be null");
+        return this;
+    }
+
+    @Override
+    public double getMinX() {
+        return minX;
+    }
+
+    public DefaultPlotContext setMinX(double minX) {
+        this.minX = minX;
+        return this;
+    }
+
+    @Override
+    public double getMaxX() {
+        return maxX;
+    }
+
+    public DefaultPlotContext setMaxX(double maxX) {
+        this.maxX = maxX;
+        return this;
+    }
+
+    @Override
+    public double getMinY() {
+        return minY;
+    }
+
+    public DefaultPlotContext setMinY(double minY) {
+        this.minY = minY;
+        return this;
+    }
+
+    @Override
+    public double getMaxY() {
+        return maxY;
+    }
+
+    public DefaultPlotContext setMaxY(double maxY) {
+        this.maxY = maxY;
+        return this;
+    }
+
+    @Override
+    public NiceScale.ScaleMode getScaleModeX() {
+        return scaleModeX;
+    }
+
+    public DefaultPlotContext setScaleModeX(NiceScale.ScaleMode scaleModeX) {
+        this.scaleModeX = (scaleModeX != null) ? scaleModeX : NiceScale.ScaleMode.LINEAR;
+        return this;
+    }
+
+    @Override
+    public NiceScale.ScaleMode getScaleModeY() {
+        return scaleModeY;
+    }
+
+    public DefaultPlotContext setScaleModeY(NiceScale.ScaleMode scaleModeY) {
+        this.scaleModeY = (scaleModeY != null) ? scaleModeY : NiceScale.ScaleMode.LINEAR;
+        return this;
+    }
+
+    @Override
+    public ChartTheme getTheme() {
+        return theme;
+    }
+
+    public DefaultPlotContext setTheme(ChartTheme theme) {
+        this.theme = (theme != null) ? theme : ChartThemes.getDarkTheme();
+        return this;
+    }
+
+    @Override
+    public com.arbergashi.charts.api.ChartRenderHints getRenderHints() {
+        return renderHints;
+    }
+
+    public DefaultPlotContext setRenderHints(com.arbergashi.charts.api.ChartRenderHints renderHints) {
+        this.renderHints = renderHints;
+        return this;
     }
 }

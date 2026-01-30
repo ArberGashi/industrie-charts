@@ -1,24 +1,27 @@
 package com.arbergashi.charts.util;
 
-import java.awt.Color;
+import com.arbergashi.charts.api.types.ArberColor;
 /**
- * Flyweight cache for immutable {@link Color} instances.
+ * Flyweight cache for immutable {@link ArberColor} instances.
  *
  * <p>Returned colors are cached and must be treated as immutable. Use this registry
  * to avoid per-frame allocations in render loops.</p>
+ * @since 1.5.0
+  * @author Arber Gashi
+  * @version 1.7.0
  */
 public final class ColorRegistry {
 
     private static final Object LOCK = new Object();
     private static int[] keys = new int[1024];
-    private static Color[] values = new Color[1024];
+    private static ArberColor[] values = new ArberColor[1024];
     private static boolean[] used = new boolean[1024];
     private static int size = 0;
 
     private ColorRegistry() {
     }
 
-    public static Color of(int r, int g, int b, int a) {
+    public static ArberColor of(int r, int g, int b, int a) {
         int rr = clamp8(r);
         int gg = clamp8(g);
         int bb = clamp8(b);
@@ -27,21 +30,21 @@ public final class ColorRegistry {
         return getOrCreate(argb);
     }
 
-    public static Color ofArgb(int argb) {
+    public static ArberColor ofArgb(int argb) {
         return getOrCreate(argb);
     }
 
-    public static Color withAlpha(Color base, float alpha) {
+    public static ArberColor applyAlpha(ArberColor base, float alpha) {
         if (base == null) return null;
         int a = (int) (Math.clamp(alpha, 0f, 1f) * 255);
-        return of(base.getRed(), base.getGreen(), base.getBlue(), a);
+        return of(base.red(), base.green(), base.blue(), a);
     }
 
-    public static Color interpolate(Color a, Color b, float t) {
+    public static ArberColor interpolate(ArberColor a, ArberColor b, float t) {
         if (a == null || b == null) return (a != null ? a : b);
         t = Math.min(1f, Math.max(0f, t));
-        int ar = a.getRed(), ag = a.getGreen(), ab = a.getBlue(), aa = a.getAlpha();
-        int br = b.getRed(), bg = b.getGreen(), bb = b.getBlue(), ba = b.getAlpha();
+        int ar = a.red(), ag = a.green(), ab = a.blue(), aa = a.alpha();
+        int br = b.red(), bg = b.green(), bb = b.blue(), ba = b.alpha();
         int r = (int) (ar + (br - ar) * t);
         int g = (int) (ag + (bg - ag) * t);
         int bl = (int) (ab + (bb - ab) * t);
@@ -49,19 +52,19 @@ public final class ColorRegistry {
         return of(r, g, bl, al);
     }
 
-    public static Color adjustBrightness(Color c, double factor) {
+    public static ArberColor adjustBrightness(ArberColor c, double factor) {
         if (c == null) return null;
-        int r = (int) Math.min(255, Math.max(0, Math.round(c.getRed() * factor)));
-        int g = (int) Math.min(255, Math.max(0, Math.round(c.getGreen() * factor)));
-        int b = (int) Math.min(255, Math.max(0, Math.round(c.getBlue() * factor)));
-        return of(r, g, b, c.getAlpha());
+        int r = (int) Math.min(255, Math.max(0, Math.round(c.red() * factor)));
+        int g = (int) Math.min(255, Math.max(0, Math.round(c.green() * factor)));
+        int b = (int) Math.min(255, Math.max(0, Math.round(c.blue() * factor)));
+        return of(r, g, b, c.alpha());
     }
 
     private static int clamp8(int v) {
         return Math.min(255, Math.max(0, v));
     }
 
-    private static Color getOrCreate(int argb) {
+    private static ArberColor getOrCreate(int argb) {
         synchronized (LOCK) {
             int mask = keys.length - 1;
             int idx = smear(argb) & mask;
@@ -82,7 +85,7 @@ public final class ColorRegistry {
                     idx = (idx + 1) & mask;
                 }
             }
-            Color created = new Color(argb, true);
+            ArberColor created = new ArberColor(argb);
             used[idx] = true;
             keys[idx] = argb;
             values[idx] = created;
@@ -94,17 +97,17 @@ public final class ColorRegistry {
     private static void resize() {
         int newSize = keys.length << 1;
         int[] oldKeys = keys;
-        Color[] oldValues = values;
+        ArberColor[] oldValues = values;
         boolean[] oldUsed = used;
         keys = new int[newSize];
-        values = new Color[newSize];
+        values = new ArberColor[newSize];
         used = new boolean[newSize];
         size = 0;
         int mask = newSize - 1;
         for (int i = 0; i < oldKeys.length; i++) {
             if (!oldUsed[i]) continue;
             int key = oldKeys[i];
-            Color value = oldValues[i];
+            ArberColor value = oldValues[i];
             int idx = smear(key) & mask;
             while (used[idx]) {
                 idx = (idx + 1) & mask;

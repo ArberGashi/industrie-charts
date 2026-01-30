@@ -2,14 +2,13 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>RSIRenderer - Relative Strength Index</h1>
  *
@@ -41,6 +40,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class RSIRenderer extends BaseRenderer {
 
@@ -54,9 +55,12 @@ public final class RSIRenderer extends BaseRenderer {
     private final double[] pxC = new double[2];
     private final double[] pxD = new double[2];
 
-    private final Path2D overboughtZone = new Path2D.Double();
-    private final Path2D oversoldZone = new Path2D.Double();
-    private final Path2D rsiPath = new Path2D.Double();
+    private final float[] zoneX = new float[4];
+    private final float[] zoneY = new float[4];
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
+    private transient float[] pathX;
+    private transient float[] pathY;
 
     // Cached indicator values (kept reusable to avoid allocations on every repaint)
     private transient ChartModel cachedModel;
@@ -71,8 +75,10 @@ public final class RSIRenderer extends BaseRenderer {
         super("rsi");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
@@ -82,25 +88,25 @@ public final class RSIRenderer extends BaseRenderer {
             if (cachedPointCount <= 0) return;
         }
 
-        drawRSILayer(g, model, context, !ready);
+        drawRSILayer(canvas, model, context, !ready);
     }
 
-    private void drawRSILayer(Graphics2D g,
+    private void drawRSILayer(ArberCanvas canvas,
                               ChartModel model,
                               PlotContext context,
                               boolean useCache) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, n, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, n, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive <= start) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color rsiColor = theme.getAccentColor();
-        final Color overboughtColor = ColorUtils.withAlpha(theme.getBearishColor(), 0.15f);
-        final Color oversoldColor = ColorUtils.withAlpha(theme.getBullishColor(), 0.15f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor rsiColor = theme.getAccentColor();
+        final ArberColor overboughtColor = ColorRegistry.applyAlpha(theme.getBearishColor(), 0.15f);
+        final ArberColor oversoldColor = ColorRegistry.applyAlpha(theme.getBullishColor(), 0.15f);
 
         final double firstX = model.getX(0);
         final double lastX = model.getX(n - 1);
@@ -111,14 +117,16 @@ public final class RSIRenderer extends BaseRenderer {
         context.mapToPixel(firstX, OVERBOUGHT_LEVEL, pxC); // left/70
         context.mapToPixel(lastX, OVERBOUGHT_LEVEL, pxD);  // right/70
 
-        overboughtZone.reset();
-        overboughtZone.moveTo(pxA[0], pxA[1]);
-        overboughtZone.lineTo(pxB[0], pxB[1]);
-        overboughtZone.lineTo(pxD[0], pxD[1]);
-        overboughtZone.lineTo(pxC[0], pxC[1]);
-        overboughtZone.closePath();
-        g.setColor(overboughtColor);
-        g.fill(overboughtZone);
+        zoneX[0] = (float) pxA[0];
+        zoneY[0] = (float) pxA[1];
+        zoneX[1] = (float) pxB[0];
+        zoneY[1] = (float) pxB[1];
+        zoneX[2] = (float) pxD[0];
+        zoneY[2] = (float) pxD[1];
+        zoneX[3] = (float) pxC[0];
+        zoneY[3] = (float) pxC[1];
+        canvas.setColor(overboughtColor);
+        canvas.fillPolygon(zoneX, zoneY, 4);
 
         // Oversold zone (0-30)
         context.mapToPixel(firstX, 0, pxA);                // left/0
@@ -126,37 +134,49 @@ public final class RSIRenderer extends BaseRenderer {
         context.mapToPixel(firstX, OVERSOLD_LEVEL, pxC);   // left/30
         context.mapToPixel(lastX, OVERSOLD_LEVEL, pxD);    // right/30
 
-        oversoldZone.reset();
-        oversoldZone.moveTo(pxA[0], pxA[1]);
-        oversoldZone.lineTo(pxB[0], pxB[1]);
-        oversoldZone.lineTo(pxD[0], pxD[1]);
-        oversoldZone.lineTo(pxC[0], pxC[1]);
-        oversoldZone.closePath();
-        g.setColor(oversoldColor);
-        g.fill(oversoldZone);
+        zoneX[0] = (float) pxA[0];
+        zoneY[0] = (float) pxA[1];
+        zoneX[1] = (float) pxB[0];
+        zoneY[1] = (float) pxB[1];
+        zoneX[2] = (float) pxD[0];
+        zoneY[2] = (float) pxD[1];
+        zoneX[3] = (float) pxC[0];
+        zoneY[3] = (float) pxC[1];
+        canvas.setColor(oversoldColor);
+        canvas.fillPolygon(zoneX, zoneY, 4);
 
         // Reference lines
-        g.setColor(theme.getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+        canvas.setColor(theme.getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         // 70
         context.mapToPixel(firstX, OVERBOUGHT_LEVEL, pxA);
         context.mapToPixel(lastX, OVERBOUGHT_LEVEL, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // 50
         context.mapToPixel(firstX, MIDDLE_LEVEL, pxA);
         context.mapToPixel(lastX, MIDDLE_LEVEL, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // 30
         context.mapToPixel(firstX, OVERSOLD_LEVEL, pxA);
         context.mapToPixel(lastX, OVERSOLD_LEVEL, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // RSI line (draw only visible slice)
-        rsiPath.reset();
-
         if (useCache) {
             int i0 = start;
             // skip warmup NaNs
@@ -165,30 +185,43 @@ public final class RSIRenderer extends BaseRenderer {
             }
             if (i0 >= endExclusive) return;
 
-            context.mapToPixel(xValues[i0], rsiValues[i0], pxA);
-            rsiPath.moveTo(pxA[0], pxA[1]);
-
-            for (int i = i0 + 1; i < endExclusive; i++) {
+            int count = 0;
+            ensurePathCapacity(endExclusive - i0);
+            for (int i = i0; i < endExclusive; i++) {
                 double y = rsiValues[i];
                 if (!Double.isFinite(y)) continue;
                 context.mapToPixel(xValues[i], y, pxA);
-                rsiPath.lineTo(pxA[0], pxA[1]);
+                pathX[count] = (float) pxA[0];
+                pathY[count] = (float) pxA[1];
+                count++;
             }
+            if (count < 2) return;
+            canvas.setColor(rsiColor);
+            canvas.setStroke(ChartScale.scale(2.5f));
+            canvas.drawPolyline(pathX, pathY, count);
         } else {
-            double x0 = model.getX(start);
-            context.mapToPixel(x0, model.getY(start), pxA);
-            rsiPath.moveTo(pxA[0], pxA[1]);
-            for (int i = start + 1; i < endExclusive; i++) {
+            int count = 0;
+            ensurePathCapacity(endExclusive - start);
+            for (int i = start; i < endExclusive; i++) {
                 double x = model.getX(i);
                 double y = model.getY(i);
                 context.mapToPixel(x, y, pxA);
-                rsiPath.lineTo(pxA[0], pxA[1]);
+                pathX[count] = (float) pxA[0];
+                pathY[count] = (float) pxA[1];
+                count++;
             }
+            if (count < 2) return;
+            canvas.setColor(rsiColor);
+            canvas.setStroke(ChartScale.scale(2.5f));
+            canvas.drawPolyline(pathX, pathY, count);
         }
+    }
 
-        g.setColor(rsiColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.5f)));
-        g.draw(rsiPath);
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
+        }
     }
 
     private boolean looksLikeRSI(ChartModel model) {
@@ -227,12 +260,16 @@ public final class RSIRenderer extends BaseRenderer {
             xValues[i] = model.getX(i);
         }
 
+        final FinancialChartModel fin = (model instanceof FinancialChartModel) ? (FinancialChartModel) model : null;
+
         // RSI calculation (Wilder smoothing).
         double avgGain = 0.0;
         double avgLoss = 0.0;
 
         for (int i = 1; i <= period; i++) {
-            final double change = model.getY(i) - model.getY(i - 1);
+            final double cur = (fin != null) ? fin.getClose(i) : model.getY(i);
+            final double prev = (fin != null) ? fin.getClose(i - 1) : model.getY(i - 1);
+            final double change = cur - prev;
             if (change > 0) avgGain += change;
             else avgLoss -= change; // change is negative
         }
@@ -246,7 +283,9 @@ public final class RSIRenderer extends BaseRenderer {
         }
 
         for (int i = period; i < n; i++) {
-            final double change = model.getY(i) - model.getY(i - 1);
+            final double cur = (fin != null) ? fin.getClose(i) : model.getY(i);
+            final double prev = (fin != null) ? fin.getClose(i - 1) : model.getY(i - 1);
+            final double change = cur - prev;
             final double gain = (change > 0) ? change : 0.0;
             final double loss = (change < 0) ? -change : 0.0;
 

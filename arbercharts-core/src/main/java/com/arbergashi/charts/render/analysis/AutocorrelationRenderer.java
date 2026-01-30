@@ -1,13 +1,13 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.ChartScale;
 /**
  * Autocorrelation (ACF) renderer.
  *
@@ -19,6 +19,8 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class AutocorrelationRenderer extends BaseRenderer {
 
@@ -28,8 +30,10 @@ public final class AutocorrelationRenderer extends BaseRenderer {
         super("autocorrelation");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 4) return;
         double[] yData = model.getYData();
@@ -54,13 +58,14 @@ public final class AutocorrelationRenderer extends BaseRenderer {
         }
         if (denom <= 1e-12) return;
 
-        Color c = seriesOrBase(model, context, 0);
+        ArberColor c = seriesOrBase(model, context, 0);
 
         // CRITICAL: Use LAG-based X-axis (0 to maxLag) instead of model X-data
-        double plotX = context.plotBounds().getX();
-        double plotY = context.plotBounds().getY();
-        double plotW = context.plotBounds().getWidth();
-        double plotH = context.plotBounds().getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double plotX = bounds.x();
+        double plotY = bounds.y();
+        double plotW = bounds.width();
+        double plotH = bounds.height();
 
         // Manual scaling for LAG axis (X: 0 to maxLag)
         double xScale = plotW / (maxLag + 1.0);
@@ -96,13 +101,13 @@ public final class AutocorrelationRenderer extends BaseRenderer {
 
 
             if (isMultiColor()) {
-                Color bar = themeSeries(context, lag);
+                ArberColor bar = themeSeries(context, lag);
                 if (bar == null) bar = c;
-                g2.setPaint(getCachedGradient(bar, (float) h));
+                canvas.setColor(bar);
             } else {
-                g2.setPaint(getCachedGradient(c, (float) h));
+                canvas.setColor(c);
             }
-            g2.fill(getRect(px - barW * 0.5, top, barW, h));
+            canvas.fillRect((float) (px - barW * 0.5), (float) top, (float) barW, (float) h);
         }
     }
 }

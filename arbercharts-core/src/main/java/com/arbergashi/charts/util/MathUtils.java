@@ -1,5 +1,4 @@
 package com.arbergashi.charts.util;
-
 /**
  * Math utilities.
  * @author Arber Gashi

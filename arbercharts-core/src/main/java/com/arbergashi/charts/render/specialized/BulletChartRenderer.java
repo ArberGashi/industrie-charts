@@ -1,14 +1,14 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import javax.swing.*;
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>BulletChartRenderer - Compact KPI Visualization</h1>
  *
@@ -42,6 +42,8 @@ import java.awt.*;
  * @version 1.0.0
  * @since 2026-01-01
  * @see ChartModel
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class BulletChartRenderer extends BaseRenderer {
 
@@ -50,18 +52,20 @@ public final class BulletChartRenderer extends BaseRenderer {
     }
 
     private final double[] pBuffer = new double[2];
-    private transient Color[] rangeColors;
-    private transient Color actualColor;
-    private transient Color targetColor;
-    private transient int uiKey;
+    private transient ArberColor[] rangeColors;
+    private transient ArberColor actualColor;
+    private transient ArberColor targetColor;
+    private transient int themeKey;
     private transient boolean multiColorKey;
 
     public BulletChartRenderer() {
         super("bullet");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
         double[] xData = model.getXData();
@@ -69,9 +73,9 @@ public final class BulletChartRenderer extends BaseRenderer {
 
         ensureUiColors(context);
 
-        Rectangle bounds = context.plotBounds().getBounds();
-        double w = bounds.getWidth();
-        double h = bounds.getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double w = bounds.width();
+        double h = bounds.height();
 
         // take first point as actual, second as target, rest ignored
         double ax = xData[0];
@@ -91,42 +95,43 @@ public final class BulletChartRenderer extends BaseRenderer {
         ranges[1] = 0.9 * w;
         ranges[2] = w;
 
-        double y = bounds.getY() + h / 2.0;
+        double y = bounds.y() + h / 2.0;
         double barH = Math.max(10.0, h / 6.0);
 
         for (int i = 0; i < ranges.length; i++) {
             double rw = ranges[i];
-            g2.setColor(rangeColors[i]);
-            g2.fill(getRect(bounds.getX(), y - barH / 2.0, rw, barH));
+            canvas.setColor(rangeColors[i]);
+            canvas.fillRect((float) bounds.x(), (float) (y - barH / 2.0), (float) rw, (float) barH);
         }
 
         // actual bar
-        g2.setColor(actualColor);
-        g2.fill(getRect(bounds.getX(), y - barH / 4.0, actualX, barH / 2.0));
+        canvas.setColor(actualColor);
+        float actualW = (float) Math.max(0.0, actualX - bounds.x());
+        canvas.fillRect((float) bounds.x(), (float) (y - barH / 4.0), actualW, (float) (barH / 2.0));
 
         // target marker
-        g2.setColor(targetColor);
-        g2.draw(getLine(targetX, y - barH / 2.0, targetX, y + barH / 2.0));
+        canvas.setColor(targetColor);
+        drawLine(canvas, targetX, y - barH / 2.0, targetX, y + barH / 2.0);
     }
 
     private void ensureUiColors(PlotContext context) {
-        int key = System.identityHashCode(UIManager.getDefaults());
+        int key = System.identityHashCode(getResolvedTheme(context));
         boolean multi = isMultiColor();
-        if (key == uiKey && rangeColors != null && multiColorKey == multi) return;
-        uiKey = key;
+        if (key == themeKey && rangeColors != null && multiColorKey == multi) return;
+        themeKey = key;
         multiColorKey = multi;
 
-        rangeColors = new Color[3];
+        rangeColors = new ArberColor[3];
         if (multi) {
-            Color c0 = themeSeries(context, 0);
-            Color c1 = themeSeries(context, 1);
-            Color c2 = themeSeries(context, 2);
+            ArberColor c0 = themeSeries(context, 0);
+            ArberColor c1 = themeSeries(context, 1);
+            ArberColor c2 = themeSeries(context, 2);
             if (c0 == null) c0 = themeAccent(context);
             if (c1 == null) c1 = c0;
             if (c2 == null) c2 = c1;
-            rangeColors[0] = com.arbergashi.charts.util.ColorUtils.withAlpha(c0, 0.35f);
-            rangeColors[1] = com.arbergashi.charts.util.ColorUtils.withAlpha(c1, 0.5f);
-            rangeColors[2] = com.arbergashi.charts.util.ColorUtils.withAlpha(c2, 0.65f);
+            rangeColors[0] = ColorRegistry.applyAlpha(c0, 0.35f);
+            rangeColors[1] = ColorRegistry.applyAlpha(c1, 0.5f);
+            rangeColors[2] = ColorRegistry.applyAlpha(c2, 0.65f);
 
             actualColor = themeSeries(context, 3);
             if (actualColor == null) actualColor = themeAccent(context);
@@ -135,35 +140,21 @@ public final class BulletChartRenderer extends BaseRenderer {
             return;
         }
 
-        Color c1 = UIManager.getColor("Chart.bullet.range1");
-        Color c2 = UIManager.getColor("Chart.bullet.range2");
-        Color c3 = UIManager.getColor("Chart.bullet.range3");
+        rangeColors[0] = ColorRegistry.applyAlpha(themeGrid(context), 0.35f);
+        rangeColors[1] = ColorRegistry.applyAlpha(themeGrid(context), 0.5f);
+        rangeColors[2] = ColorRegistry.applyAlpha(themeGrid(context), 0.65f);
 
-        if (c1 != null && c2 != null && c3 != null) {
-            rangeColors[0] = c1;
-            rangeColors[1] = c2;
-            rangeColors[2] = c3;
-        } else {
-            // Fallback: Adapt to dark/light theme based on panel background
-            Color bg = UIManager.getColor("Panel.background");
-            if (bg == null) bg = themeBackground(context);
-            boolean dark = (bg.getRed() + bg.getGreen() + bg.getBlue()) / 3 < 128;
+        actualColor = themeForeground(context);
+        targetColor = themeAccent(context);
+    }
 
-            if (dark) {
-                rangeColors[0] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.45f);
-                rangeColors[1] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.6f);
-                rangeColors[2] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.75f);
-            } else {
-                rangeColors[0] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.35f);
-                rangeColors[1] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.5f);
-                rangeColors[2] = com.arbergashi.charts.util.ColorUtils.withAlpha(themeGrid(context), 0.65f);
-            }
-        }
-
-        actualColor = UIManager.getColor("Label.foreground"); // Black in light, White in dark
-        if (actualColor == null) actualColor = themeForeground(context);
-
-        targetColor = UIManager.getColor("Actions.Red"); // FlatLaf standard red
-        if (targetColor == null) targetColor = themeAccent(context);
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "bullet.line.x", 2);
+        float[] ys = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "bullet.line.y", 2);
+        xs[0] = (float) x1;
+        ys[0] = (float) y1;
+        xs[1] = (float) x2;
+        ys[1] = (float) y2;
+        canvas.drawPolyline(xs, ys, 2);
     }
 }

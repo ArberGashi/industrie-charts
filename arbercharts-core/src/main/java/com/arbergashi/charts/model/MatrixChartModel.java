@@ -1,7 +1,6 @@
 package com.arbergashi.charts.model;
 
 import java.util.List;
-
 /**
  * An extension of ChartModel for matrix-based data, such as that required
  * by Chord Diagrams or adjacency matrices.

@@ -1,12 +1,15 @@
 package com.arbergashi.charts.render.standard;
 
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ColorUtils;
 import com.arbergashi.charts.util.MathUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
 
 /**
  * Area renderer relative to a configurable baseline.
@@ -15,6 +18,7 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-15
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class BaselineAreaRenderer extends BaseRenderer {
 
@@ -24,8 +28,11 @@ public final class BaselineAreaRenderer extends BaseRenderer {
         super("baselineArea");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
@@ -34,30 +41,46 @@ public final class BaselineAreaRenderer extends BaseRenderer {
 
         double baselineValue = 0.0;
         try {
-            baselineValue = Double.parseDouble(com.arbergashi.charts.util.ChartAssets.getString("chart.render.baseline.value", "0.0"));
+            baselineValue = Double.parseDouble(ChartAssets.getString("chart.render.baseline.value", "0.0"));
         } catch (Exception ignored) {
         }
         context.mapToPixel(0, baselineValue, p0);
-        double baselineY = MathUtils.clamp(p0[1], context.plotBounds().getY(), context.plotBounds().getMaxY());
+        ArberRect bounds = context.getPlotBounds();
+        double baselineY = MathUtils.clamp(p0[1], bounds.minY(), bounds.maxY());
 
-        Color c = getSeriesColor(model);
+        ArberColor c = getSeriesColor(model);
 
-        Path2D area = getPathCache();
-        area.reset();
-        area.moveTo(xData[0], baselineY);
+        float[] xs = RendererAllocationCache.getFloatArray(this, "baseline.x", n);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "baseline.y", n);
+        int out = 0;
         for (int i = 0; i < n; i++) {
             context.mapToPixel(xData[i], yData[i], p0);
-            area.lineTo(p0[0], p0[1]);
+            xs[out] = (float) p0[0];
+            ys[out] = (float) p0[1];
+            out++;
         }
-        context.mapToPixel(xData[n - 1], baselineY, p0);
-        area.lineTo(p0[0], p0[1]);
-        area.closePath();
+        if (out < 2) return;
 
-        g2.setPaint(getCachedGradient(c, (float) context.plotBounds().getHeight()));
-        g2.fill(area);
+        float[] polyX = RendererAllocationCache.getFloatArray(this, "baseline.poly.x", out + 2);
+        float[] polyY = RendererAllocationCache.getFloatArray(this, "baseline.poly.y", out + 2);
+        int p = 0;
+        polyX[p] = xs[0];
+        polyY[p] = (float) baselineY;
+        p++;
+        for (int i = 0; i < out; i++) {
+            polyX[p] = xs[i];
+            polyY[p] = ys[i];
+            p++;
+        }
+        polyX[p] = xs[out - 1];
+        polyY[p] = (float) baselineY;
+        p++;
 
-        g2.setStroke(getSeriesStroke());
-        g2.setColor(c);
-        g2.draw(area);
+        canvas.setColor(ColorUtils.applyAlpha(c, 0.25f));
+        canvas.fillPolygon(polyX, polyY, p);
+
+        canvas.setStroke(getSeriesStrokeWidth());
+        canvas.setColor(c);
+        canvas.drawPolyline(xs, ys, out);
     }
 }

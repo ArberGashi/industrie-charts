@@ -1,17 +1,15 @@
 package com.arbergashi.charts.render.circular;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Optional;
-
 /**
  * <h1>Modern Polar Line Renderer</h1>
  * <p>
@@ -28,6 +26,8 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class PolarLineRenderer extends BaseRenderer {
 
@@ -35,110 +35,96 @@ public final class PolarLineRenderer extends BaseRenderer {
     private boolean smoothing = false;
 
     // Reusable buffers to avoid allocations in drawData
-    private final Point2D.Double[] pointCache = new Point2D.Double[0];
+    private final ArberPoint[] pointCache = new ArberPoint[0];
 
     public PolarLineRenderer() {
         super("polarLine");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n <= 0) return;
 
-        drawPolarGrid(g, context);
+        drawPolarGrid(canvas, context);
         
         // Ensure point cache is large enough (reused, not re-allocated every frame)
-        Point2D.Double[] points = ensurePointCacheCapacity(n);
+        ArberPoint[] points = ensurePointCacheCapacity(n);
         mapToPolar(points, model, context);
         
         if (n < 2) return;
 
-        drawPolarPath(g, points, n, getSeriesColor(model));
-        drawDataNodes(g, points, n, getSeriesColor(model));
+        drawPolarPath(canvas, points, n, getSeriesColor(model));
+        drawDataNodes(canvas, points, n, getSeriesColor(model));
     }
 
-    private void drawPolarGrid(Graphics2D g, PlotContext context) {
-        Rectangle2D b = context.plotBounds();
-        double cx = b.getCenterX();
-        double cy = b.getCenterY();
-        double maxRadius = Math.min(b.getWidth(), b.getHeight()) / 2.0 * 0.85;
+    private void drawPolarGrid(ArberCanvas canvas, PlotContext context) {
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
+        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
 
-        g.setColor(resolveTheme(context).getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+        canvas.setColor(getResolvedTheme(context).getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         int ringCount = 5;
         for (int i = 1; i <= ringCount; i++) {
             double r = maxRadius * ((double) i / ringCount);
-            g.draw(getEllipse(cx - r, cy - r, r * 2, r * 2));
+            drawCirclePolyline(canvas, cx, cy, r);
         }
 
         int radialLines = 8;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarLine.grid.x", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarLine.grid.y", 2);
         for (int i = 0; i < radialLines; i++) {
             double angleRad = Math.toRadians(i * (360.0 / radialLines));
             double x = cx + Math.cos(angleRad) * maxRadius;
             double y = cy + Math.sin(angleRad) * maxRadius;
-            g.draw(getLine(cx, cy, x, y));
+            xs[0] = (float) cx;
+            ys[0] = (float) cy;
+            xs[1] = (float) x;
+            ys[1] = (float) y;
+            canvas.drawPolyline(xs, ys, 2);
         }
     }
 
-    private void drawPolarPath(Graphics2D g, Point2D.Double[] points, int n, Color accent) {
-        Path2D path = getPathCache();
-        path.reset();
-
-        if (smoothing && n > 2) {
-            path.moveTo(points[0].x, points[0].y);
-            for (int i = 0; i < n - 1; i++) {
-                Point2D p0 = points[Math.max(0, i - 1)];
-                Point2D p1 = points[i];
-                Point2D p2 = points[i + 1];
-                Point2D p3 = points[Math.min(n - 1, i + 2)];
-
-                double t = 0.5; // Tension
-                double c1x = p1.getX() + (p2.getX() - p0.getX()) * t / 3.0;
-                double c1y = p1.getY() + (p2.getY() - p0.getY()) * t / 3.0;
-                double c2x = p2.getX() - (p3.getX() - p1.getX()) * t / 3.0;
-                double c2y = p2.getY() - (p3.getY() - p1.getY()) * t / 3.0;
-                
-                path.curveTo(c1x, c1y, c2x, c2y, p2.getX(), p2.getY());
-            }
-        } else {
-            path.moveTo(points[0].x, points[0].y);
-            for (int i = 1; i < n; i++) {
-                path.lineTo(points[i].x, points[i].y);
-            }
+    private void drawPolarPath(ArberCanvas canvas, ArberPoint[] points, int n, ArberColor accent) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarLine.path.x", n);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarLine.path.y", n);
+        for (int i = 0; i < n; i++) {
+            xs[i] = (float) points[i].x();
+            ys[i] = (float) points[i].y();
         }
 
-        g.setColor(ColorUtils.withAlpha(accent, 0.2f));
-        g.fill(path);
-        
-        g.setStroke(getCachedStroke(1.5f));
-        g.setColor(accent);
-        g.draw(path);
+        canvas.setColor(accent);
+        canvas.fillPolygon(xs, ys, n);
+        canvas.setStroke(1.5f);
+        canvas.drawPolyline(xs, ys, n);
     }
 
-    private void drawDataNodes(Graphics2D g, Point2D.Double[] points, int n, Color accent) {
+    private void drawDataNodes(ArberCanvas canvas, ArberPoint[] points, int n, ArberColor accent) {
         for (int i = 0; i < n; i++) {
             double nodeRadius = (i == hoverIndex) ? ChartScale.scale(5f) : ChartScale.scale(3f);
-            Color nodeColor = (i == hoverIndex) ? accent.brighter() : accent;
-            
-            g.setColor(nodeColor);
-            g.fill(getEllipse(points[i].x - nodeRadius, points[i].y - nodeRadius, nodeRadius * 2, nodeRadius * 2));
+            canvas.setColor(accent);
+            drawCircleFill(canvas, points[i].x(), points[i].y(), nodeRadius);
         }
     }
 
-    private void mapToPolar(Point2D.Double[] points, ChartModel model, PlotContext context) {
+    private void mapToPolar(ArberPoint[] points, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
-        double cx = context.plotBounds().getCenterX();
-        double cy = context.plotBounds().getCenterY();
-        double maxRadius = Math.min(context.plotBounds().getWidth(), context.plotBounds().getHeight()) / 2.0 * 0.85;
+        ArberRect b = context.getPlotBounds();
+        double cx = b.centerX();
+        double cy = b.centerY();
+        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
         
         for (int i = 0; i < n; i++) {
             double angleDeg = model.getX(i);
             double radiusValue = model.getY(i);
             
             double angleRad = Math.toRadians(angleDeg - 90);
-            double radius = maxRadius * (radiusValue / context.maxY());
+            double radius = maxRadius * (radiusValue / context.getMaxY());
             
             double x = cx + Math.cos(angleRad) * radius;
             double y = cy + Math.sin(angleRad) * radius;
@@ -147,11 +133,11 @@ public final class PolarLineRenderer extends BaseRenderer {
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         int n = model.getPointCount();
         if (n <= 0) return Optional.empty();
         
-        Point2D.Double[] points = ensurePointCacheCapacity(n);
+        ArberPoint[] points = ensurePointCacheCapacity(n);
         mapToPolar(points, model, context);
         
         double thresholdSq = Math.pow(ChartScale.scale(10), 2);
@@ -166,13 +152,37 @@ public final class PolarLineRenderer extends BaseRenderer {
         hoverIndex = -1;
         return Optional.empty();
     }
+
+    private void drawCirclePolyline(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 48;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarLine.circle.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarLine.circle.y", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
+
+    private void drawCircleFill(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 24;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarLine.dot.x", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarLine.dot.y", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
+    }
     
-    private Point2D.Double[] ensurePointCacheCapacity(int required) {
+    private ArberPoint[] ensurePointCacheCapacity(int required) {
         if (pointCache.length >= required) return pointCache;
         
-        Point2D.Double[] newCache = new Point2D.Double[required];
+        ArberPoint[] newCache = new ArberPoint[required];
         for (int i = 0; i < required; i++) {
-            newCache[i] = new Point2D.Double();
+            newCache[i] = new ArberPoint();
         }
         System.arraycopy(pointCache, 0, newCache, 0, pointCache.length);
         return newCache; // This is an allocation, but outside drawData, only on capacity change.
@@ -180,9 +190,10 @@ public final class PolarLineRenderer extends BaseRenderer {
     
     // --- Public API ---
 
-    public PolarLineRenderer setSmoothing(boolean smoothing) {
+    public PolarLineRenderer setSmoothing(boolean smoothing){
         this.smoothing = smoothing;
         return this;
+        
     }
 
 }

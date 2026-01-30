@@ -1,13 +1,12 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Ellipse2D;
-
 /**
  * <h1>BeeswarmRenderer - Beeswarm Plot (Stripchart)</h1>
  *
@@ -40,6 +39,8 @@ import java.awt.geom.Ellipse2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class BeeswarmRenderer extends BaseRenderer {
 
@@ -51,31 +52,50 @@ public final class BeeswarmRenderer extends BaseRenderer {
         super("beeswarm");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 1) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
-        final Color baseColor = getSeriesColor(model);
+        final ArberColor baseColor = getSeriesColor(model);
         final double scaledRadius = ChartScale.scale(DOT_RADIUS);
         // Simple beeswarm: plot all points, jitter x if needed (no grouping)
         for (int i = 0; i < model.getPointCount(); i++) {
             context.mapToPixel(xData[i], yData[i], p0);
-            Ellipse2D dot = getEllipse(
-                    p0[0] - scaledRadius,
-                    p0[1] - scaledRadius,
-                    scaledRadius * 2,
-                    scaledRadius * 2
-            );
-            Color pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
+            ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (pointColor == null) pointColor = baseColor;
-            g.setColor(pointColor);
-            g.fill(dot);
-            g.setColor(themeBackground(context));
-            g.setStroke(getCachedStroke(ChartScale.scale(0.5f)));
-            g.draw(dot);
+            canvas.setColor(pointColor);
+            fillCircle(canvas, p0[0], p0[1], scaledRadius);
+            canvas.setColor(themeBackground(context));
+            canvas.setStroke(ChartScale.scale(0.5f));
+            strokeCircle(canvas, p0[0], p0[1], scaledRadius);
         }
     }
 
+    private void fillCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 10;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "beeswarm.cx", segments);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "beeswarm.cy", segments);
+        for (int i = 0; i < segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.fillPolygon(xs, ys, segments);
+    }
+
+    private void strokeCircle(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 10;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "beeswarm.sx", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "beeswarm.sy", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = (2.0 * Math.PI * i) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
+    }
 }

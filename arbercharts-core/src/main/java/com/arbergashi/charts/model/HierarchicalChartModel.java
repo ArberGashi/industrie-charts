@@ -1,5 +1,4 @@
 package com.arbergashi.charts.model;
-
 /**
  * An extension of ChartModel for hierarchical data structures, such as
  * those required by Sunburst or Treemap charts.

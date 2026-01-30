@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head('ArberCharts Core')"></head>
+  <body data-theme="dark">
+    <header th:replace="fragments/layout :: header('core')"></header>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <h1>Core Architecture</h1>
+          <p>The ArberCharts core is engineered for deterministic, low-latency rendering in regulated environments. Every bridge is a thin integration layer over the same headless engine.</p>
+          <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+            <a class="btn ghost" href="#pipeline">Pipeline</a>
+            <a class="btn ghost" href="#capabilities">Capabilities</a>
+            <a class="btn ghost" href="#live-preview">Live preview</a>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Engine pillars</h3>
+          <div class="grid">
+            <div class="pill">Zero‑GC render loop</div>
+            <div class="pill">Lock‑free model reads</div>
+            <div class="pill">Deterministic playback</div>
+            <div class="pill">HiDPI aware scaling</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pipeline">
+        <h2>Pipeline overview</h2>
+        <div class="grid wide">
+          <div class="card">
+            <h3>Model → Context → Engine → Canvas</h3>
+            <p>Data flows from model buffers into PlotContext transforms, then through the render engine into bridge‑specific canvases. The core keeps transform math consistent so renderers remain portable across platforms.</p>
+          </div>
+          <div class="card">
+            <h3>Deterministic rendering contracts</h3>
+            <p>Renderers honor PlotContext clipping and scaling policies, enabling frame‑exact reproduction for QA and regulated audits.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="capabilities">
+        <h2>Core capabilities</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Zero‑Allocation discipline</h3>
+            <p>Renderer layers reuse cached images and primitive arrays to avoid allocations during active draw.</p>
+          </div>
+          <div class="card">
+            <h3>Medical calibration</h3>
+            <p>Physical scaling stays stable across resize for ECG/EEG waveforms and ISO‑aligned calibrations.</p>
+          </div>
+          <div class="card">
+            <h3>Spatial transforms</h3>
+            <p>Spatial renderers share a uniform 3D transform stack with matrix composition for deterministic camera control.</p>
+          </div>
+          <div class="card">
+            <h3>Theme & palette governance</h3>
+            <p>Global themes allow consistent branding without sacrificing contrast or diagnostic fidelity.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="live-preview">
+        <h2>Live core preview</h2>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>High‑density line series</h3>
+              <span class="badge">core</span>
+            </div>
+            <img data-type="line" data-domain="core" data-points="20000" data-width="980" data-height="520" alt="Line series" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Area with large dataset</h3>
+              <span class="badge">core</span>
+            </div>
+            <img data-type="area" data-domain="core" data-points="20000" data-width="980" data-height="520" alt="Area series" />
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+    <div th:replace="fragments/layout :: scripts"></div>
+  </body>
+</html>

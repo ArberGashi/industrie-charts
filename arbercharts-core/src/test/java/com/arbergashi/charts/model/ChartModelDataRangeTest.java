@@ -33,11 +33,11 @@ class ChartModelDataRangeTest {
             }
 
             @Override
-            public void addChangeListener(ChartModelListener listener) {
+            public void setChangeListener(ChartModel.ChartModelListener listener) {
             }
 
             @Override
-            public void removeChangeListener(ChartModelListener listener) {
+            public void removeChangeListener(ChartModel.ChartModelListener listener) {
             }
         };
 
@@ -71,11 +71,11 @@ class ChartModelDataRangeTest {
             }
 
             @Override
-            public void addChangeListener(ChartModelListener listener) {
+            public void setChangeListener(ChartModel.ChartModelListener listener) {
             }
 
             @Override
-            public void removeChangeListener(ChartModelListener listener) {
+            public void removeChangeListener(ChartModel.ChartModelListener listener) {
             }
         };
 
@@ -96,11 +96,11 @@ class ChartModelDataRangeTest {
             }
 
             @Override
-            public void addChangeListener(ChartModelListener listener) {
+            public void setChangeListener(ChartModel.ChartModelListener listener) {
             }
 
             @Override
-            public void removeChangeListener(ChartModelListener listener) {
+            public void removeChangeListener(ChartModel.ChartModelListener listener) {
             }
         };
 
@@ -131,11 +131,11 @@ class ChartModelDataRangeTest {
             }
 
             @Override
-            public void addChangeListener(ChartModelListener listener) {
+            public void setChangeListener(ChartModel.ChartModelListener listener) {
             }
 
             @Override
-            public void removeChangeListener(ChartModelListener listener) {
+            public void removeChangeListener(ChartModel.ChartModelListener listener) {
             }
         };
 

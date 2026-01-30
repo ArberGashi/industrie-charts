@@ -1,15 +1,12 @@
 package com.arbergashi.charts.render.specialized;
 
-import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Rectangle2D;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
@@ -19,6 +16,7 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public class WindRoseRenderer extends BaseRenderer {
 
@@ -33,17 +31,20 @@ public class WindRoseRenderer extends BaseRenderer {
         super("wind_rose");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Rectangle2D bounds = context.plotBounds();
-        double cx = bounds.getCenterX();
-        double cy = bounds.getCenterY();
-        double radius = Math.min(bounds.getWidth(), bounds.getHeight()) * 0.4;
+        var bounds = context.getPlotBounds();
+        double cx = bounds.centerX();
+        double cy = bounds.centerY();
+        double radius = Math.min(bounds.width(), bounds.height()) * 0.4;
 
         int dirs = 16; // 16 direction bins (22.5° each)
         if (bins == null || bins.length < dirs) {
@@ -66,26 +67,43 @@ public class WindRoseRenderer extends BaseRenderer {
         int max = 1;
         for (int v : bins) if (v > max) max = v;
 
-        Stroke prevStroke = g2.getStroke();
-        Color prevColor = g2.getColor();
-        g2.setStroke(getSeriesStroke());
+        canvas.setStroke(getSeriesStrokeWidth());
 
-        // draw each direction as an arc sector with radius proportional to count
+        int segs = 24;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "wind.arc.x", segs + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "wind.arc.y", segs + 1);
+        float[] polyX = RendererAllocationCache.getFloatArray(this, "wind.poly.x", segs * 2 + 2);
+        float[] polyY = RendererAllocationCache.getFloatArray(this, "wind.poly.y", segs * 2 + 2);
+
         for (int i = 0; i < dirs; i++) {
             double startDeg = i * (360.0 / dirs);
             double extent = 360.0 / dirs;
             double r = radius * (bins[i] / (double) max);
-            // draw filled arc
-            Shape arc = getArc(cx - r, cy - r, r * 2, r * 2, -startDeg - extent, extent, Arc2D.PIE);
 
-            // Each direction gets a distinct color from the theme palette
-            Color directionColor = seriesOrBase(model, context, i);
-            g2.setColor(directionColor);
-            g2.fill(arc);
+            if (r <= 0.0) continue;
+
+            // outer arc
+            double startRad = Math.toRadians(-startDeg - extent);
+            double endRad = Math.toRadians(-startDeg);
+            for (int s = 0; s <= segs; s++) {
+                double t = startRad + (endRad - startRad) * (s / (double) segs);
+                xs[s] = (float) (cx + Math.cos(t) * r);
+                ys[s] = (float) (cy + Math.sin(t) * r);
+            }
+            int idx = 0;
+            for (int s = 0; s <= segs; s++) {
+                polyX[idx] = xs[s];
+                polyY[idx] = ys[s];
+                idx++;
+            }
+            // inner arc at center
+            polyX[idx] = (float) cx;
+            polyY[idx] = (float) cy;
+            idx++;
+
+            ArberColor directionColor = seriesOrBase(model, context, i);
+            canvas.setColor(directionColor);
+            canvas.fillPolygon(polyX, polyY, idx);
         }
-
-        // restore
-        g2.setColor(prevColor);
-        g2.setStroke(prevStroke);
     }
 }

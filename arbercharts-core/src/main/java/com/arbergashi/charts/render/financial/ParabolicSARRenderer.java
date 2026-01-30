@@ -3,14 +3,11 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
-
 /**
  * <h1>ParabolicSARRenderer - Parabolic Stop and Reverse</h1>
  *
@@ -24,6 +21,8 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ParabolicSARRenderer extends BaseRenderer {
 
@@ -32,8 +31,8 @@ public final class ParabolicSARRenderer extends BaseRenderer {
     private static final double AF_MAX = 0.20;
 
     private final double[] px = new double[2];
-    private final Path2D dotsPath = new Path2D.Double();
-    private final Rectangle2D.Double viewRect = new Rectangle2D.Double();
+    private final float[] dotX = new float[1];
+    private final float[] dotY = new float[1];
 
     // Cached indicator arrays (x + sar + trend flag)
     private transient ChartModel cachedModel;
@@ -46,50 +45,38 @@ public final class ParabolicSARRenderer extends BaseRenderer {
         super("parabolic_sar");
     }
 
-    private static void addCircle(Path2D path, double cx, double cy, double r) {
-        // Simple 4-segment approximation (fast; no allocations)
-        // This is visually fine at small icon-like dot sizes.
-        final double c = r * 0.5522847498307936; // kappa
-        path.moveTo(cx + r, cy);
-        path.curveTo(cx + r, cy + c, cx + c, cy + r, cx, cy + r);
-        path.curveTo(cx - c, cy + r, cx - r, cy + c, cx - r, cy);
-        path.curveTo(cx - r, cy - c, cx - c, cy - r, cx, cy - r);
-        path.curveTo(cx + c, cy - r, cx + r, cy - c, cx + r, cy);
-        path.closePath();
-    }
-
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 3) return;
 
         ensureCache(model);
         if (cachedPointCount < 2 || xValues == null || sarValues == null || uptrend == null) return;
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, cachedPointCount, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, cachedPointCount, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive - start < 2) return;
 
-        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(g, context);
-        viewRect.setRect(vp.x(), vp.y(), vp.w(), vp.h());
+        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(context);
 
-        final double leftX = vp.x();
-        final double rightX = vp.maxX();
+        final double leftX = vp.getX();
+        final double rightX = vp.getMaxX();
 
         final ChartTheme theme = getTheme();
-        final Color uptrendColor = theme.getBullishColor();
-        final Color downtrendColor = theme.getBearishColor();
-        final Color borderColor = theme.getForeground();
+        final ArberColor uptrendColor = theme.getBullishColor();
+        final ArberColor downtrendColor = theme.getBearishColor();
+        final ArberColor borderColor = theme.getForeground();
 
         // Build a single path containing all dot circles (sub-path per dot).
         // We draw two paths (up/down) to avoid per-dot color switching overhead.
-        final double dotSize = ChartScale.scale(6.0);
-        final double r = dotSize * 0.5;
-        final Stroke borderStroke = getCachedStroke(ChartScale.scale(0.75f));
+        final float dotSize = ChartScale.scale(6.0f);
+        final float half = dotSize * 0.5f;
+        final float border = ChartScale.scale(0.75f);
 
         // Uptrend dots
-        dotsPath.reset();
         boolean anyUp = false;
         for (int i = start; i < endExclusive; i++) {
             if (!uptrend[i]) continue;
@@ -97,18 +84,16 @@ public final class ParabolicSARRenderer extends BaseRenderer {
             final double cx = px[0];
             if (cx < leftX - dotSize || cx > rightX + dotSize) continue;
             anyUp = true;
-            addCircle(dotsPath, cx, px[1], r);
-        }
-        if (anyUp) {
-            g.setColor(uptrendColor);
-            g.fill(dotsPath);
-            g.setColor(borderColor);
-            g.setStroke(borderStroke);
-            g.draw(dotsPath);
+            dotX[0] = (float) (cx - half);
+            dotY[0] = (float) (px[1] - half);
+            canvas.setColor(uptrendColor);
+            canvas.fillRect(dotX[0], dotY[0], dotSize, dotSize);
+            canvas.setColor(borderColor);
+            canvas.setStroke(border);
+            canvas.drawRect(dotX[0], dotY[0], dotSize, dotSize);
         }
 
         // Downtrend dots
-        dotsPath.reset();
         boolean anyDown = false;
         for (int i = start; i < endExclusive; i++) {
             if (uptrend[i]) continue;
@@ -116,14 +101,13 @@ public final class ParabolicSARRenderer extends BaseRenderer {
             final double cx = px[0];
             if (cx < leftX - dotSize || cx > rightX + dotSize) continue;
             anyDown = true;
-            addCircle(dotsPath, cx, px[1], r);
-        }
-        if (anyDown) {
-            g.setColor(downtrendColor);
-            g.fill(dotsPath);
-            g.setColor(borderColor);
-            g.setStroke(borderStroke);
-            g.draw(dotsPath);
+            dotX[0] = (float) (cx - half);
+            dotY[0] = (float) (px[1] - half);
+            canvas.setColor(downtrendColor);
+            canvas.fillRect(dotX[0], dotY[0], dotSize, dotSize);
+            canvas.setColor(borderColor);
+            canvas.setStroke(border);
+            canvas.drawRect(dotX[0], dotY[0], dotSize, dotSize);
         }
     }
 

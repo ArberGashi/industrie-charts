@@ -2,37 +2,41 @@ package com.arbergashi.charts.render.medical;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * Medical spectrogram renderer: visualizes spectrogram-like data for medical signals.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class SpectrogramMedicalRenderer extends BaseRenderer {
 
     // Zero-GC: cached resources.
     private final double[] d1 = new double[2];
     private final double[] d2 = new double[2];
-    private final BasicStroke stroke = new BasicStroke(1.5f);
-    private final Color[] colorPalette = new Color[256];
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
+    private final ArberColor[] colorPalette = new ArberColor[256];
     private transient int themeKey;
 
     public SpectrogramMedicalRenderer() {
         super("spectrogram_medical");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof CircularFastMedicalModel circleModel)) return;
-        ChartTheme theme = resolveTheme(context);
+        ChartTheme theme = getResolvedTheme(context);
         ensurePalette(theme);
         double[] rawX = circleModel.getXData();
         double[] rawY = circleModel.getRawChannelArray(0); // frequency/depth
@@ -40,8 +44,8 @@ public class SpectrogramMedicalRenderer extends BaseRenderer {
         int head = circleModel.getRawHeadIndex();
         int gapEnd = (head + 15) % capacity;
         boolean wrap = head > gapEnd;
-        double minY = context.minY();
-        g2.setStroke(stroke);
+        double minY = context.getMinY();
+        canvas.setStroke(1.5f);
         for (int i = 0; i < capacity; i++) {
             // Sweep-erase gap check.
             if (wrap ? (i >= head || i < gapEnd) : (i >= head && i < gapEnd)) continue;
@@ -50,8 +54,12 @@ public class SpectrogramMedicalRenderer extends BaseRenderer {
             int colorIdx = (int) Math.max(0, Math.min(255, intensityVal));
             context.mapToPixel(rawX[i], minY, d1);
             context.mapToPixel(rawX[i], rawY[i], d2);
-            g2.setColor(colorPalette[colorIdx]);
-            g2.drawLine((int) d1[0], (int) d1[1], (int) d2[0], (int) d2[1]);
+            canvas.setColor(colorPalette[colorIdx]);
+            lineX[0] = (float) d1[0];
+            lineY[0] = (float) d1[1];
+            lineX[1] = (float) d2[0];
+            lineY[1] = (float) d2[1];
+            canvas.drawPolyline(lineX, lineY, 2);
         }
     }
 
@@ -65,15 +73,15 @@ public class SpectrogramMedicalRenderer extends BaseRenderer {
         if (key == themeKey && colorPalette[0] != null) return;
         themeKey = key;
 
-        Color low = theme.getSeriesColor(0);
-        Color mid = theme.getSeriesColor(1);
-        Color high = theme.getSeriesColor(2);
+        ArberColor low = theme.getSeriesColor(0);
+        ArberColor mid = theme.getSeriesColor(1);
+        ArberColor high = theme.getSeriesColor(2);
         for (int i = 0; i < 256; i++) {
             float t = i / 255f;
-            Color base = (t < 0.5f)
-                    ? ColorUtils.interpolate(low, mid, t * 2f)
-                    : ColorUtils.interpolate(mid, high, (t - 0.5f) * 2f);
-            colorPalette[i] = ColorUtils.withAlpha(base, 0.78f);
+            ArberColor base = (t < 0.5f)
+                    ? ColorRegistry.interpolate(low, mid, t * 2f)
+                    : ColorRegistry.interpolate(mid, high, (t - 0.5f) * 2f);
+            colorPalette[i] = ColorRegistry.applyAlpha(base, 0.78f);
         }
     }
 }

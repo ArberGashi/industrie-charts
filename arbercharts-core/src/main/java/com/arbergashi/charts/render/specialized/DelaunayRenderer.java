@@ -1,68 +1,52 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.HitTestUtils;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 
-import java.awt.*;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
  * Delaunay-like renderer (approximation): connects each point to nearby neighbors using a spatial grid
- * or a KD-tree for large datasets. This reduces O(n^2) behavior while keeping the rendering path allocation-light.
- * For very large datasets, it precomputes edges off-EDT and caches them to avoid jank.
- *
- * @author Arber Gashi
- * @version 1.0.0
- * @since 2026-01-01
+ * or a KD-tree for large datasets. Headless implementation using ArberCanvas only.
+  * @author Arber Gashi
+  * @version 1.7.0
+  * @since 2026-01-30
  */
-public class DelaunayRenderer extends BaseRenderer {
+public final class DelaunayRenderer extends BaseRenderer {
 
-    // background precomputation
     private static final ExecutorService BACKGROUND = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().factory());
-    private static final long COMPUTE_COOLDOWN_NANOS = 250_000_000L; // 250ms
+    private static final long COMPUTE_COOLDOWN_NANOS = 250_000_000L;
 
     static {
         RendererRegistry.register("delaunay", new RendererDescriptor("delaunay", "renderer.delaunay", "/icons/delaunay.svg"), DelaunayRenderer::new);
     }
 
-    private KDTree buildKdTree(double[] sxs, double[] sys) {
-        return new KDTree(sxs, sys);
-    }
-
     private transient final AtomicBoolean computing = new AtomicBoolean(false);
-    // Reusable mapping buffer for allocation-free pixel mapping.
     private final double[] pix = new double[2];
-    /**
-     * Monotonic stamp to ensure only the newest background result becomes visible.
-     * Guards against the following race: key A compute starts, then key B compute starts and finishes,
-     * then key A finishes later and overwrites the cache.
-     */
     private transient final AtomicLong computeStamp = new AtomicLong();
     private transient double[] xs;
     private transient double[] ys;
     private transient volatile int[] cachedEdgeA;
     private transient volatile int[] cachedEdgeB;
     private transient volatile int cachedKey = 0;
-    // Reusable buffers for grid-based neighbor search (avoid ArrayList / per-point allocations)
     private transient int[] gridHead;
     private transient int[] gridNext;
     private transient double[] bestD;
     private transient int[] bestIdx;
-    // Throttle background recomputation to avoid p95 spikes from frequent submits.
     private transient volatile long lastComputeNanos;
 
     public DelaunayRenderer() {
@@ -70,7 +54,7 @@ public class DelaunayRenderer extends BaseRenderer {
     }
 
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
         if (xs == null || xs.length < n) {
@@ -78,7 +62,6 @@ public class DelaunayRenderer extends BaseRenderer {
             ys = RendererAllocationCache.getDoubleArray(this, "ys", n);
         }
 
-        // map points to pixel coordinates (allocation-free)
         double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY;
         double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < n; i++) {
@@ -93,58 +76,26 @@ public class DelaunayRenderer extends BaseRenderer {
             if (py > maxY) maxY = py;
         }
 
-        Stroke prev = g2.getStroke();
-        Color prevColor = g2.getColor();
-        g2.setStroke(getSeriesStroke());
-        Color baseColor = getSeriesColor(model);
+        canvas.setStroke(getSeriesStrokeWidth());
+        ArberColor baseColor = getSeriesColor(model);
         if (!isMultiColor()) {
-            g2.setColor(baseColor);
+            canvas.setColor(baseColor);
         }
 
-        final int k = 6;
-        Rectangle clip = g2.getClipBounds();
-        int kEffective = k;
-        if (n > 50_000) kEffective = 3;
-        if (n > 200_000) kEffective = 2;
+        int k = 6;
+        if (n > 50_000) k = 3;
+        if (n > 200_000) k = 2;
+        final int kFinal = k;
 
-        // For very large datasets, prefer using a precomputed edge set (built off-EDT)
         int sampleLimit = 5000;
-        Rectangle2D b = context.plotBounds();
-        // Key should be stable and cheap: avoid hashing Color objects.
-        int key = Objects.hash(n, (int) b.getX(), (int) b.getY(), (int) b.getWidth(), (int) b.getHeight());
+        ArberRect b = context.getPlotBounds();
+        int key = java.util.Objects.hash(n, (int) b.x(), (int) b.y(), (int) b.width(), (int) b.height());
 
         if (n > 800) {
             if (cachedEdgeA != null && cachedKey == key) {
-                // draw cached edges
-                int[] ea = cachedEdgeA;
-                int[] eb = cachedEdgeB;
-                int ec = Math.min(ea.length, eb.length);
-                for (int ei = 0; ei < ec; ei++) {
-                    int a = ea[ei];
-                    int b1 = eb[ei];
-                    if ((a | b1) < 0 || a >= n || b1 >= n) continue;
-                    double x1 = xs[a], y1 = ys[a], x2 = xs[b1], y2 = ys[b1];
-                    if (clip != null) {
-                        if ((x1 < clip.getX() && x2 < clip.getX()) || (x1 > clip.getX() + clip.getWidth() && x2 > clip.getX() + clip.getWidth())
-                                || (y1 < clip.getY() && y2 < clip.getY()) || (y1 > clip.getY() + clip.getHeight() && y2 > clip.getY() + clip.getHeight())) {
-                            continue;
-                        }
-                    }
-                    double dx = x1 - x2, dy = y1 - y2;
-                    if (dx * dx + dy * dy > 1e7) continue;
-                    if (isMultiColor()) {
-                        Color edge = themeSeries(context, a);
-                        if (edge == null) edge = baseColor;
-                        g2.setColor(edge);
-                    }
-                    g2.draw(getLine(x1, y1, x2, y2));
-                }
-                g2.setColor(prevColor);
-                g2.setStroke(prev);
+                drawCachedEdges(canvas, context, baseColor, n);
                 return;
             }
-
-            // Trigger background compute only if cache is missing, not already computing, and cooldown elapsed.
             if (cachedKey != key) {
                 long now = System.nanoTime();
                 if (!computing.get() && (now - lastComputeNanos) > COMPUTE_COOLDOWN_NANOS && computing.compareAndSet(false, true)) {
@@ -152,7 +103,6 @@ public class DelaunayRenderer extends BaseRenderer {
                     final int keyFinal = key;
                     final long stamp = computeStamp.incrementAndGet();
 
-                    // Snapshot inputs for the background computation *now*.
                     final int step;
                     final int m;
                     if (n > sampleLimit) {
@@ -163,9 +113,9 @@ public class DelaunayRenderer extends BaseRenderer {
                         m = n;
                     }
 
-                    final double[] sxs = com.arbergashi.charts.tools.RendererAllocationCache.getDoubleArray(this, "delaunay.snap.sxs", m);
-                    final double[] sys = com.arbergashi.charts.tools.RendererAllocationCache.getDoubleArray(this, "delaunay.snap.sys", m);
-                    final int[] originalIdx = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "delaunay.snap.idx", m);
+                    final double[] sxs = RendererAllocationCache.getDoubleArray(this, "delaunay.snap.sxs", m);
+                    final double[] sys = RendererAllocationCache.getDoubleArray(this, "delaunay.snap.sys", m);
+                    final int[] originalIdx = RendererAllocationCache.getIntArray(this, "delaunay.snap.idx", m);
 
                     int si = 0;
                     for (int i = 0; i < n; i += step) {
@@ -177,19 +127,17 @@ public class DelaunayRenderer extends BaseRenderer {
                     }
 
                     final int siFinal = si;
-
-                    BACKGROUND.submit(() -> computeDelaunayBackground(sxs, sys, originalIdx, siFinal, stamp, keyFinal, k));
+                    BACKGROUND.submit(() -> getComputedDelaunayBackground(sxs, sys, originalIdx, siFinal, stamp, keyFinal, kFinal));
                 }
             }
         }
 
-            if (n > sampleLimit) {
-            // create an index sample of size sampleLimit evenly
+        if (n > sampleLimit) {
             int step = Math.max(1, n / sampleLimit);
             int m = (n + step - 1) / step;
-            double[] sxs = com.arbergashi.charts.tools.RendererAllocationCache.getDoubleArray(this, "delaunay.sample.sxs", m);
-            double[] sys = com.arbergashi.charts.tools.RendererAllocationCache.getDoubleArray(this, "delaunay.sample.sys", m);
-            int[] originalIdx = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "delaunay.sample.idx", m);
+            double[] sxs = RendererAllocationCache.getDoubleArray(this, "delaunay.sample.sxs", m);
+            double[] sys = RendererAllocationCache.getDoubleArray(this, "delaunay.sample.sys", m);
+            int[] originalIdx = RendererAllocationCache.getIntArray(this, "delaunay.sample.idx", m);
             int si = 0;
             for (int i = 0; i < n; i += step) {
                 sxs[si] = xs[i];
@@ -197,24 +145,23 @@ public class DelaunayRenderer extends BaseRenderer {
                 originalIdx[si] = i;
                 si++;
             }
-            KDTree tree = buildKdTree(sxs, sys);
+            KDTree tree = buildKDTree(sxs, sys);
             for (int i = 0; i < si; i++) {
-                int[] neighbors = tree.kNearest(i, kEffective + 1);
+                int[] neighbors = tree.kNearest(i, k + 1);
                 if (neighbors == null) continue;
                 for (int idx : neighbors) {
                     if (idx <= i) continue;
                     int a = originalIdx[i];
                     int b1 = originalIdx[idx];
                     if (isMultiColor()) {
-                        Color edge = themeSeries(context, a);
+                        ArberColor edge = themeSeries(context, a);
                         if (edge == null) edge = baseColor;
-                        g2.setColor(edge);
+                        canvas.setColor(edge);
                     }
-                    g2.draw(getLine(xs[a], ys[a], xs[b1], ys[b1]));
+                    drawLine(canvas, xs[a], ys[a], xs[b1], ys[b1]);
                 }
             }
         } else {
-            // grid-based neighbor search (optimized with primitive linked lists)
             double width = Math.max(1.0, maxX - minX);
             double height = Math.max(1.0, maxY - minY);
             double cellSize = Math.sqrt((width * height) / (double) n) * 1.5;
@@ -225,16 +172,14 @@ public class DelaunayRenderer extends BaseRenderer {
             int cellCount = cols * rows;
 
             if (gridHead == null || gridHead.length < cellCount) {
-                gridHead = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "delaunay.gridHead", cellCount);
+                gridHead = RendererAllocationCache.getIntArray(this, "delaunay.gridHead", cellCount);
             }
-            // reset heads
             Arrays.fill(gridHead, 0, cellCount, -1);
 
             if (gridNext == null || gridNext.length < n) {
-                gridNext = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "delaunay.gridNext", n);
+                gridNext = RendererAllocationCache.getIntArray(this, "delaunay.gridNext", n);
             }
 
-            // Build linked lists: push each point onto its cell bucket
             for (int i = 0; i < n; i++) {
                 int cx = (int) ((xs[i] - minX) / cellSize);
                 int cy = (int) ((ys[i] - minY) / cellSize);
@@ -248,8 +193,8 @@ public class DelaunayRenderer extends BaseRenderer {
             }
 
             if (bestD == null || bestD.length < k) {
-                bestD = com.arbergashi.charts.tools.RendererAllocationCache.getDoubleArray(this, "delaunay.bestD", k);
-                bestIdx = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "delaunay.bestIdx", k);
+                bestD = RendererAllocationCache.getDoubleArray(this, "delaunay.bestD", k);
+                bestIdx = RendererAllocationCache.getIntArray(this, "delaunay.bestIdx", k);
             }
 
             for (int i = 0; i < n; i++) {
@@ -295,29 +240,46 @@ public class DelaunayRenderer extends BaseRenderer {
                 for (int bi = 0; bi < k; bi++) {
                     int j = bestIdx[bi];
                     if (j <= i) continue;
-                    double x1 = xs[i], y1 = ys[i], x2 = xs[j], y2 = ys[j];
-                    if (clip != null) {
-                        if ((x1 < clip.getX() && x2 < clip.getX()) || (x1 > clip.getX() + clip.getWidth() && x2 > clip.getX() + clip.getWidth())
-                                || (y1 < clip.getY() && y2 < clip.getY()) || (y1 > clip.getY() + clip.getHeight() && y2 > clip.getY() + clip.getHeight())) {
-                            continue;
-                        }
-                    }
                     if (isMultiColor()) {
-                        Color edge = themeSeries(context, i);
+                        ArberColor edge = themeSeries(context, i);
                         if (edge == null) edge = baseColor;
-                        g2.setColor(edge);
+                        canvas.setColor(edge);
                     }
-                    g2.draw(getLine(x1, y1, x2, y2));
+                    drawLine(canvas, xs[i], ys[i], xs[j], ys[j]);
                 }
             }
         }
+    }
 
-        g2.setColor(prevColor);
-        g2.setStroke(prev);
+    private void drawCachedEdges(ArberCanvas canvas, PlotContext context, ArberColor baseColor, int n) {
+        int[] ea = cachedEdgeA;
+        int[] eb = cachedEdgeB;
+        int ec = Math.min(ea.length, eb.length);
+        for (int ei = 0; ei < ec; ei++) {
+            int a = ea[ei];
+            int b1 = eb[ei];
+            if ((a | b1) < 0 || a >= n || b1 >= n) continue;
+            if (isMultiColor()) {
+                ArberColor edge = themeSeries(context, a);
+                if (edge == null) edge = baseColor;
+                canvas.setColor(edge);
+            }
+            drawLine(canvas, xs[a], ys[a], xs[b1], ys[b1]);
+        }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        float[] xs = RendererAllocationCache.getFloatArray(this, "delaunay.line.x", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "delaunay.line.y", 2);
+        xs[0] = (float) x1;
+        ys[0] = (float) y1;
+        xs[1] = (float) x2;
+        ys[1] = (float) y2;
+        canvas.drawPolyline(xs, ys, 2);
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         return HitTestUtils.nearestPointIndex(pixel, model, context);
     }
 
@@ -326,15 +288,13 @@ public class DelaunayRenderer extends BaseRenderer {
         return this;
     }
 
-    // --- Simple KD-tree implementation for 2D points for k-NN queries ---
-    private void computeDelaunayBackground(final double[] sxsBuf, final double[] sysBuf, final int[] originalIdxBuf, final int siFinal, final long stamp, final int keyFinal, final int k) {
+    private void getComputedDelaunayBackground(final double[] sxsBuf, final double[] sysBuf, final int[] originalIdxBuf, final int siFinal, final long stamp, final int keyFinal, final int k) {
         try {
-            // Copy snapshots into thread-local arrays (allocations happen off-EDT)
             final double[] sxs = Arrays.copyOf(sxsBuf, siFinal);
             final double[] sys = Arrays.copyOf(sysBuf, siFinal);
             final int[] originalIdx = Arrays.copyOf(originalIdxBuf, siFinal);
 
-            KDTree tree = new KDTree(sxs, sys);
+            KDTree tree = buildKDTree(sxs, sys);
 
             int maxEdges = Math.max(1, siFinal * k);
             int[] ea = new int[maxEdges];
@@ -358,7 +318,6 @@ public class DelaunayRenderer extends BaseRenderer {
                 eb = Arrays.copyOf(eb, ec);
             }
 
-            // Publish only if still newest.
             if (stamp == computeStamp.get()) {
                 cachedEdgeA = ea;
                 cachedEdgeB = eb;
@@ -370,9 +329,14 @@ public class DelaunayRenderer extends BaseRenderer {
             computing.set(false);
         }
     }
+
+    private static KDTree buildKDTree(double[] xs, double[] ys) {
+        return new KDTree(xs, ys);
+    }
+
     private static final class KDTree {
         private final int n;
-        private final int[] idx; // permutation of indices in tree order
+        private final int[] idx;
         private final double[] xs, ys;
         private final Node root;
 
@@ -408,10 +372,8 @@ public class DelaunayRenderer extends BaseRenderer {
             return node;
         }
 
-        // find k nearest neighbors (return indices array) to point at index 'query'
         int[] kNearest(int queryIndex, int k) {
             if (n == 0) return null;
-            // The renderer uses small k (<=7). Use a primitive bounded buffer to avoid PriorityQueue/Stream allocations.
             if (k <= 8) {
                 double qx = xs[queryIndex], qy = ys[queryIndex];
                 SmallKNN knn = new SmallKNN(k);
@@ -459,10 +421,6 @@ public class DelaunayRenderer extends BaseRenderer {
             }
         }
 
-        /**
-         * In-place quickselect so that arr[k] is the element that would be at that position
-         * if the range were sorted by the selected dimension.
-         */
         private void nthElement(int[] arr, int left, int right, int k, int dim) {
             int l = left;
             int r = right;
@@ -499,10 +457,6 @@ public class DelaunayRenderer extends BaseRenderer {
             return (dim == 0) ? xs[index] : ys[index];
         }
 
-        /**
-         * Fixed-size nearest neighbor buffer for small k.
-         * Keeps entries sorted by distance descending at insertion time (O(k)).
-         */
         private static final class SmallKNN {
             final int cap;
             final int[] idx;
@@ -522,108 +476,127 @@ public class DelaunayRenderer extends BaseRenderer {
                     idx[size] = i;
                     dist[size] = d;
                     size++;
-                    // bubble up to keep dist descending
-                    for (int p = size - 1; p > 0; p--) {
-                        if (dist[p] > dist[p - 1]) {
-                            swap(p, p - 1);
-                        } else {
-                            break;
-                        }
-                    }
+                    bubbleUp();
                     return;
                 }
-
-                // buffer full: only insert if better than current worst (which is dist[0] because descending)
                 if (d >= dist[0]) return;
-
                 idx[0] = i;
                 dist[0] = d;
-                // push down to restore descending order
-                for (int p = 0; p < cap - 1; p++) {
-                    if (dist[p] < dist[p + 1]) {
-                        swap(p, p + 1);
-                    } else {
-                        break;
-                    }
-                }
-            }
-
-            double maxDistance() {
-                return size == 0 ? Double.POSITIVE_INFINITY : dist[0];
+                bubbleDown();
             }
 
             int[] toArraySorted() {
-                int[] out = Arrays.copyOf(idx, size);
-                Arrays.sort(out);
+                int[] out = new int[size];
+                System.arraycopy(idx, 0, out, 0, size);
                 return out;
             }
 
-            private void swap(int a, int b) {
-                int ti = idx[a];
-                idx[a] = idx[b];
-                idx[b] = ti;
-                double td = dist[a];
-                dist[a] = dist[b];
-                dist[b] = td;
+            double maxDistance() {
+                return (size == 0) ? Double.POSITIVE_INFINITY : dist[0];
+            }
+
+            private void bubbleUp() {
+                int i = size - 1;
+                while (i > 0) {
+                    int p = (i - 1) >>> 1;
+                    if (dist[i] <= dist[p]) break;
+                    swap(idx, i, p);
+                    double t = dist[i]; dist[i] = dist[p]; dist[p] = t;
+                    i = p;
+                }
+            }
+
+            private void bubbleDown() {
+                int i = 0;
+                while (true) {
+                    int l = (i << 1) + 1;
+                    int r = l + 1;
+                    if (l >= size) break;
+                    int m = (r < size && dist[r] > dist[l]) ? r : l;
+                    if (dist[i] >= dist[m]) break;
+                    swap(idx, i, m);
+                    double t = dist[i]; dist[i] = dist[m]; dist[m] = t;
+                    i = m;
+                }
             }
         }
 
-        private static final class Node {
-            int i;
-            Node left, right;
-
-            Node(int i) {
-                this.i = i;
-            }
-        }
-
-        // small bounded max-heap of (index, distance)
         private static final class BoundedMaxHeap {
             private final int cap;
-            private final PriorityQueue<Entry> pq;
+            private final int[] idx;
+            private final double[] dist;
+            private int size;
 
             BoundedMaxHeap(int cap) {
-                this.cap = cap;
-                this.pq = new PriorityQueue<>((a, b) -> Double.compare(b.dist, a.dist));
-            }
-
-            void offer(int idx, double dist) {
-                if (cap <= 0) return;
-                if (pq.size() < cap) {
-                    pq.add(new Entry(idx, dist));
-                    return;
-                }
-                Entry head = pq.peek();
-                if (head != null && dist < head.dist) {
-                    pq.poll();
-                    pq.add(new Entry(idx, dist));
-                }
-            }
-
-            int size() {
-                return pq.size();
+                this.cap = Math.max(1, cap);
+                this.idx = new int[this.cap];
+                this.dist = new double[this.cap];
+                this.size = 0;
             }
 
             int capacity() {
                 return cap;
             }
 
+            int size() {
+                return size;
+            }
+
+            void offer(int i, double d) {
+                if (size < cap) {
+                    idx[size] = i;
+                    dist[size] = d;
+                    size++;
+                    bubbleUp();
+                    return;
+                }
+                if (d >= dist[0]) return;
+                idx[0] = i;
+                dist[0] = d;
+                bubbleDown();
+            }
+
             double maxDistance() {
-                return pq.isEmpty() ? Double.POSITIVE_INFINITY : pq.peek().dist;
+                return (size == 0) ? Double.POSITIVE_INFINITY : dist[0];
             }
 
             int[] toArray() {
-                // Avoid streams allocations.
-                int sz = pq.size();
-                int[] out = new int[sz];
-                int i = 0;
-                for (Entry e : pq) out[i++] = e.idx;
-                Arrays.sort(out);
+                int[] out = new int[size];
+                System.arraycopy(idx, 0, out, 0, size);
                 return out;
             }
 
-            record Entry(int idx, double dist) {
+            private void bubbleUp() {
+                int i = size - 1;
+                while (i > 0) {
+                    int p = (i - 1) >>> 1;
+                    if (dist[i] <= dist[p]) break;
+                    swap(idx, i, p);
+                    double t = dist[i]; dist[i] = dist[p]; dist[p] = t;
+                    i = p;
+                }
             }
+
+            private void bubbleDown() {
+                int i = 0;
+                while (true) {
+                    int l = (i << 1) + 1;
+                    int r = l + 1;
+                    if (l >= size) break;
+                    int m = (r < size && dist[r] > dist[l]) ? r : l;
+                    if (dist[i] >= dist[m]) break;
+                    swap(idx, i, m);
+                    double t = dist[i]; dist[i] = dist[m]; dist[m] = t;
+                    i = m;
+                }
+            }
+        }
+
+        private static final class Node {
+            final int i;
+            Node left;
+            Node right;
+            Node(int i) { this.i = i; }
         }
     }
 }

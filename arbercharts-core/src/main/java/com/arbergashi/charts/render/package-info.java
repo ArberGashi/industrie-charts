@@ -1,11 +1,15 @@
 /**
- * Rendering layer of the ArberCharts framework.
+ * Rendering layer for ArberCharts.
  *
- * <p>Renderers are responsible for drawing a {@link com.arbergashi.charts.model.ChartModel}
- * into a plot area defined by {@link com.arbergashi.charts.api.PlotContext} using colors and
- * fonts from {@link com.arbergashi.charts.api.ChartTheme}.</p>
+ * <p>Contains renderer implementations organized by domain (financial, medical, statistical,
+ * circular, specialized, standard). Renderers are designed for zero-allocation execution and
+ * should honor PlotContext clipping and scaling contracts.</p>
  *
- * <p><b>Contract:</b> Renderers must be fast, allocation-aware, and must not depend on demo-only
- * resources or global theme state.</p>
+ * <p>Thread-safety: Renderers may be reused across frames and must avoid shared mutable state
+ * unless explicitly documented. Per-instance caches should remain thread-confined.</p>
+ *
+ * @author Arber Gashi
+ * @version 1.7.0
+ * @since 2026-01-30
  */
 package com.arbergashi.charts.render;

@@ -3,15 +3,15 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
+import com.arbergashi.charts.util.ColorRegistry;
 
-import java.awt.*;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -20,37 +20,44 @@ import java.util.Optional;
  * <p>Performance policy:</p>
  * <ul>
  *   <li>No allocations in the hot drawing loop.</li>
- *   <li>No usage of {@link java.awt.geom.Area}.</li>
+ *   <li>No usage of platform-specific geometry classes.</li>
  *   <li>Hit testing uses a reusable rectangle buffer.</li>
  * </ul>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class HighLowRenderer extends BaseRenderer {
 
     private final double[] pixMid = new double[2];
-    private transient Rectangle2D.Double[] hitBoxBuffer = new Rectangle2D.Double[0];
+    private transient double[] hitX = new double[0];
+    private transient double[] hitY = new double[0];
+    private transient double[] hitW = new double[0];
+    private transient double[] hitH = new double[0];
     private transient int hitBoxCount;
+
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     public HighLowRenderer() {
         super("highlow");
     }
 
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
         ensureHitBoxCapacity(n);
         hitBoxCount = 0;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color bullish = theme.getBullishColor();
-        final Color bearish = theme.getBearishColor();
-        final Color tickBullish = ColorUtils.adjustBrightness(bullish, 0.7f);
-        final Color tickBearish = ColorUtils.adjustBrightness(bearish, 0.7f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor bullish = theme.getBullishColor();
+        final ArberColor bearish = theme.getBearishColor();
+        final ArberColor tickBullish = ColorRegistry.adjustBrightness(bullish, 0.7f);
+        final ArberColor tickBearish = ColorRegistry.adjustBrightness(bearish, 0.7f);
 
         final float mainStrokeWidth = ChartScale.scale(2.0f);
         final float tickStrokeWidth = ChartScale.scale(1.2f);
@@ -60,14 +67,6 @@ public final class HighLowRenderer extends BaseRenderer {
         final double[] pixHigh = pBuffer();
         final double[] pixLow = pBuffer4();
 
-        final Stroke mainStroke = getCachedStroke(mainStrokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-        final Stroke tickStroke = getCachedStroke(tickStrokeWidth, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER);
-
-        // clip optimization for x
-        final Rectangle clip = g.getClipBounds();
-        final double clipLeft = (clip != null) ? clip.getX() : Double.NEGATIVE_INFINITY;
-        final double clipRight = (clip != null) ? clip.getMaxX() : Double.POSITIVE_INFINITY;
-
         for (int i = 0; i < n; i++) {
             final double xData = model.getX(i);
 
@@ -76,76 +75,64 @@ public final class HighLowRenderer extends BaseRenderer {
             context.mapToPixel(xData, model.getY(i), pixMid);
 
             final double x = pixHigh[0];
-            if (x < clipLeft - hitWidth || x > clipRight + hitWidth) continue;
 
             final double yHigh = pixHigh[1];
             final double yLow = pixLow[1];
             final double open = model.getWeight(i);
             final double close = model.getY(i);
             final boolean up = close >= open;
-            final Color mainColor = up ? bullish : bearish;
-            final Color tickColor = up ? tickBullish : tickBearish;
+            final ArberColor mainColor = up ? bullish : bearish;
+            final ArberColor tickColor = up ? tickBullish : tickBearish;
 
-            // main wick
-            g.setColor(mainColor);
-            g.setStroke(mainStroke);
-            g.draw(getLine(x, yHigh, x, yLow));
+            canvas.setStroke(mainStrokeWidth);
+            canvas.setColor(mainColor);
+            drawLine(canvas, x, yHigh, x, yLow);
 
-            // ticks
-            g.setStroke(tickStroke);
-            g.setColor(tickColor);
-            g.draw(getLine(x - tickHalfWidth, yHigh, x + tickHalfWidth, yHigh));
-            g.draw(getLine(x - tickHalfWidth, yLow, x + tickHalfWidth, yLow));
+            canvas.setStroke(tickStrokeWidth);
+            canvas.setColor(tickColor);
+            drawLine(canvas, x - tickHalfWidth, yHigh, x + tickHalfWidth, yHigh);
+            drawLine(canvas, x - tickHalfWidth, yLow, x + tickHalfWidth, yLow);
 
-            // label
-            String label = model.getLabel(i);
-            if (label != null && !label.isEmpty()) {
-                renderHighLowLabel(g, label, x, pixMid[1], tickHalfWidth);
-            }
-
-            // hit box in reusable buffer
-            final Rectangle2D.Double hb = hitBoxBuffer[hitBoxCount++];
-            hb.x = x - hitWidth / 2;
-            hb.y = Math.min(yHigh, yLow);
-            hb.width = hitWidth;
-            hb.height = Math.max(Math.abs(yLow - yHigh), 1.0);
+            int hb = hitBoxCount++;
+            hitX[hb] = x - hitWidth / 2.0;
+            hitY[hb] = Math.min(yHigh, yLow);
+            hitW[hb] = hitWidth;
+            hitH[hb] = Math.max(Math.abs(yLow - yHigh), 1.0);
         }
     }
 
-    private void renderHighLowLabel(Graphics2D g, String label, double x, double yMid, double tickOffset) {
-        final Font currentFont = Objects.requireNonNullElseGet(g.getFont(),
-                () -> new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-
-        Font font = currentFont.deriveFont(Font.BOLD, ChartScale.uiFontSize(currentFont, 10.0f));
-        Color color = getTheme().getForeground();
-
-        final float textX = (float) (x + tickOffset + ChartScale.scale(6.0));
-        final float textY = (float) (yMid);
-
-        drawLabel(g, label, font, color, textX, textY);
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        lineX[0] = (float) x1;
+        lineX[1] = (float) x2;
+        lineY[0] = (float) y1;
+        lineY[1] = (float) y2;
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
-    public Shape getRenderedShape(ChartModel model, PlotContext context) {
-        return context.plotBounds();
+    public Object getRenderedShape(ChartModel model, PlotContext context) {
+        return context.getPlotBounds();
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         final int n = hitBoxCount;
         if (n == 0) return Optional.empty();
 
         for (int i = 0; i < n; i++) {
-            if (hitBoxBuffer[i].contains(pixel)) return Optional.of(i);
+            double x = hitX[i];
+            double y = hitY[i];
+            if (pixel.x() >= x && pixel.x() <= x + hitW[i] && pixel.y() >= y && pixel.y() <= y + hitH[i]) {
+                return Optional.of(i);
+            }
         }
         return Optional.empty();
     }
 
     private void ensureHitBoxCapacity(int n) {
-        if (hitBoxBuffer.length >= n) return;
-        final Rectangle2D.Double[] next = new Rectangle2D.Double[n];
-        for (int i = 0; i < n; i++) {
-            next[i] = new Rectangle2D.Double();
-        }
-        hitBoxBuffer = next;
+        if (hitX.length >= n) return;
+        hitX = RendererAllocationCache.getDoubleArray(this, "highlow.hit.x", n);
+        hitY = RendererAllocationCache.getDoubleArray(this, "highlow.hit.y", n);
+        hitW = RendererAllocationCache.getDoubleArray(this, "highlow.hit.w", n);
+        hitH = RendererAllocationCache.getDoubleArray(this, "highlow.hit.h", n);
     }
 }

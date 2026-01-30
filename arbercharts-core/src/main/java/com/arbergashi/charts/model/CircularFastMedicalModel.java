@@ -1,13 +1,12 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Circular buffer implementation for high-performance real-time medical data (e.g. ECG, Spirometry).
  * Provides zero-copy, zero-GC access for FastMedicalModel.
  * <p>
- * <b>Design:</b> No ChangeListeners, no legacy API (addPoint, setPoints, etc.).
+ * <b>Design:</b> No ChangeListeners, no legacy API (setPoint, setPoints, etc.).
  * Optimized for DSP and real-time rendering.
  * <p>
  * <b>Important for Renderers:</b> For sweep-erase/monitor visualization, use getSweepIndex() to identify the current write position and avoid drawing a line across the buffer start.
@@ -26,7 +25,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
     private int size = 0;
     private int sweepIndex = 0;
     private String name = "MedicalSeries";
-    private Color color = null;
+    private ArberColor color = null;
 
     public CircularFastMedicalModel(int capacity, int channels) {
         super("CircularMedical", capacity);
@@ -62,7 +61,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
 
     @Override
     public double getX(int index) {
-        checkIndex(index);
+        validateIndex(index);
         int idx = (head - size + index + capacity) % capacity;
         return x[idx];
     }
@@ -80,8 +79,8 @@ public class CircularFastMedicalModel extends FastMedicalModel {
      */
     @Override
     public double getY(int index, int channel) {
-        checkIndex(index);
-        checkChannel(channel);
+        validateIndex(index);
+        validateChannel(channel);
         int idx = (head - size + index + capacity) % capacity;
         return y[channel][idx];
     }
@@ -92,7 +91,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
      */
     @Override
     public double getValue(int index, int component) {
-        checkIndex(index);
+        validateIndex(index);
         if (component == 0) return getX(index);
         if (component >= 1 && component <= channels) return getY(index, component - 1);
         return 0.0;
@@ -107,7 +106,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
      * Returns the internal array for a channel (DSP/filter operations, Read-Only!).
      */
     public double[] getRawChannelArray(int channel) {
-        checkChannel(channel);
+        validateChannel(channel);
         return y[channel];
     }
 
@@ -128,18 +127,20 @@ public class CircularFastMedicalModel extends FastMedicalModel {
         return name;
     }
 
-    public void setName(String name) {
+    public CircularFastMedicalModel setName(String name) {
         this.name = name;
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
     @Override
-    public void setColor(Color color) {
+    public CircularFastMedicalModel setColor(ArberColor color) {
         this.color = color;
+        return this;
     }
 
 
@@ -151,7 +152,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
     }
 
     @Override
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
         // No listener support (design decision for real-time performance)
     }
 
@@ -161,12 +162,12 @@ public class CircularFastMedicalModel extends FastMedicalModel {
     }
 
     // --- Utility: Defensive index checks ---
-    private void checkIndex(int index) {
+    private void validateIndex(int index) {
         if (index < 0 || index >= size)
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size);
     }
 
-    private void checkChannel(int channel) {
+    private void validateChannel(int channel) {
         if (channel < 0 || channel >= channels)
             throw new IndexOutOfBoundsException("Channel: " + channel + ", Channels: " + channels);
     }
@@ -207,7 +208,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
      * Used for Sweep-Erase/Monitor-Style rendering.
      */
     public double getYRaw(int internalIndex, int channel) {
-        checkChannel(channel);
+        validateChannel(channel);
         if (internalIndex < 0 || internalIndex >= capacity)
             throw new IndexOutOfBoundsException("InternalIndex: " + internalIndex + ", Capacity: " + capacity);
         return y[channel][internalIndex];

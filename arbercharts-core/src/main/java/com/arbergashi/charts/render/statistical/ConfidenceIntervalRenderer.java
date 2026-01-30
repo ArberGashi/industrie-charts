@@ -1,20 +1,19 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
- * Professional, zero-allocation confidence interval renderer.
- *
- * @author Arber Gashi
- * @version 1.0.0
- * @since 2025-06-01
+ * Professional, zero-allocation confidence interval renderer (headless).
+  * @author Arber Gashi
+  * @version 1.7.0
+  * @since 2026-01-30
  */
 public class ConfidenceIntervalRenderer extends BaseRenderer {
 
@@ -22,95 +21,78 @@ public class ConfidenceIntervalRenderer extends BaseRenderer {
     private final double[] topBuf = new double[2];
     private final double[] bottomBuf = new double[2];
     private final double[] meanBuf = new double[2];
-    private Shape lastRenderedCloud;
-    // Cached dashed stroke for outlines (lazy init)
-    private transient Stroke dashedStroke;
 
     public ConfidenceIntervalRenderer() {
         super("confidence");
     }
 
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
-        final Color meanColor = seriesOrBase(model, context, 0);
-        Color boundsColor = isMultiColor() ? themeSeries(context, 1) : meanColor;
+        final ArberColor meanColor = seriesOrBase(model, context, 0);
+        ArberColor boundsColor = isMultiColor() ? themeSeries(context, 1) : meanColor;
         if (boundsColor == null) boundsColor = meanColor;
 
-        Path2D pth = getPathCache();
-        pth.reset();
+        float[] xs = RendererAllocationCache.getFloatArray(this, "confidence.xs", n * 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "confidence.ys", n * 2);
+        float[] lineX = RendererAllocationCache.getFloatArray(this, "confidence.lineX", n);
+        float[] lineY = RendererAllocationCache.getFloatArray(this, "confidence.lineY", n);
 
-        // Build upper path and draw immediately (uses single shared path cache)
+        int count = 0;
         for (int i = 0; i < n; i++) {
             double x = model.getX(i);
             context.mapToPixel(x, model.getValue(i, 4), topBuf); // max
-            if (i == 0) pth.moveTo(topBuf[0], topBuf[1]);
-            else pth.lineTo(topBuf[0], topBuf[1]);
+            xs[count] = (float) topBuf[0];
+            ys[count] = (float) topBuf[1];
+            count++;
         }
-        // Draw upper path
-        g.setColor(ColorUtils.withAlpha(boundsColor, 0.4f));
-        g.draw(pth);
-
-        // Build lower path and draw
-        pth.reset();
-        for (int i = 0; i < n; i++) {
+        for (int i = n - 1; i >= 0; i--) {
             double x = model.getX(i);
             context.mapToPixel(x, model.getValue(i, 3), bottomBuf); // min
-            if (i == 0) pth.moveTo(bottomBuf[0], bottomBuf[1]);
-            else pth.lineTo(bottomBuf[0], bottomBuf[1]);
+            xs[count] = (float) bottomBuf[0];
+            ys[count] = (float) bottomBuf[1];
+            count++;
         }
-        g.setColor(ColorUtils.withAlpha(boundsColor, 0.4f));
-        g.draw(pth);
 
-        // Build and draw mean line
-        pth.reset();
-        for (int i = 0; i < n; i++) {
-            double x = model.getX(i);
-            context.mapToPixel(x, model.getY(i), meanBuf);
-            if (i == 0) pth.moveTo(meanBuf[0], meanBuf[1]);
-            else pth.lineTo(meanBuf[0], meanBuf[1]);
-        }
-        g.setStroke(getSeriesStroke());
-        g.setColor(meanColor);
-        g.draw(pth);
+        canvas.setColor(ColorUtils.applyAlpha(boundsColor, 0.25f));
+        canvas.fillPolygon(xs, ys, count);
 
-        // Build filled cloud using upper and lower sequences
-        Path2D cloudPath = getPathCache();
-        cloudPath.reset();
-        // upper
+        // upper and lower outlines
+        canvas.setColor(ColorUtils.applyAlpha(boundsColor, 0.4f));
+        canvas.setStroke(ChartScale.scale(1.0f));
+        int lineCount = 0;
         for (int i = 0; i < n; i++) {
             double x = model.getX(i);
             context.mapToPixel(x, model.getValue(i, 4), topBuf);
-            if (i == 0) cloudPath.moveTo(topBuf[0], topBuf[1]);
-            else cloudPath.lineTo(topBuf[0], topBuf[1]);
+            lineX[lineCount] = (float) topBuf[0];
+            lineY[lineCount] = (float) topBuf[1];
+            lineCount++;
         }
-        // lower reversed
-        for (int i = n - 1; i >= 0; i--) {
+        canvas.drawPolyline(lineX, lineY, lineCount);
+
+        lineCount = 0;
+        for (int i = 0; i < n; i++) {
             double x = model.getX(i);
             context.mapToPixel(x, model.getValue(i, 3), bottomBuf);
-            cloudPath.lineTo(bottomBuf[0], bottomBuf[1]);
+            lineX[lineCount] = (float) bottomBuf[0];
+            lineY[lineCount] = (float) bottomBuf[1];
+            lineCount++;
         }
-        cloudPath.closePath();
-        this.lastRenderedCloud = cloudPath;
+        canvas.drawPolyline(lineX, lineY, lineCount);
 
-        g.setPaint(getCachedGradient(boundsColor, (float) (context.plotBounds() == null ? 0 : context.plotBounds().getHeight())));
-        g.fill(cloudPath);
-
-        // Use a cached dashed stroke to avoid allocations
-        if (dashedStroke == null) {
-            float[] dash = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "confidence.dash", 2);
-            dash[0] = ChartScale.scale(5f);
-            dash[1] = ChartScale.scale(3f);
-            dashedStroke = com.arbergashi.charts.tools.RendererAllocationCache.getBasicStroke(this, "confidence.dashedStroke", ChartScale.scale(0.8f), BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1.0f, dash, 0f);
+        // mean line
+        lineCount = 0;
+        for (int i = 0; i < n; i++) {
+            double x = model.getX(i);
+            context.mapToPixel(x, model.getY(i), meanBuf);
+            lineX[lineCount] = (float) meanBuf[0];
+            lineY[lineCount] = (float) meanBuf[1];
+            lineCount++;
         }
-        g.setStroke(dashedStroke);
-        g.setColor(ColorUtils.withAlpha(boundsColor, 0.4f));
-        g.draw(cloudPath);
-    }
-
-    public Shape getRenderedShape(ChartModel model, PlotContext context) {
-        return lastRenderedCloud;
+        canvas.setStroke(getSeriesStrokeWidth());
+        canvas.setColor(meanColor);
+        canvas.drawPolyline(lineX, lineY, lineCount);
     }
 }

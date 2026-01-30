@@ -1,23 +1,24 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
  * Vector Field renderer.
  * Draws a vector field (e.g. gravity/electromagnetism) as a grid of arrows.
  *
- * <p><b>Performance</b>: the draw path is allocation-free (no Point2D/Path objects per arrow).
+ * <p><b>Performance</b>: the draw path is allocation-free (no ArberPoint/Path objects per arrow).
  * The grid resolution can be adjusted for performance vs. detail.</p>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class VectorFieldRenderer extends BaseRenderer {
 
@@ -26,8 +27,6 @@ public class VectorFieldRenderer extends BaseRenderer {
     private final double[] p0 = new double[2];
     private final double[] p1 = new double[2];
     private final double[] vecBuffer = new double[2];
-    // Reusable arrow head path.
-    private final Path2D head = new Path2D.Double(Path2D.WIND_NON_ZERO, 4);
     private int gridResolution = 20;
 
     public VectorFieldRenderer(VectorFieldFunction vectorField) {
@@ -35,28 +34,34 @@ public class VectorFieldRenderer extends BaseRenderer {
         this.vectorField = vectorField;
     }
 
-    public void setGridResolution(int resolution) {
+    public VectorFieldRenderer setGridResolution(int resolution) {
         this.gridResolution = Math.max(5, resolution);
+        return this;
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
-        Rectangle clip = g2.getClipBounds();
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
 
-        double minX = context.minX();
-        double maxX = context.maxX();
-        double minY = context.minY();
-        double maxY = context.maxY();
+        double minX = context.getMinX();
+        double maxX = context.getMaxX();
+        double minY = context.getMinY();
+        double maxY = context.getMaxY();
 
         double stepX = (maxX - minX) / gridResolution;
         double stepY = (maxY - minY) / gridResolution;
 
-        Color base = seriesOrBase(model, context, 0);
-        g2.setColor(base);
-        g2.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
+        ArberColor base = seriesOrBase(model, context, 0);
+        canvas.setColor(base);
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         // Arrow geometry (pixels)
         double arrowSize = ChartScale.scale(5.0);
+        float[] lineX = RendererAllocationCache.getFloatArray(this, "vec.line.x", 2);
+        float[] lineY = RendererAllocationCache.getFloatArray(this, "vec.line.y", 2);
+        float[] headX = RendererAllocationCache.getFloatArray(this, "vec.head.x", 3);
+        float[] headY = RendererAllocationCache.getFloatArray(this, "vec.head.y", 3);
 
         for (int i = 0; i <= gridResolution; i++) {
             double x = minX + i * stepX;
@@ -84,23 +89,19 @@ public class VectorFieldRenderer extends BaseRenderer {
                 double sx = p0[0], sy = p0[1];
                 double ex = p1[0], ey = p1[1];
 
-                if (clip != null) {
-                    // Cheap clip test: if both ends are outside on the same side, skip.
-                    if ((sx < clip.x && ex < clip.x) || (sx > clip.x + clip.width && ex > clip.x + clip.width)
-                            || (sy < clip.y && ey < clip.y) || (sy > clip.y + clip.height && ey > clip.y + clip.height)) {
-                        continue;
-                    }
-                }
-
                 if (isMultiColor()) {
                     int idx = i * (gridResolution + 1) + j;
-                    Color cell = themeSeries(context, idx);
+                    ArberColor cell = themeSeries(context, idx);
                     if (cell == null) cell = base;
-                    g2.setColor(cell);
+                    canvas.setColor(cell);
                 }
 
                 // Main line (int cast is OK for polyline speed)
-                g2.drawLine((int) sx, (int) sy, (int) ex, (int) ey);
+                lineX[0] = (float) sx;
+                lineY[0] = (float) sy;
+                lineX[1] = (float) ex;
+                lineY[1] = (float) ey;
+                canvas.drawPolyline(lineX, lineY, 2);
 
                 // Arrow head without trig: build from normalized screen direction
                 double sdx = ex - sx;
@@ -125,12 +126,13 @@ public class VectorFieldRenderer extends BaseRenderer {
                 double x2 = backX - px * wing;
                 double y2 = backY - py * wing;
 
-                head.reset();
-                head.moveTo(ex, ey);
-                head.lineTo(x1, y1);
-                head.lineTo(x2, y2);
-                head.closePath();
-                g2.fill(head);
+                headX[0] = (float) ex;
+                headY[0] = (float) ey;
+                headX[1] = (float) x1;
+                headY[1] = (float) y1;
+                headX[2] = (float) x2;
+                headY[2] = (float) y2;
+                canvas.fillPolygon(headX, headY, 3);
             }
         }
     }

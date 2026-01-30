@@ -2,15 +2,13 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * Professional MACD indicator renderer.
  * This implementation is zero-allocation and works directly on primitive data.
@@ -18,14 +16,20 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class MACDRenderer extends BaseRenderer {
 
     private final double[] pxA = new double[2];
     private final double[] pxB = new double[2];
 
-    private final Path2D macdPath = new Path2D.Double();
-    private final Path2D signalPath = new Path2D.Double();
+    private transient float[] macdX;
+    private transient float[] macdY;
+    private transient float[] signalX;
+    private transient float[] signalY;
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     // Cached computed series
     private long lastModelStamp = -1;
@@ -44,7 +48,7 @@ public final class MACDRenderer extends BaseRenderer {
         super("macd");
     }
 
-    private static void computeEMA(double[] values, int period, double[] out) {
+    private static void getComputedEMA(double[] values, int period, double[] out) {
         final int n = values.length;
         if (n < period) return;
         final double alpha = 2.0 / (period + 1.0);
@@ -62,7 +66,7 @@ public final class MACDRenderer extends BaseRenderer {
         }
     }
 
-    private static void computeEMAOnArray(double[] src, int start, int end, int period, double[] out) {
+    private static void getComputedEMAOnArray(double[] src, int start, int end, int period, double[] out) {
         if (end - start < period) return;
         final double alpha = 2.0 / (period + 1.0);
 
@@ -79,41 +83,46 @@ public final class MACDRenderer extends BaseRenderer {
         }
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
         ensureCache(model);
         if (cachedPointCount <= 0) return;
 
-        final Rectangle2D viewBounds = g.getClipBounds() != null ? g.getClipBounds() : context.plotBounds();
-        final double leftX = viewBounds.getMinX();
-        final double rightX = viewBounds.getMaxX();
+        final double leftX = context.getPlotBounds().minX();
+        final double rightX = context.getPlotBounds().maxX();
 
-        final double w = context.plotBounds().getWidth();
+        final double w = context.getPlotBounds().getWidth();
         final double barWidth = (w / (double) cachedPointCount) * 0.6;
 
-        final Color macdColor = themeAccent(context);
-        final Color bullishColor = themeBullish(context);
-        final Color bearishColor = themeBearish(context);
-        final Color signalColor = ColorUtils.adjustBrightness(macdColor, 1.2f);
-        final Color bullishHist = ColorUtils.withAlpha(bullishColor, 0.5f);
-        final Color bearishHist = ColorUtils.withAlpha(bearishColor, 0.5f);
+        final ArberColor macdColor = themeAccent(context);
+        final ArberColor bullishColor = themeBullish(context);
+        final ArberColor bearishColor = themeBearish(context);
+        final ArberColor signalColor = ColorRegistry.adjustBrightness(macdColor, 1.2f);
+        final ArberColor bullishHist = ColorRegistry.applyAlpha(bullishColor, 0.5f);
+        final ArberColor bearishHist = ColorRegistry.applyAlpha(bearishColor, 0.5f);
 
         // Zero line
         context.mapToPixel(xValues[0], 0, pxA);
         context.mapToPixel(xValues[cachedPointCount - 1], 0, pxB);
-        g.setColor(themeGrid(context));
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        canvas.setColor(themeGrid(context));
+        canvas.setStroke(ChartScale.scale(1.0f));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // Histogram, MACD, and Signal lines
-        drawHistogram(g, context, barWidth, leftX, rightX, bullishHist, bearishHist);
-        drawLines(g, context, macdColor, signalColor);
+        drawHistogram(canvas, context, barWidth, leftX, rightX, bullishHist, bearishHist);
+        drawLines(canvas, context, macdColor, signalColor);
     }
 
-    private void drawHistogram(Graphics2D g, PlotContext context, double barWidth, double leftX, double rightX, Color bullish, Color bearish) {
+    private void drawHistogram(ArberCanvas canvas, PlotContext context, double barWidth, double leftX, double rightX, ArberColor bullish, ArberColor bearish) {
         for (int i = 0; i < cachedPointCount; i++) {
             final double histogram = histValues[i];
             if (!Double.isFinite(histogram)) continue;
@@ -129,48 +138,54 @@ public final class MACDRenderer extends BaseRenderer {
             final double barHeight = Math.abs(baseY - topY);
             final double y = Math.min(topY, baseY);
 
-            g.setColor(histogram >= 0 ? bullish : bearish);
-            g.fill(getRect(x, y, barWidth, barHeight));
+            canvas.setColor(histogram >= 0 ? bullish : bearish);
+            canvas.fillRect((float) x, (float) y, (float) barWidth, (float) barHeight);
         }
     }
 
-    private void drawLines(Graphics2D g, PlotContext context, Color macdColor, Color signalColor) {
-        macdPath.reset();
-        signalPath.reset();
-        boolean macdMoved = false;
-        boolean signalMoved = false;
+    private void drawLines(ArberCanvas canvas, PlotContext context, ArberColor macdColor, ArberColor signalColor) {
+        int macdCount = 0;
+        int signalCount = 0;
+        ensurePathCapacity(cachedPointCount);
 
         for (int i = 0; i < cachedPointCount; i++) {
             double x = xValues[i];
 
             if (Double.isFinite(macdValues[i])) {
                 context.mapToPixel(x, macdValues[i], pxA);
-                if (!macdMoved) {
-                    macdPath.moveTo(pxA[0], pxA[1]);
-                    macdMoved = true;
-                } else {
-                    macdPath.lineTo(pxA[0], pxA[1]);
-                }
+                macdX[macdCount] = (float) pxA[0];
+                macdY[macdCount] = (float) pxA[1];
+                macdCount++;
             }
 
             if (Double.isFinite(signalValues[i])) {
                 context.mapToPixel(x, signalValues[i], pxB);
-                if (!signalMoved) {
-                    signalPath.moveTo(pxB[0], pxB[1]);
-                    signalMoved = true;
-                } else {
-                    signalPath.lineTo(pxB[0], pxB[1]);
-                }
+                signalX[signalCount] = (float) pxB[0];
+                signalY[signalCount] = (float) pxB[1];
+                signalCount++;
             }
         }
 
-        g.setStroke(getCachedStroke(ChartScale.scale(2.0f)));
-        g.setColor(macdColor);
-        g.draw(macdPath);
+        if (macdCount >= 2) {
+            canvas.setStroke(ChartScale.scale(2.0f));
+            canvas.setColor(macdColor);
+            canvas.drawPolyline(macdX, macdY, macdCount);
+        }
 
-        g.setStroke(getCachedStroke(ChartScale.scale(1.5f)));
-        g.setColor(signalColor);
-        g.draw(signalPath);
+        if (signalCount >= 2) {
+            canvas.setStroke(ChartScale.scale(1.5f));
+            canvas.setColor(signalColor);
+            canvas.drawPolyline(signalX, signalY, signalCount);
+        }
+    }
+
+    private void ensurePathCapacity(int count) {
+        if (macdX == null || macdX.length < count) {
+            macdX = new float[count];
+            macdY = new float[count];
+            signalX = new float[count];
+            signalY = new float[count];
+        }
     }
 
     private void ensureCache(ChartModel model) {
@@ -190,18 +205,26 @@ public final class MACDRenderer extends BaseRenderer {
 
         ensureCapacity(n);
 
-        for (int i = 0; i < n; i++) {
-            xValues[i] = model.getX(i);
-            yValues[i] = model.getY(i);
+        final FinancialChartModel fin = (model instanceof FinancialChartModel) ? (FinancialChartModel) model : null;
+        if (fin != null) {
+            for (int i = 0; i < n; i++) {
+                xValues[i] = model.getX(i);
+                yValues[i] = fin.getClose(i);
+            }
+        } else {
+            for (int i = 0; i < n; i++) {
+                xValues[i] = model.getX(i);
+                yValues[i] = model.getY(i);
+            }
         }
 
-        computeEMA(yValues, 12, emaFast);
-        computeEMA(yValues, 26, emaSlow);
+        getComputedEMA(yValues, 12, emaFast);
+        getComputedEMA(yValues, 26, emaSlow);
 
         for (int i = 0; i < 25; i++) macdValues[i] = Double.NaN;
         for (int i = 25; i < n; i++) macdValues[i] = emaFast[i] - emaSlow[i];
 
-        computeEMAOnArray(macdValues, 25, n, 9, signalValues);
+        getComputedEMAOnArray(macdValues, 25, n, 9, signalValues);
 
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;

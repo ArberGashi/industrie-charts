@@ -32,7 +32,7 @@ class ConcurrentModelTest {
                     long id = counter.getAndIncrement();
                     double x = id;
                     double y = id * 2.0;
-                    model.addPoint(x, y, y - 1.0, y + 1.0, 1.0, Long.toString(id));
+                    model.setPoint(x, y, y - 1.0, y + 1.0, 1.0, Long.toString(id));
                 }
             });
         }
@@ -97,7 +97,7 @@ class ConcurrentModelTest {
                     long id = counter.getAndIncrement();
                     double x = id;
                     double y = id * 2.0;
-                    model.addPoint(x, y, y - 1.0, y + 1.0, 1.0, null);
+                    model.setPoint(x, y, y - 1.0, y + 1.0, 1.0, null);
                 }
             });
         }

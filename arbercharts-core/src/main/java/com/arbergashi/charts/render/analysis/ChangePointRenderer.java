@@ -1,14 +1,13 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.ChartScale;
 /**
  * Change-point detection overlay renderer.
  *
@@ -18,6 +17,8 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ChangePointRenderer extends BaseRenderer {
 
@@ -28,8 +29,10 @@ public final class ChangePointRenderer extends BaseRenderer {
         super("changePoint");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 4) return;
         double[] xData = model.getXData();
@@ -48,13 +51,13 @@ public final class ChangePointRenderer extends BaseRenderer {
 
         double threshold = med * 6.0;
 
-        Color base = seriesOrBase(model, context, 0);
-        Color c = ColorUtils.withAlpha(base, 0.65f);
-        g2.setColor(c);
-        g2.setStroke(getCachedStroke((float) ChartScale.scale(1.0)));
+        ArberColor base = seriesOrBase(model, context, 0);
+        canvas.setColor(base);
+        canvas.setStroke((float) ChartScale.scale(1.0));
 
-        double yTop = context.plotBounds().getY();
-        double yBottom = context.plotBounds().getMaxY();
+        ArberRect bounds = context.getPlotBounds();
+        double yTop = bounds.y();
+        double yBottom = bounds.maxY();
 
         for (int i = 1; i < count; i++) {
             double d = yData[i] - yData[i - 1];
@@ -63,11 +66,17 @@ public final class ChangePointRenderer extends BaseRenderer {
             context.mapToPixel(xData[i], yData[i], pBuffer);
             double x = pBuffer[0];
             if (isMultiColor()) {
-                Color marker = themeSeries(context, i);
+                ArberColor marker = themeSeries(context, i);
                 if (marker == null) marker = base;
-                g2.setColor(ColorUtils.withAlpha(marker, 0.65f));
+                canvas.setColor(marker);
             }
-            g2.draw(getLine(x, yTop, x, yBottom));
+            float[] xs = RendererAllocationCache.getFloatArray(this, "cp.line.x", 2);
+            float[] ys = RendererAllocationCache.getFloatArray(this, "cp.line.y", 2);
+            xs[0] = (float) x;
+            ys[0] = (float) yTop;
+            xs[1] = (float) x;
+            ys[1] = (float) yBottom;
+            canvas.drawPolyline(xs, ys, 2);
         }
     }
 }

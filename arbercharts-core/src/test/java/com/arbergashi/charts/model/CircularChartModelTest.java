@@ -10,11 +10,11 @@ class CircularChartModelTest {
     void overwritesOldestPointWhenCapacityExceeded() {
         CircularChartModel model = new CircularChartModel(4);
 
-        model.addXY(0, 0);
-        model.addXY(1, 10);
-        model.addXY(2, 20);
-        model.addXY(3, 30);
-        model.addXY(4, 40);
+        model.setXY(0, 0);
+        model.setXY(1, 10);
+        model.setXY(2, 20);
+        model.setXY(3, 30);
+        model.setXY(4, 40);
 
         assertEquals(4, model.getPointCount());
         assertEquals(1.0, model.getX(0), 0.0001);

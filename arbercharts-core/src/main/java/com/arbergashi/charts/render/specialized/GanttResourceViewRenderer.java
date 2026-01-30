@@ -1,12 +1,13 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
 
 /**
  * Gantt Resource View: draws tasks as horizontal bars per resource row.
@@ -15,6 +16,7 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class GanttResourceViewRenderer extends BaseRenderer {
 
@@ -26,15 +28,17 @@ public final class GanttResourceViewRenderer extends BaseRenderer {
         super("gantt_resource");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int count = model.getPointCount();
         if (count == 0) return;
 
-        Rectangle bounds = context.plotBounds().getBounds();
-        double height = bounds.getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double height = bounds.height();
 
-        // compute number of resources (y as integer indices)
         int maxResource = 1;
         for (int i = 0; i < count; i++) {
             int r = Math.max(0, (int) Math.round(model.getY(i)));
@@ -42,7 +46,7 @@ public final class GanttResourceViewRenderer extends BaseRenderer {
         }
 
         double rowH = Math.max(12.0, height / Math.max(1, maxResource));
-        g2.setStroke(getSeriesStroke());
+        canvas.setStroke(getSeriesStrokeWidth());
 
         double[] buf = pBuffer();
         for (int i = 0; i < count; i++) {
@@ -54,17 +58,11 @@ public final class GanttResourceViewRenderer extends BaseRenderer {
             double x1 = buf[0];
             context.mapToPixel(end, 0, buf);
             double x2 = buf[0];
-            double y = bounds.getY() + resource * rowH + rowH * 0.15;
+            double y = bounds.y() + resource * rowH + rowH * 0.15;
             double h = rowH * 0.7;
-            Shape rect = getRect(x1, y, Math.max(1.0, x2 - x1), h);
-            Color barColor = seriesOrBase(model, context, i);
-            g2.setColor(barColor);
-            g2.fill(rect);
-            // small label
-            String label = model.getLabel(i);
-            if (label != null && !label.isBlank()) {
-                drawLabel(g2, label, g2.getFont(), themeForeground(context), (float) x1 + 4f, (float) (y + h / 2));
-            }
+            ArberColor barColor = seriesOrBase(model, context, i);
+            canvas.setColor(barColor);
+            canvas.fillRect((float) x1, (float) y, (float) Math.max(1.0, x2 - x1), (float) h);
         }
     }
 }

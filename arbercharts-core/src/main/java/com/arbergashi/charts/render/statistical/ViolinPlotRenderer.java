@@ -1,14 +1,13 @@
 package com.arbergashi.charts.render.statistical;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
 /**
  * ViolinPlotRenderer.
  * Combines box-plot properties with a kernel density estimate (KDE).
@@ -17,6 +16,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-15
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class ViolinPlotRenderer extends BaseRenderer {
 
@@ -24,8 +25,10 @@ public class ViolinPlotRenderer extends BaseRenderer {
         super("violin");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
 
@@ -36,13 +39,13 @@ public class ViolinPlotRenderer extends BaseRenderer {
         double[] maxPix = pBuffer();
 
         for (int i = 0; i < count; i++) {
-            // Each violin gets a distinct color from the theme palette
-            Color violinColor = seriesOrBase(model, context, i);
-            drawViolin(g2, i, model, context, violinColor, maxWidth, centerPix, minPix, maxPix);
+            ArberColor violinColor = seriesOrBase(model, context, i);
+            drawViolin(canvas, i, model, context, violinColor, maxWidth, centerPix, minPix, maxPix);
         }
     }
 
-    private void drawViolin(Graphics2D g2, int idx, ChartModel model, PlotContext context, Color color, double maxWidth, double[] centerPix, double[] minPix, double[] maxPix) {
+    private void drawViolin(ArberCanvas canvas, int idx, ChartModel model, PlotContext context, ArberColor color, double maxWidth,
+                            double[] centerPix, double[] minPix, double[] maxPix) {
         context.mapToPixel(model.getX(idx), model.getY(idx), centerPix);
         context.mapToPixel(model.getX(idx), model.getMin(idx), minPix);
         context.mapToPixel(model.getX(idx), model.getMax(idx), maxPix);
@@ -52,27 +55,29 @@ public class ViolinPlotRenderer extends BaseRenderer {
         double maxY = minPix[1];
         double height = maxY - minY;
 
-        Path2D violin = getPathCache();
-        violin.moveTo(centerX, minY);
+        int segments = 24;
+        int points = segments * 2 + 1;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "violin.x", points);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "violin.y", points);
 
-        violin.curveTo(centerX + maxWidth, minY + height * 0.25,
-                centerX + maxWidth * 0.5, minY + height * 0.75,
-                centerX, maxY);
+        for (int i = 0; i <= segments; i++) {
+            double t = (double) i / segments;
+            double y = minY + height * t;
+            double w = maxWidth * Math.sin(Math.PI * t);
+            xs[i] = (float) (centerX + w);
+            ys[i] = (float) y;
+            xs[points - 1 - i] = (float) (centerX - w);
+            ys[points - 1 - i] = (float) y;
+        }
 
-        violin.curveTo(centerX - maxWidth * 0.5, minY + height * 0.75,
-                centerX - maxWidth, minY + height * 0.25,
-                centerX, minY);
-
-        violin.closePath();
-
-        g2.setColor(ColorUtils.withAlpha(color, 0.4f));
-        g2.fill(violin);
-        g2.setColor(color);
-        g2.setStroke(getCachedStroke(ChartScale.scale(1.5f)));
-        g2.draw(violin);
+        canvas.setColor(ColorUtils.applyAlpha(color, 0.4f));
+        canvas.fillPolygon(xs, ys, points);
+        canvas.setColor(color);
+        canvas.setStroke(ChartScale.scale(1.5f));
+        canvas.drawPolyline(xs, ys, points);
 
         double boxWidth = ChartScale.scale(4.0);
-        g2.setColor(themeBackground(context));
-        g2.fill(getRect(centerX - boxWidth / 2, centerPix[1] - boxWidth, boxWidth, boxWidth * 2));
+        canvas.setColor(themeBackground(context));
+        canvas.fillRect((float) (centerX - boxWidth / 2), (float) (centerPix[1] - boxWidth), (float) boxWidth, (float) (boxWidth * 2));
     }
 }

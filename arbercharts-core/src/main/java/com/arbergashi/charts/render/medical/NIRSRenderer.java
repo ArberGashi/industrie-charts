@@ -1,7 +1,6 @@
 package com.arbergashi.charts.render.medical;
 
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * NIRS renderer: visualizes near-infrared spectroscopy (NIRS) trends.
  * Slow, smoothed curves suitable for long time spans.
@@ -9,11 +8,13 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class NIRSRenderer extends AbstractMedicalSweepRenderer {
     public NIRSRenderer() {
         // Blue/violet, 2.0f stroke width, gap 10 (trend data).
-        super(new Color(100, 100, 200), 2.0f, 10);
+        super(ColorRegistry.of(100, 100, 200, 255), 2.0f, 10);
     }
 
     @Override

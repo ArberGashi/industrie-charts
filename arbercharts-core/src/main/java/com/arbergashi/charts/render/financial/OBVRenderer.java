@@ -3,16 +3,11 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
-
 /**
  * <h1>OBVRenderer - On-Balance Volume</h1>
  *
@@ -48,18 +43,18 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class OBVRenderer extends BaseRenderer {
 
     private final double[] pxA = new double[2];
     private final double[] pxB = new double[2];
 
-    private final Path2D obvPath = new Path2D.Double();
-    private final Path2D posArea = new Path2D.Double();
-    /**
-     * Cached local clip rectangles (mutated per paint, avoids allocations).
-     */
-    private final Rectangle2D.Double clipRect = new Rectangle2D.Double();
+    private transient float[] pathX;
+    private transient float[] pathY;
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
     // Cached indicator arrays
     private transient ChartModel cachedModel;
     private transient int cachedPointCount;
@@ -72,23 +67,23 @@ public final class OBVRenderer extends BaseRenderer {
         super("obv");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
         ensureCache(model);
         if (cachedPointCount <= 0 || xValues == null || obvValues == null) return;
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, cachedPointCount, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, cachedPointCount, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive <= start) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color obvColor = theme.getAccentColor();
-        final Color positiveColor = ColorUtils.withAlpha(theme.getBullishColor(), 0.18f);
-        final Color negativeColor = ColorUtils.withAlpha(theme.getBearishColor(), 0.18f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor obvColor = theme.getAccentColor();
 
         // map baseline y once
         context.mapToPixel(xValues[start], 0, pxA);
@@ -97,73 +92,34 @@ public final class OBVRenderer extends BaseRenderer {
         // Draw zero line (visible slice)
         context.mapToPixel(xValues[start], 0, pxA);
         context.mapToPixel(xValues[endExclusive - 1], 0, pxB);
-        g.setColor(resolveTheme(context).getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        canvas.setColor(getResolvedTheme(context).getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // Build line + area path (area closed to baseline) for visible slice
-        obvPath.reset();
-        posArea.reset();
-
-        context.mapToPixel(xValues[start], obvValues[start], pxB);
-        obvPath.moveTo(pxB[0], pxB[1]);
-
-        posArea.moveTo(pxB[0], baseY);
-        posArea.lineTo(pxB[0], pxB[1]);
-
-        for (int i = start + 1; i < endExclusive; i++) {
+        int count = endExclusive - start;
+        ensurePathCapacity(count);
+        for (int i = start, p = 0; i < endExclusive; i++, p++) {
             context.mapToPixel(xValues[i], obvValues[i], pxB);
-            obvPath.lineTo(pxB[0], pxB[1]);
-            posArea.lineTo(pxB[0], pxB[1]);
+            pathX[p] = (float) pxB[0];
+            pathY[p] = (float) pxB[1];
         }
 
-        // close area back to baseline at last x
-        context.mapToPixel(xValues[endExclusive - 1], 0, pxA);
-        final double lastX = pxA[0];
-        posArea.lineTo(lastX, baseY);
-        posArea.closePath();
+        // Draw line (area fills removed in headless core)
+        canvas.setColor(obvColor);
+        canvas.setStroke(ChartScale.scale(2.5f));
+        canvas.drawPolyline(pathX, pathY, count);
+    }
 
-        // Fill above/below baseline using clip in local coordinates.
-        final Shape oldClip = g.getClip();
-        final AffineTransform oldTx = g.getTransform();
-        try {
-            // translate so that baseline is y=0 in local coordinates
-            g.translate(0, baseY);
-
-            final double bx = context.plotBounds().getX();
-            final double by = context.plotBounds().getY();
-            final double bw = context.plotBounds().getWidth();
-            final double bh = context.plotBounds().getHeight();
-
-            // clip rectangles must be in translated coordinates, hence y -= baseY
-            final double localY = by - baseY;
-
-            // positive part: y < 0 (above baseline)
-            final double posH = -localY;
-            if (posH > 0.0) {
-                clipRect.setRect(bx, localY, bw, posH);
-                g.setClip(clipRect);
-                g.setColor(positiveColor);
-                g.fill(posArea);
-            }
-
-            // negative part: y >= 0 (below baseline)
-            final double negH = bh + Math.max(0.0, localY);
-            if (negH > 0.0) {
-                clipRect.setRect(bx, 0.0, bw, negH);
-                g.setClip(clipRect);
-                g.setColor(negativeColor);
-                g.fill(posArea);
-            }
-        } finally {
-            g.setTransform(oldTx);
-            g.setClip(oldClip);
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
         }
-
-        // Draw line
-        g.setColor(obvColor);
-        g.setStroke(getCachedStroke(ChartScale.scale(2.5f)));
-        g.draw(obvPath);
     }
 
     /**

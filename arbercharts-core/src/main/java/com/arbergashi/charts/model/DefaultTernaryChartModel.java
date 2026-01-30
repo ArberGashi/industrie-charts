@@ -1,10 +1,9 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a ternary chart model.
  *
@@ -19,7 +18,7 @@ public class DefaultTernaryChartModel implements TernaryChartModel {
     private final List<String> componentLabels;
     private final AtomicLong updateStamp = new AtomicLong(0);
     private String name;
-    private Color color;
+    private ArberColor color;
 
     public DefaultTernaryChartModel(List<TernaryPoint> data, List<String> componentLabels) {
         if (data == null) {
@@ -47,20 +46,22 @@ public class DefaultTernaryChartModel implements TernaryChartModel {
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultTernaryChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
     @Override
-    public void setColor(Color color) {
+    public DefaultTernaryChartModel setColor(ArberColor color) {
         this.color = color;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
@@ -81,15 +82,11 @@ public class DefaultTernaryChartModel implements TernaryChartModel {
         return 0;
     }
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException();
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultTernaryChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException();
     }
 
@@ -98,19 +95,34 @@ public class DefaultTernaryChartModel implements TernaryChartModel {
         updateStamp.incrementAndGet();
     }
 
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
     }
 
     public void removeChangeListener(ChartModelListener listener) {
     }
 
     /**
-     * A simple, immutable implementation of TernaryPoint.
+     * A simple implementation of TernaryPoint.
      */
-    public static record DefaultTernaryPoint(double a, double b, double c) implements TernaryPoint {
+    public static final class DefaultTernaryPoint implements TernaryPoint {
+        private double a;
+        private double b;
+        private double c;
+
+        public DefaultTernaryPoint(double a, double b, double c) {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+        }
+
         @Override
         public double getA() {
             return a;
+        }
+
+        public DefaultTernaryPoint setA(double a) {
+            this.a = a;
+        return this;
         }
 
         @Override
@@ -118,9 +130,19 @@ public class DefaultTernaryChartModel implements TernaryChartModel {
             return b;
         }
 
+        public DefaultTernaryPoint setB(double b) {
+            this.b = b;
+        return this;
+        }
+
         @Override
         public double getC() {
             return c;
+        }
+
+        public DefaultTernaryPoint setC(double c) {
+            this.c = c;
+        return this;
         }
     }
 }

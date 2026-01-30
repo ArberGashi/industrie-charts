@@ -1,14 +1,12 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import javax.swing.*;
-import java.awt.*;
-
 /**
  * Linear regression line renderer.
  *
@@ -19,6 +17,8 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class RegressionLineRenderer extends BaseRenderer {
 
@@ -28,8 +28,10 @@ public final class RegressionLineRenderer extends BaseRenderer {
         super("regressionLine");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 2) return;
         double[] xData = model.getXData();
@@ -52,8 +54,8 @@ public final class RegressionLineRenderer extends BaseRenderer {
         double b = (count * sxy - sx * sy) / denom;
         double a = (sy - b * sx) / count;
 
-        double xMin = context.minX();
-        double xMax = context.maxX();
+        double xMin = context.getMinX();
+        double xMax = context.getMaxX();
         double y1 = a + b * xMin;
         double y2 = a + b * xMax;
 
@@ -62,19 +64,23 @@ public final class RegressionLineRenderer extends BaseRenderer {
         context.mapToPixel(xMax, y2, pBuffer);
         double px2 = pBuffer[0], py2 = pBuffer[1];
 
-        Color base = seriesOrBase(model, context, 0);
-        Color accent = isMultiColor() ? themeSeries(context, 1) : base;
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor accent = isMultiColor() ? themeSeries(context, 1) : base;
         if (accent == null) accent = base;
 
-        float w = (UIManager.get("Chart.analysis.lineWidth") instanceof Number nn) ? nn.floatValue() : 2.0f;
+        float w = ChartAssets.getFloat("chart.analysis.lineWidth", 2.0f);
         if (isMultiColor() && accent != base) {
-            g2.setColor(ColorUtils.withAlpha(accent, 0.45f));
-            g2.setStroke(getCachedStroke(ChartScale.scale(w + 0.8f)));
-            g2.draw(getLine(px1, py1, px2, py2));
+            canvas.setColor(accent);
+            canvas.setStroke(ChartScale.scale(w + 0.8f));
+            float[] xs = { (float) px1, (float) px2 };
+            float[] ys = { (float) py1, (float) py2 };
+            canvas.drawPolyline(xs, ys, 2);
         }
 
-        g2.setColor(ColorUtils.withAlpha(base, 0.85f));
-        g2.setStroke(getCachedStroke(ChartScale.scale(w)));
-        g2.draw(getLine(px1, py1, px2, py2));
+        canvas.setColor(base);
+        canvas.setStroke(ChartScale.scale(w));
+        float[] xs = { (float) px1, (float) px2 };
+        float[] ys = { (float) py1, (float) py2 };
+        canvas.drawPolyline(xs, ys, 2);
     }
 }

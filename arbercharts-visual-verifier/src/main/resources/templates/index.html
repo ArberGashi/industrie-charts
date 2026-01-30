@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <head th:replace="fragments/layout :: head('ArberCharts Showcase')"></head>
+  <body data-theme="dark">
+    <header th:replace="fragments/layout :: header('home')"></header>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <h1>ArberCharts Core Showcase</h1>
+          <p>Customer-facing visual verifier that highlights the rendering engine, core architecture, and domain‑specific strengths. Every image is live‑rendered from the same pipeline customers ship to production.</p>
+        </div>
+        <div class="card">
+          <h3>v1.7.0 LTS at a glance</h3>
+          <div class="grid">
+            <div class="pill">158 Renderers</div>
+            <div class="pill">Zero‑GC Pipeline</div>
+            <div class="pill">Java 25</div>
+            <div class="pill">Deterministic Playback</div>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn" data-refresh type="button">Refresh visuals</button>
+            <a class="btn ghost" href="/core">Explore core</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Featured renderers</h2>
+        <div class="grid wide chart-grid">
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Candlestick Suite</h3>
+              <span class="badge">financial</span>
+            </div>
+            <img data-type="candlestick" data-domain="financial" data-points="6000" data-width="920" data-height="520" alt="Candlestick" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Medical Sweep</h3>
+              <span class="badge">medical</span>
+            </div>
+            <img data-type="medical" data-domain="medical" data-points="12000" data-width="920" data-height="520" alt="Medical" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Heatmap Matrix</h3>
+              <span class="badge">analysis</span>
+            </div>
+            <img data-type="heatmap" data-domain="analysis" data-points="4096" data-width="920" data-height="520" alt="Heatmap" />
+          </div>
+          <div class="card">
+            <div class="chart-meta">
+              <h3>Vector Field</h3>
+              <span class="badge">analysis</span>
+            </div>
+            <img data-type="vector" data-domain="analysis" data-points="900" data-width="920" data-height="520" alt="Vector field" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Core capabilities</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Zero‑Allocation Rendering</h3>
+            <p>Heavy renderers reuse buffers and image layers to keep GC pressure close to zero during sustained streaming workloads.</p>
+          </div>
+          <div class="card">
+            <h3>Deterministic Playback</h3>
+            <p>Playback surfaces are stable and reproducible, enabling forensic review, audits, and QA snapshot comparisons.</p>
+          </div>
+          <div class="card">
+            <h3>Bridge‑Agnostic Core</h3>
+            <p>Render once, deploy anywhere: Swing, server pipelines, Compose, Swift, and Qt share the same core logic.</p>
+          </div>
+          <div class="card">
+            <h3>Thread‑Safe Models</h3>
+            <p>Lock‑free readers and deterministic update stamps make it safe to stream data from background threads.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer th:replace="fragments/layout :: footer"></footer>
+    <div th:replace="fragments/layout :: scripts"></div>
+  </body>
+</html>

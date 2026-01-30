@@ -5,44 +5,52 @@ import java.util.List;
 
 /**
  * Represents a node in a hierarchical data structure, used for charts like Sunburst or Treemaps.
- *
- * @param name     The name of the data point (e.g., "Users", "System").
- * @param value    The quantitative value of this node. For parent nodes, this is often the sum of its children.
- * @param children A list of child nodes.
- *
- * @author Arber Gashi
- * @version 1.0.0
- * @since 2025-06-01
+  * @author Arber Gashi
+  * @version 1.7.0
+  * @since 2026-01-30
  */
-public record HierarchicalDataPoint(
-        String name,
-        double value,
-        List<HierarchicalDataPoint> children
-) {
-    /**
-     * Creates a hierarchical data point, ensuring the children list is never null.
-     */
-    public HierarchicalDataPoint {
-        if (children == null) {
-            children = new ArrayList<>();
-        }
+public final class HierarchicalDataPoint {
+    private String name;
+    private double value;
+    private List<HierarchicalDataPoint> children;
+
+    public HierarchicalDataPoint(String name, double value, List<HierarchicalDataPoint> children) {
+        this.name = name;
+        this.value = value;
+        this.children = children != null ? children : new ArrayList<>();
     }
 
-    /**
-     * Convenience constructor for a leaf node (a node with no children).
-     *
-     * @param name  The name of the leaf node.
-     * @param value The value of the leaf node.
-     */
     public HierarchicalDataPoint(String name, double value) {
         this(name, value, new ArrayList<>());
     }
 
-    /**
-     * Checks if this node is a leaf (has no children).
-     *
-     * @return true if this node has no children, false otherwise.
-     */
+    public String getName() {
+        return name;
+    }
+
+    public HierarchicalDataPoint setName(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public HierarchicalDataPoint setValue(double value) {
+        this.value = value;
+        return this;
+    }
+
+    public List<HierarchicalDataPoint> getChildren() {
+        return children;
+    }
+
+    public HierarchicalDataPoint setChildren(List<HierarchicalDataPoint> children) {
+        this.children = children != null ? children : new ArrayList<>();
+        return this;
+    }
+
     public boolean isLeaf() {
         return children.isEmpty();
     }

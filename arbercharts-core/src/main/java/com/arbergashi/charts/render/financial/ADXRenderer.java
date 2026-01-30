@@ -3,14 +3,12 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>ADXRenderer - Average Directional Index</h1>
  *
@@ -31,6 +29,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ADXRenderer extends BaseRenderer {
 
@@ -42,9 +42,10 @@ public final class ADXRenderer extends BaseRenderer {
     private final double[] pxA = new double[2];
     private final double[] pxB = new double[2];
 
-    private final Path2D adxPath = new Path2D.Double();
-    private final Path2D plusPath = new Path2D.Double();
-    private final Path2D minusPath = new Path2D.Double();
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
+    private transient float[] pathX;
+    private transient float[] pathY;
 
     // Cached computed series
     private transient ChartModel cachedModel;
@@ -65,24 +66,26 @@ public final class ADXRenderer extends BaseRenderer {
         super("adx");
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < DEFAULT_PERIOD * 2 + 2) return;
 
         ensureCache(model);
         if (cachedPointCount <= 0 || xValues == null || adxValues == null) return;
 
-        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(g, context, cachedPointCount, 2);
-        final int start = range.start();
-        final int endExclusive = range.endExclusive();
+        final IndicatorRendererSupport.IndexRange range = IndicatorRendererSupport.visibleRange(context, cachedPointCount, 2);
+        final int start = range.getStart();
+        final int endExclusive = range.getEndExclusive();
         if (endExclusive - start < 2) return;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color adxColor = theme.getAccentColor();
-        final Color plusDIColor = theme.getBullishColor();
-        final Color minusDIColor = theme.getBearishColor();
-        final Color weakZoneColor = ColorUtils.withAlpha(theme.getGridColor(), 0.10f);
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor adxColor = theme.getAccentColor();
+        final ArberColor plusDIColor = theme.getBullishColor();
+        final ArberColor minusDIColor = theme.getBearishColor();
+        final ArberColor weakZoneColor = ColorRegistry.applyAlpha(theme.getGridColor(), 0.10f);
 
         // Weak zone (0..25)
         context.mapToPixel(xValues[start], 0, pxA);
@@ -94,42 +97,56 @@ public final class ADXRenderer extends BaseRenderer {
         context.mapToPixel(xValues[start], WEAK_THRESHOLD, pxA);
         final double y25 = pxA[1];
 
-        g.setColor(weakZoneColor);
-        g.fill(getRect(Math.min(x0, x1), Math.min(y0, y25), Math.abs(x1 - x0), Math.abs(y25 - y0)));
+        canvas.setColor(weakZoneColor);
+        canvas.fillRect((float) Math.min(x0, x1), (float) Math.min(y0, y25), (float) Math.abs(x1 - x0), (float) Math.abs(y25 - y0));
 
         // Threshold lines
-        g.setColor(resolveTheme(context).getGridColor());
-        g.setStroke(getCachedStroke(ChartScale.scale(1.0f)));
-        g.draw(getLine(x0, y25, x1, y25));
+        canvas.setColor(getResolvedTheme(context).getGridColor());
+        canvas.setStroke(ChartScale.scale(1.0f));
+        lineX[0] = (float) x0;
+        lineY[0] = (float) y25;
+        lineX[1] = (float) x1;
+        lineY[1] = (float) y25;
+        canvas.drawPolyline(lineX, lineY, 2);
         context.mapToPixel(xValues[start], STRONG_THRESHOLD, pxA);
         context.mapToPixel(xValues[endExclusive - 1], STRONG_THRESHOLD, pxB);
-        g.draw(getLine(pxA[0], pxA[1], pxB[0], pxB[1]));
+        lineX[0] = (float) pxA[0];
+        lineY[0] = (float) pxA[1];
+        lineX[1] = (float) pxB[0];
+        lineY[1] = (float) pxB[1];
+        canvas.drawPolyline(lineX, lineY, 2);
 
         // -DI, +DI, ADX (foreground)
-        drawSeriesPath(g, minusPath, xValues, minusDIValues, start, endExclusive, context, minusDIColor, 1.5f);
-        drawSeriesPath(g, plusPath, xValues, plusDIValues, start, endExclusive, context, plusDIColor, 1.5f);
-        drawSeriesPath(g, adxPath, xValues, adxValues, start, endExclusive, context, adxColor, 2.5f);
+        drawSeriesPath(canvas, xValues, minusDIValues, start, endExclusive, context, minusDIColor, 1.5f);
+        drawSeriesPath(canvas, xValues, plusDIValues, start, endExclusive, context, plusDIColor, 1.5f);
+        drawSeriesPath(canvas, xValues, adxValues, start, endExclusive, context, adxColor, 2.5f);
     }
 
-    private void drawSeriesPath(Graphics2D g,
-                                Path2D path,
+    private void drawSeriesPath(ArberCanvas canvas,
                                 double[] xs,
                                 double[] ys,
                                 int start,
                                 int endExclusive,
                                 PlotContext context,
-                                Color color,
+                                ArberColor color,
                                 float width) {
-        path.reset();
-        context.mapToPixel(xs[start], ys[start], pxA);
-        path.moveTo(pxA[0], pxA[1]);
-        for (int i = start + 1; i < endExclusive; i++) {
+        int count = endExclusive - start;
+        ensurePathCapacity(count);
+        for (int i = start, p = 0; i < endExclusive; i++, p++) {
             context.mapToPixel(xs[i], ys[i], pxA);
-            path.lineTo(pxA[0], pxA[1]);
+            pathX[p] = (float) pxA[0];
+            pathY[p] = (float) pxA[1];
         }
-        g.setColor(color);
-        g.setStroke(getCachedStroke(ChartScale.scale(width)));
-        g.draw(path);
+        canvas.setColor(color);
+        canvas.setStroke(ChartScale.scale(width));
+        canvas.drawPolyline(pathX, pathY, count);
+    }
+
+    private void ensurePathCapacity(int count) {
+        if (pathX == null || pathX.length < count) {
+            pathX = new float[count];
+            pathY = new float[count];
+        }
     }
 
     private void ensureCache(ChartModel model) {

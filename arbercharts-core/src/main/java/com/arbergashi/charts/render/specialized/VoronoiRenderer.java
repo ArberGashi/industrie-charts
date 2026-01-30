@@ -1,30 +1,28 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
- * Voronoi renderer (optimized): uses a lower-resolution sampling buffer and reuses a backing image.
+ * Voronoi renderer (optimized): uses a lower-resolution sampling buffer and renders as rectangles.
  * <p>
  * Performance notes:
  * <ul>
- *   <li>No {@code new Color(...)} inside the pixel loop (precomputed palette)</li>
- *   <li>No {@code new Point(...)} or repeated {@code mapToPixel(...)} calls inside tight loops</li>
+ *   <li>No per-point allocations in the hot loop</li>
  *   <li>Sampling runs in buffer space directly</li>
  * </ul>
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class VoronoiRenderer extends BaseRenderer {
 
@@ -33,59 +31,59 @@ public final class VoronoiRenderer extends BaseRenderer {
     }
 
     private final double[] pBuffer = new double[2];
-    private transient BufferedImage buf;
-    private transient int[] pixels;
-    private transient int bufW = -1, bufH = -1;
-    // reusable per-render buffers (avoid allocations)
     private transient double[] sx;
     private transient double[] sy;
-    private transient int[] palette;
+    private transient ArberColor[] palette;
+    private transient int[] cells;
 
     public VoronoiRenderer() {
         super("voronoi");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count == 0) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
 
-        Rectangle2D bounds = context.plotBounds();
-        int w = Math.min(400, Math.max(120, (int) bounds.getWidth()));
-        int h = Math.min(400, Math.max(120, (int) bounds.getHeight()));
+        ArberRect bounds = context.getPlotBounds();
+        int w = Math.min(200, Math.max(120, (int) bounds.width()));
+        int h = Math.min(200, Math.max(120, (int) bounds.height()));
 
-        if (buf == null || bufW != w || bufH != h) {
-            buf = RendererAllocationCache.getBufferedImage(this, "buf", w, h, BufferedImage.TYPE_INT_ARGB);
-            pixels = ((DataBufferInt) buf.getRaster().getDataBuffer()).getData();
-            bufW = w;
-            bufH = h;
+        int total = w * h;
+        if (cells == null || cells.length < total) {
+            cells = RendererAllocationCache.getIntArray(this, "cells", total);
         }
 
         int n = Math.min(count, 200); // limit candidate points
         if (sx == null || sx.length < n) {
             sx = RendererAllocationCache.getDoubleArray(this, "sx", n);
             sy = RendererAllocationCache.getDoubleArray(this, "sy", n);
-            palette = RendererAllocationCache.getIntArray(this, "palette", n);
+        }
+        if (palette == null || palette.length < n) {
+            palette = (ArberColor[]) RendererAllocationCache.getArray(this, "voronoi.palette", ArberColor.class, n);
         }
 
         // Precompute candidate pixel positions + a stable palette.
-        Color baseColor = getSeriesColor(model);
+        ArberColor baseColor = getSeriesColor(model);
         for (int i = 0; i < n; i++) {
             context.mapToPixel(xData[i], yData[i], pBuffer);
             sx[i] = pBuffer[0];
             sy[i] = pBuffer[1];
-            Color cellColor = isMultiColor() ? themeSeries(context, i) : baseColor;
+            ArberColor cellColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (cellColor == null) cellColor = baseColor;
-            palette[i] = cellColor.getRGB();
+            palette[i] = cellColor;
         }
 
         // Precompute buffer-space mapping (avoid double divides in inner loop).
-        double bx = bounds.getX();
-        double by = bounds.getY();
-        double bw = bounds.getWidth();
-        double bh = bounds.getHeight();
+        double bx = bounds.x();
+        double by = bounds.y();
+        double bw = bounds.width();
+        double bh = bounds.height();
         double stepX = bw / (double) w;
         double stepY = bh / (double) h;
 
@@ -106,15 +104,21 @@ public final class VoronoiRenderer extends BaseRenderer {
                         best = i;
                     }
                 }
-                pixels[idx] = palette[best];
+                cells[idx] = best;
             }
         }
 
-        g2.drawImage(buf,
-                (int) bounds.getX(),
-                (int) bounds.getY(),
-                (int) bounds.getWidth(),
-                (int) bounds.getHeight(),
-                null);
+        // draw cells
+        idx = 0;
+        for (int iy = 0; iy < h; iy++) {
+            double y0 = by + iy * stepY;
+            for (int ix = 0; ix < w; ix++, idx++) {
+                ArberColor c = palette[cells[idx]];
+                if (c == null) continue;
+                canvas.setColor(c);
+                float x0 = (float) (bx + ix * stepX);
+                canvas.fillRect(x0, (float) y0, (float) stepX + 0.5f, (float) stepY + 0.5f);
+            }
+        }
     }
 }

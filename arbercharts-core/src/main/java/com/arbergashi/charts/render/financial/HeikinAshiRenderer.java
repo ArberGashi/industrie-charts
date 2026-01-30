@@ -3,12 +3,14 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
+import com.arbergashi.charts.util.ColorRegistry;
 
 /**
  * Heikin-Ashi Renderer - modified candlestick visualization for trend readability.
@@ -18,6 +20,7 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class HeikinAshiRenderer extends BaseRenderer {
 
@@ -25,6 +28,9 @@ public final class HeikinAshiRenderer extends BaseRenderer {
     private final double[] pxLow = new double[2];
     private final double[] pxOpen = new double[2];
     private final double[] pxClose = new double[2];
+
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
 
     // Cached computed series
     private transient ChartModel cachedModel;
@@ -41,26 +47,24 @@ public final class HeikinAshiRenderer extends BaseRenderer {
     }
 
     @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n == 0) return;
 
         ensureCache(model);
         if (cachedPointCount <= 0 || xValues == null) return;
 
-        final Rectangle clip = g.getClipBounds();
-        final Rectangle viewBounds = (clip != null) ? clip : context.plotBounds().getBounds();
-
-        final double w = context.plotBounds().getWidth();
-        final double leftX = viewBounds.getX();
-        final double rightX = viewBounds.getMaxX();
+        final ArberRect bounds = context.getPlotBounds();
+        final double w = bounds.getWidth();
+        final double leftX = bounds.x();
+        final double rightX = bounds.x() + bounds.getWidth();
         final double step = (cachedPointCount > 1) ? (w / (double) (cachedPointCount - 1)) : w;
 
         int start = 0;
         int endExclusive = cachedPointCount;
         if (step > 0.0) {
-            start = (int) Math.floor((leftX - context.plotBounds().getX()) / step) - 2;
-            endExclusive = (int) Math.ceil((rightX - context.plotBounds().getX()) / step) + 2;
+            start = (int) Math.floor((leftX - bounds.x()) / step) - 2;
+            endExclusive = (int) Math.ceil((rightX - bounds.x()) / step) + 2;
             if (start < 0) start = 0;
             if (endExclusive > cachedPointCount) endExclusive = cachedPointCount;
         }
@@ -68,15 +72,13 @@ public final class HeikinAshiRenderer extends BaseRenderer {
 
         final double barWidth = (w / (double) cachedPointCount) * 0.75;
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color colorBullish = theme.getBullishColor();
-        final Color colorBearish = theme.getBearishColor();
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor colorBullish = theme.getBullishColor();
+        final ArberColor colorBearish = theme.getBearishColor();
 
-        final Stroke wickStroke = getCachedStroke(ChartScale.scale(1.0f));
-        final Stroke bodyStroke = getCachedStroke(ChartScale.scale(0.85f));
+        canvas.setStroke((float) ChartScale.scale(1.0f));
 
         for (int i = start; i < endExclusive; i++) {
-            // map OHLC
             context.mapToPixel(xValues[i], haHigh[i], pxHigh);
             context.mapToPixel(xValues[i], haLow[i], pxLow);
             context.mapToPixel(xValues[i], haOpen[i], pxOpen);
@@ -85,29 +87,31 @@ public final class HeikinAshiRenderer extends BaseRenderer {
             final double x = pxOpen[0];
 
             final boolean bullish = haClose[i] >= haOpen[i];
-            final Color candleColor = bullish ? colorBullish : colorBearish;
+            final ArberColor candleColor = bullish ? colorBullish : colorBearish;
 
-            // wick
-            g.setColor(theme.getForeground());
-            g.setStroke(wickStroke);
-            g.draw(getLine(pxHigh[0], pxHigh[1], pxLow[0], pxLow[1]));
+            canvas.setColor(theme.getForeground());
+            drawLine(canvas, pxHigh[0], pxHigh[1], pxLow[0], pxLow[1]);
 
-            // body
             final double bodyY = Math.min(pxOpen[1], pxClose[1]);
             final double bodyH = Math.max(Math.abs(pxOpen[1] - pxClose[1]), ChartScale.scale(1.5f));
             final double bx = x - barWidth / 2.0;
 
-            // Fast clip test
             if (bx > rightX || (bx + barWidth) < leftX) continue;
-            if (bodyY > viewBounds.getMaxY() || (bodyY + bodyH) < viewBounds.getY()) continue;
 
-            final Shape body = getRect(bx, bodyY, barWidth, bodyH);
-            g.setColor(candleColor);
-            g.fill(body);
-            g.setColor(ColorUtils.adjustBrightness(candleColor, 0.7f));
-            g.setStroke(bodyStroke);
-            g.draw(body);
+            canvas.setColor(candleColor);
+            canvas.fillRect((float) bx, (float) bodyY, (float) barWidth, (float) bodyH);
+            canvas.setColor(ColorRegistry.adjustBrightness(candleColor, 0.7f));
+            canvas.setStroke((float) ChartScale.scale(0.85f));
+            canvas.drawRect((float) bx, (float) bodyY, (float) barWidth, (float) bodyH);
         }
+    }
+
+    private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {
+        lineX[0] = (float) x1;
+        lineX[1] = (float) x2;
+        lineY[0] = (float) y1;
+        lineY[1] = (float) y2;
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
     private void ensureCache(ChartModel model) {
@@ -127,26 +131,36 @@ public final class HeikinAshiRenderer extends BaseRenderer {
 
         ensureCapacity(n);
 
-        // Seed with first candle
+        final FinancialChartModel fin = (model instanceof FinancialChartModel) ? (FinancialChartModel) model : null;
+
         xValues[0] = model.getX(0);
 
-        // heikin close uses OHLC average
-        double prevHaClose = (model.getWeight(0) + model.getMax(0) + model.getMin(0) + model.getY(0)) * 0.25;
-        double prevHaOpen = (model.getWeight(0) + model.getY(0)) * 0.5;
+        final double open0 = (fin != null) ? fin.getOpen(0) : model.getWeight(0);
+        final double high0 = (fin != null) ? fin.getHigh(0) : model.getMax(0);
+        final double low0 = (fin != null) ? fin.getLow(0) : model.getMin(0);
+        final double close0 = (fin != null) ? fin.getClose(0) : model.getY(0);
+
+        double prevHaClose = (open0 + high0 + low0 + close0) * 0.25;
+        double prevHaOpen = (open0 + close0) * 0.5;
 
         haOpen[0] = prevHaOpen;
         haClose[0] = prevHaClose;
-        haHigh[0] = Math.max(model.getMax(0), Math.max(prevHaOpen, prevHaClose));
-        haLow[0] = Math.min(model.getMin(0), Math.min(prevHaOpen, prevHaClose));
+        haHigh[0] = Math.max(high0, Math.max(prevHaOpen, prevHaClose));
+        haLow[0] = Math.min(low0, Math.min(prevHaOpen, prevHaClose));
 
         for (int i = 1; i < n; i++) {
             xValues[i] = model.getX(i);
 
-            final double curHaClose = (model.getWeight(i) + model.getMax(i) + model.getMin(i) + model.getY(i)) * 0.25;
+            final double open = (fin != null) ? fin.getOpen(i) : model.getWeight(i);
+            final double high = (fin != null) ? fin.getHigh(i) : model.getMax(i);
+            final double low = (fin != null) ? fin.getLow(i) : model.getMin(i);
+            final double close = (fin != null) ? fin.getClose(i) : model.getY(i);
+
+            final double curHaClose = (open + high + low + close) * 0.25;
             final double curHaOpen = 0.5 * (prevHaOpen + prevHaClose);
 
-            final double curHaHigh = Math.max(model.getMax(i), Math.max(curHaOpen, curHaClose));
-            final double curHaLow = Math.min(model.getMin(i), Math.min(curHaOpen, curHaClose));
+            final double curHaHigh = Math.max(high, Math.max(curHaOpen, curHaClose));
+            final double curHaLow = Math.min(low, Math.min(curHaOpen, curHaClose));
 
             haOpen[i] = curHaOpen;
             haClose[i] = curHaClose;

@@ -1,7 +1,6 @@
 package com.arbergashi.charts.model;
 
 import java.util.List;
-
 /**
  * An extension of ChartModel for multivariate data, where each data point
  * consists of multiple values across different dimensions. Required for

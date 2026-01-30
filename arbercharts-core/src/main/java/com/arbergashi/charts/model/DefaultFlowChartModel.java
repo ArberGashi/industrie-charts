@@ -1,10 +1,9 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a flow-based chart model.
  *
@@ -39,18 +38,20 @@ public class DefaultFlowChartModel implements FlowChartModel {
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultFlowChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return null;
-    } // Color is usually per-node/link
+    } // ArberColor is usually per-node/link
 
     @Override
-    public void setColor(Color color) {
+    public DefaultFlowChartModel setColor(ArberColor color) {
+        return this;
     }
 
     @Override
@@ -71,15 +72,11 @@ public class DefaultFlowChartModel implements FlowChartModel {
         return 0;
     }
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException();
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultFlowChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException();
     }
 
@@ -87,7 +84,7 @@ public class DefaultFlowChartModel implements FlowChartModel {
         throw new UnsupportedOperationException();
     }
 
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
     }
 
     public void removeChangeListener(ChartModelListener listener) {

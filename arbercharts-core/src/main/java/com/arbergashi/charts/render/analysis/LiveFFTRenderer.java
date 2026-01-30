@@ -1,12 +1,12 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
-
+import com.arbergashi.charts.tools.RendererAllocationCache;
 /**
  * Live FFT renderer (JDK 25 standard).
  * Transforms a time signal into the frequency domain and visualizes it.
@@ -15,6 +15,8 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public class LiveFFTRenderer extends BaseRenderer {
 
@@ -29,7 +31,7 @@ public class LiveFFTRenderer extends BaseRenderer {
      * Helper for a simple FFT (Cooley-Tukey).
      * Provided as a placeholder for internal logic.
      */
-    public static double[] computeFFT(double[] timeSignal) {
+    public static double[] getComputedFFT(double[] timeSignal) {
         int n = timeSignal.length;
         if (Integer.bitCount(n) != 1) {
             // Padding to the next power of two would be required.
@@ -38,12 +40,15 @@ public class LiveFFTRenderer extends BaseRenderer {
         return timeSignal; // Dummy
     }
 
-    public void setAsBars(boolean asBars) {
+    public LiveFFTRenderer setAsBars(boolean asBars) {
         this.asBars = asBars;
+        return this;
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 2) return;
         double[] xData = model.getXData();
@@ -53,17 +58,17 @@ public class LiveFFTRenderer extends BaseRenderer {
         // We assume the model already contains frequency data (magnitude),
         // or this would be transformed if the input is time-domain data.
 
-        Color base = seriesOrBase(model, context, 0);
-        g2.setColor(base);
+        ArberColor base = seriesOrBase(model, context, 0);
+        canvas.setColor(base);
 
         if (asBars) {
-            drawAsBars(g2, xData, yData, count, context, base);
+            drawAsBars(canvas, xData, yData, count, context, base);
         } else {
-            drawAsLine(g2, xData, yData, count, context, base);
+            drawAsLine(canvas, xData, yData, count, context, base);
         }
     }
 
-    private void drawAsBars(Graphics2D g2, double[] xData, double[] yData, int count, PlotContext context, Color base) {
+    private void drawAsBars(ArberCanvas canvas, double[] xData, double[] yData, int count, PlotContext context, ArberColor base) {
         // Find data range for proper scaling
         double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
         double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -82,10 +87,11 @@ public class LiveFFTRenderer extends BaseRenderer {
         maxY = maxY + rangeY * 0.05;
         rangeY = maxY - minY;
 
-        double plotX = context.plotBounds().getX();
-        double plotY = context.plotBounds().getY();
-        double plotW = context.plotBounds().getWidth();
-        double plotH = context.plotBounds().getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double plotX = bounds.x();
+        double plotY = bounds.y();
+        double plotW = bounds.width();
+        double plotH = bounds.height();
 
         double xRange = maxX - minX;
         if (xRange == 0) xRange = 1.0;
@@ -98,19 +104,19 @@ public class LiveFFTRenderer extends BaseRenderer {
             double px = plotX + (xData[i] - minX) / xRange * plotW;
             double py = plotY + (maxY - yData[i]) / rangeY * plotH;
 
-            int h = (int) Math.abs(baseline - py);
-            int y = (int) Math.min(baseline, py);
+            float h = (float) Math.abs(baseline - py);
+            float y = (float) Math.min(baseline, py);
 
             if (isMultiColor()) {
-                Color bar = themeSeries(context, i);
+                ArberColor bar = themeSeries(context, i);
                 if (bar == null) bar = base;
-                g2.setColor(bar);
+                canvas.setColor(bar);
             }
-            g2.fillRect((int) (px - barW / 2), y, (int) barW, h);
+            canvas.fillRect((float) (px - barW / 2), y, (float) barW, h);
         }
     }
 
-    private void drawAsLine(Graphics2D g2, double[] xData, double[] yData, int count, PlotContext context, Color base) {
+    private void drawAsLine(ArberCanvas canvas, double[] xData, double[] yData, int count, PlotContext context, ArberColor base) {
         // Find data range for proper scaling
         double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
         double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -129,18 +135,24 @@ public class LiveFFTRenderer extends BaseRenderer {
         maxY = maxY + rangeY * 0.05;
         rangeY = maxY - minY;
 
-        double plotX = context.plotBounds().getX();
-        double plotY = context.plotBounds().getY();
-        double plotW = context.plotBounds().getWidth();
-        double plotH = context.plotBounds().getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double plotX = bounds.x();
+        double plotY = bounds.y();
+        double plotW = bounds.width();
+        double plotH = bounds.height();
 
         double xRange = maxX - minX;
         if (xRange == 0) xRange = 1.0;
 
-        Path2D path = getPathCache();
-        boolean first = true;
         double prevX = Double.NaN;
         double prevY = Double.NaN;
+        float[] xs = null;
+        float[] ys = null;
+        int outCount = 0;
+        if (!isMultiColor()) {
+            xs = RendererAllocationCache.getFloatArray(this, "fft.line.x", count);
+            ys = RendererAllocationCache.getFloatArray(this, "fft.line.y", count);
+        }
 
         for (int i = 0; i < count; i++) {
             // Manual pixel mapping
@@ -148,25 +160,27 @@ public class LiveFFTRenderer extends BaseRenderer {
             double py = plotY + (maxY - yData[i]) / rangeY * plotH;
 
             if (!isMultiColor()) {
-                if (first) {
-                    path.moveTo(px, py);
-                    first = false;
-                } else {
-                    path.lineTo(px, py);
-                }
+                xs[outCount] = (float) px;
+                ys[outCount] = (float) py;
+                outCount++;
             } else if (i > 0) {
-                Color seg = themeSeries(context, i);
+                ArberColor seg = themeSeries(context, i);
                 if (seg == null) seg = base;
-                g2.setColor(seg);
-                g2.draw(getLine(prevX, prevY, px, py));
+                canvas.setColor(seg);
+                float[] sx = RendererAllocationCache.getFloatArray(this, "fft.seg.x", 2);
+                float[] sy = RendererAllocationCache.getFloatArray(this, "fft.seg.y", 2);
+                sx[0] = (float) prevX;
+                sy[0] = (float) prevY;
+                sx[1] = (float) px;
+                sy[1] = (float) py;
+                canvas.drawPolyline(sx, sy, 2);
             }
             prevX = px;
             prevY = py;
         }
 
         if (!isMultiColor()) {
-            g2.setStroke(getSeriesStroke());
-            g2.draw(path);
+            canvas.drawPolyline(xs, ys, outCount);
         }
     }
 }

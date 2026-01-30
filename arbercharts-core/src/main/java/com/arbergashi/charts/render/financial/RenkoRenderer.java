@@ -1,14 +1,13 @@
 package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
-import com.arbergashi.charts.render.RendererRegistry;
+import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-
-import java.awt.*;
-import java.awt.geom.Rectangle2D;
-
 /**
  * Renko renderer.
  *
@@ -22,6 +21,8 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class RenkoRenderer extends BaseRenderer {
 
@@ -34,7 +35,6 @@ public final class RenkoRenderer extends BaseRenderer {
     }
 
     private final double[] px = new double[2];
-    private final Rectangle2D.Double rect = new Rectangle2D.Double();
     private transient ChartModel cachedModel;
     private transient int cachedPointCount;
     private transient double cachedBrick;
@@ -49,34 +49,32 @@ public final class RenkoRenderer extends BaseRenderer {
         super("renko");
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int nPts = model.getPointCount();
         if (nPts < 2) return;
 
-        final Rectangle2D bounds2 = context.plotBounds();
-        final Rectangle bounds = bounds2.getBounds();
+        final ArberRect bounds2 = context.getPlotBounds();
 
         final double brick = estimateBrickSize(model);
-        ensureCache(model, context, brick, bounds);
+        ensureCache(model, context, brick, bounds2);
         if (brickCount == 0) return;
 
-        final double w = bounds.getWidth();
+        final double w = bounds2.width();
         final int n = brickCount;
         final double boxW = Math.max(4.0, w / (double) Math.max(1, n));
 
         // Get bullish/bearish colors from theme
-        final var theme = resolveTheme(context);
-        final Color bullish = theme.getBullishColor();
-        final Color bearish = theme.getBearishColor();
+        final var theme = getResolvedTheme(context);
+        final ArberColor bullish = theme.getBullishColor();
+        final ArberColor bearish = theme.getBearishColor();
 
-        g2.setStroke(getSeriesStroke());
-
-        final double x0 = bounds.getX();
+        final double x0 = bounds2.x();
         final double stableX = model.getX(0);
-        final Rectangle clip = g2.getClipBounds();
-        final double clipLeft = (clip != null) ? clip.getX() : Double.NEGATIVE_INFINITY;
-        final double clipRight = (clip != null) ? clip.getMaxX() : Double.POSITIVE_INFINITY;
+        final double clipLeft = bounds2.minX();
+        final double clipRight = bounds2.maxX();
 
         for (int i = 0; i < n; i++) {
             final double cx = x0 + i * boxW;
@@ -90,13 +88,13 @@ public final class RenkoRenderer extends BaseRenderer {
                 ? (brickPrices[0] >= model.getY(0))
                 : (brickPrices[i] > brickPrices[i - 1]);
 
-            g2.setColor(isBullish ? bullish : bearish);
+            canvas.setColor(isBullish ? bullish : bearish);
 
-            rect.x = cx;
-            rect.y = y - boxW * 0.5;
-            rect.width = boxW * 0.9; // Small gap between bricks
-            rect.height = boxW;
-            g2.fill(rect);
+            double rx = cx;
+            double ry = y - boxW * 0.5;
+            double rw = boxW * 0.9; // Small gap between bricks
+            double rh = boxW;
+            canvas.fillRect((float) rx, (float) ry, (float) rw, (float) rh);
         }
     }
 
@@ -118,17 +116,17 @@ public final class RenkoRenderer extends BaseRenderer {
         return Math.max(1e-6, raw);
     }
 
-    private void ensureCache(ChartModel model, PlotContext context, double brick, Rectangle bounds) {
+    private void ensureCache(ChartModel model, PlotContext context, double brick, ArberRect bounds) {
         final int nPts = model.getPointCount();
 
         // cache invalidation: data size + theme-independent geometry + brick size
         if (cachedModel == model
                 && cachedPointCount == nPts
                 && cachedBrick == brick
-                && cachedBoundsW == bounds.width
-                && cachedBoundsH == bounds.height
-                && Double.compare(cachedMinY, context.minY()) == 0
-                && Double.compare(cachedMaxY, context.maxY()) == 0
+                && cachedBoundsW == (int) Math.round(bounds.width())
+                && cachedBoundsH == (int) Math.round(bounds.height())
+                && Double.compare(cachedMinY, context.getMinY()) == 0
+                && Double.compare(cachedMaxY, context.getMaxY()) == 0
                 && brickCount > 0) {
             return;
         }
@@ -136,14 +134,14 @@ public final class RenkoRenderer extends BaseRenderer {
         cachedModel = model;
         cachedPointCount = nPts;
         cachedBrick = brick;
-        cachedBoundsW = bounds.width;
-        cachedBoundsH = bounds.height;
-        cachedMinY = context.minY();
-        cachedMaxY = context.maxY();
+        cachedBoundsW = (int) Math.round(bounds.width());
+        cachedBoundsH = (int) Math.round(bounds.height());
+        cachedMinY = context.getMinY();
+        cachedMaxY = context.getMaxY();
 
         // hard cap: never generate more bricks than a multiple of pixel width.
         // This prevents worst-case O(huge) loops when data jumps massively.
-        final int maxBricks = Math.max(512, Math.min(200_000, bounds.width * 8));
+        final int maxBricks = Math.max(512, Math.min(200_000, ((int) Math.round(bounds.width())) * 8));
 
         ensureCapacity(Math.max(16, Math.min(nPts, maxBricks)));
 

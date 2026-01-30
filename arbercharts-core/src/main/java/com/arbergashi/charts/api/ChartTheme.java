@@ -1,7 +1,7 @@
 package com.arbergashi.charts.api;
 
-import java.awt.*;
-
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberFont;
 /**
  * Chart theme interface for providing colors and fonts to renderers.
  * <p>
@@ -20,35 +20,35 @@ public interface ChartTheme {
      *
      * @return The background color
      */
-    Color getBackground();
+    ArberColor getBackground();
 
     /**
      * Gets the foreground color for text and lines.
      *
      * @return The foreground color
      */
-    Color getForeground();
+    ArberColor getForeground();
 
     /**
      * Gets the grid color for axes and grid lines.
      *
      * @return The grid color
      */
-    Color getGridColor();
+    ArberColor getGridColor();
 
     /**
      * Gets the color for axis labels.
      *
      * @return The axis label color
      */
-    Color getAxisLabelColor();
+    ArberColor getAxisLabelColor();
 
     /**
      * Gets the accent color (primary highlight color).
      *
      * @return The accent color
      */
-    Color getAccentColor();
+    ArberColor getAccentColor();
 
     /**
      * Gets a series color by index.
@@ -60,14 +60,14 @@ public interface ChartTheme {
      * @param index The series index (0-based)
      * @return The series color for the given index
      */
-    Color getSeriesColor(int index);
+    ArberColor getSeriesColor(int index);
 
     /**
      * Gets the base font for chart text.
      *
      * @return The base font
      */
-    Font getBaseFont();
+    ArberFont getBaseFont();
 
     /**
      * Gets the bullish color for financial charts.
@@ -77,7 +77,7 @@ public interface ChartTheme {
      *
      * @return The bullish color (default: green)
      */
-    default Color getBullishColor() {
+    default ArberColor getBullishColor() {
         return com.arbergashi.charts.util.ColorRegistry.of(0, 150, 50, 255);
     }
 
@@ -89,7 +89,7 @@ public interface ChartTheme {
      *
      * @return The bearish color (default: red)
      */
-    default Color getBearishColor() {
+    default ArberColor getBearishColor() {
         return com.arbergashi.charts.util.ColorRegistry.of(215, 50, 0, 255);
     }
 }

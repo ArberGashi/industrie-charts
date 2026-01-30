@@ -1,5 +1,4 @@
 package com.arbergashi.charts.internal;
-
 /**
  * Helper for hexagon geometry. Precomputes the six corner offsets for a hex
  * of a given radius. This class is immutable and safe to reuse between frames.
@@ -23,7 +22,7 @@ public final class HexLayout {
         }
     }
 
-    public static HexLayout create(double radius) {
+    public static HexLayout of(double radius) {
         return new HexLayout(radius);
     }
 
@@ -39,4 +38,3 @@ public final class HexLayout {
         return radius;
     }
 }
-

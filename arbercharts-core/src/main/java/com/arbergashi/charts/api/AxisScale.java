@@ -1,5 +1,4 @@
 package com.arbergashi.charts.api;
-
 /**
  * Convenience helpers for common axis scale presets.
  *
@@ -19,7 +18,9 @@ public final class AxisScale {
      * @return configured AxisConfig
      */
     public static AxisConfig medical(double mmPerUnit) {
-        return new AxisConfig().medicalScale(mmPerUnit);
+        AxisConfig config = new AxisConfig();
+        config.setMedicalScale(mmPerUnit);
+        return config;
     }
 
     /**
@@ -33,6 +34,40 @@ public final class AxisScale {
         return new AxisPair(medical(mmPerSec), medical(mmPerMv));
     }
 
-    public record AxisPair(AxisConfig xAxis, AxisConfig yAxis) {
+    public static final class AxisPair {
+        private AxisConfig xAxis;
+        private AxisConfig yAxis;
+
+        public AxisPair(AxisConfig xAxis, AxisConfig yAxis) {
+            if (xAxis == null || yAxis == null) {
+                throw new IllegalArgumentException("AxisPair requires non-null xAxis and yAxis");
+            }
+            this.xAxis = xAxis;
+            this.yAxis = yAxis;
+        }
+
+        public AxisConfig getXAxis() {
+            return xAxis;
+        }
+
+        public AxisPair setXAxis(AxisConfig xAxis) {
+            if (xAxis == null) {
+                throw new IllegalArgumentException("xAxis");
+            }
+            this.xAxis = xAxis;
+        return this;
+        }
+
+        public AxisConfig getYAxis() {
+            return yAxis;
+        }
+
+        public AxisPair setYAxis(AxisConfig yAxis) {
+            if (yAxis == null) {
+                throw new IllegalArgumentException("yAxis");
+            }
+            this.yAxis = yAxis;
+        return this;
+        }
     }
 }

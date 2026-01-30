@@ -1,17 +1,17 @@
 package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.MultiDimensionalChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.awt.*;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.util.List;
-import com.arbergashi.charts.tools.RendererAllocationCache;
 import java.util.Optional;
 
 /**
@@ -21,11 +21,10 @@ import java.util.Optional;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class ParallelCoordinatesRenderer extends BaseRenderer {
 
-    private Font axisFont;
-    private Stroke polylineStroke;
     private int hoverIndex = -1;
     private static final double HIT_RADIUS = 8.0;
 
@@ -33,10 +32,12 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
         super("parallel_coordinates");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof MultiDimensionalChartModel mdModel)) {
-            drawErrorMessage(g2, context, "ParallelCoordinatesRenderer requires a MultiDimensionalChartModel");
             return;
         }
 
@@ -45,11 +46,11 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
         if (data.isEmpty()) return;
 
         int dimensions = labels.size();
-        Rectangle2D bounds = context.plotBounds();
-        double axisSpacing = bounds.getWidth() / (dimensions - 1);
-        double plotX = bounds.getX();
-        double plotY = bounds.getY();
-        double plotHeight = bounds.getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double axisSpacing = bounds.width() / (dimensions - 1);
+        double plotX = bounds.x();
+        double plotY = bounds.y();
+        double plotHeight = bounds.height();
 
         // Find min/max for each dimension for normalization
         double[] minValues = RendererAllocationCache.getDoubleArray(this, "minValues", dimensions);
@@ -65,74 +66,64 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
             }
         }
 
-        // Draw the polylines for each data point
-        if (polylineStroke == null) {
-            polylineStroke = RendererAllocationCache.getBasicStroke(this, "polylineStroke", 1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, null, 0f);
-        }
-        g2.setStroke(polylineStroke);
-        Path2D path = getPathCache();
         float baseAlpha = 0.28f;
         float dimAlpha = 0.06f;
         float hoverAlpha = 0.85f;
-        Color baseColor = seriesOrBase(model, context, 0);
+        ArberColor baseColor = seriesOrBase(model, context, 0);
 
+        float[] xs = RendererAllocationCache.getFloatArray(this, "pc.x", dimensions);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "pc.y", dimensions);
+
+        canvas.setStroke(getSeriesStrokeWidth());
+
+        // Draw the polylines for each data point
         for (int p = 0; p < data.size(); p++) {
             double[] point = data.get(p);
-            path.reset();
             for (int i = 0; i < dimensions; i++) {
                 double x = plotX + i * axisSpacing;
                 double range = maxValues[i] - minValues[i];
                 double normalized = (range == 0) ? 0.5 : (point[i] - minValues[i]) / range;
                 double y = plotY + plotHeight * (1 - normalized);
-
-                if (i == 0) {
-                    path.moveTo(x, y);
-                } else {
-                    path.lineTo(x, y);
-                }
+                xs[i] = (float) x;
+                ys[i] = (float) y;
             }
             float alpha = baseAlpha;
             if (hoverIndex >= 0) {
                 alpha = (p == hoverIndex) ? hoverAlpha : dimAlpha;
             }
-            Color lineColor = isMultiColor() ? themeSeries(context, p) : baseColor;
+            ArberColor lineColor = isMultiColor() ? themeSeries(context, p) : baseColor;
             if (lineColor == null) lineColor = baseColor;
-            g2.setColor(ColorUtils.withAlpha(lineColor, alpha));
-            g2.draw(path);
+            canvas.setColor(ColorUtils.applyAlpha(lineColor, alpha));
+            canvas.drawPolyline(xs, ys, dimensions);
         }
 
         // Draw the vertical axes
-        g2.setColor(themeGrid(context));
-        if (axisFont == null) {
-            axisFont = RendererAllocationCache.getFont(this, "axisFont", "SansSerif", Font.PLAIN, 10);
-        }
-        g2.setFont(axisFont);
+        canvas.setColor(themeGrid(context));
+        float[] axisX = RendererAllocationCache.getFloatArray(this, "pc.axis.x", 2);
+        float[] axisY = RendererAllocationCache.getFloatArray(this, "pc.axis.y", 2);
         for (int i = 0; i < dimensions; i++) {
-            double x = plotX + i * axisSpacing;
-            g2.drawLine((int) x, (int) plotY, (int) x, (int) (plotY + plotHeight));
-            g2.drawString(labels.get(i), (int) x - 10, (int) (plotY + plotHeight + 15));
+            float x = (float) (plotX + i * axisSpacing);
+            axisX[0] = x;
+            axisY[0] = (float) plotY;
+            axisX[1] = x;
+            axisY[1] = (float) (plotY + plotHeight);
+            canvas.drawPolyline(axisX, axisY, 2);
         }
-    }
-
-    private void drawErrorMessage(Graphics2D g2, PlotContext context, String message) {
-        g2.setColor(themeAccent(context));
-        Rectangle2D bounds = context.plotBounds();
-        g2.drawString(message, (float) bounds.getX() + 10, (float) bounds.getY() + 20);
     }
 
     @Override
-    public Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context) {
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         if (!(model instanceof MultiDimensionalChartModel mdModel)) return Optional.empty();
         List<double[]> data = mdModel.getMultiDimensionalData();
         List<String> labels = mdModel.getDimensionLabels();
         if (data.isEmpty() || labels.isEmpty()) return Optional.empty();
 
         int dimensions = labels.size();
-        Rectangle2D bounds = context.plotBounds();
-        double axisSpacing = bounds.getWidth() / (dimensions - 1);
-        double plotX = bounds.getX();
-        double plotY = bounds.getY();
-        double plotHeight = bounds.getHeight();
+        ArberRect bounds = context.getPlotBounds();
+        double axisSpacing = bounds.width() / (dimensions - 1);
+        double plotX = bounds.x();
+        double plotY = bounds.y();
+        double plotHeight = bounds.height();
 
         double[] minValues = RendererAllocationCache.getDoubleArray(this, "minValues", dimensions);
         double[] maxValues = RendererAllocationCache.getDoubleArray(this, "maxValues", dimensions);
@@ -149,8 +140,8 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
 
         double minDistSq = Double.MAX_VALUE;
         int bestIndex = -1;
-        double px = pixel.getX();
-        double py = pixel.getY();
+        double px = pixel.x();
+        double py = pixel.y();
 
         for (int p = 0; p < data.size(); p++) {
             double[] point = data.get(p);
@@ -199,12 +190,11 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
             return sx * sx + sy * sy;
         }
         double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-        if (t < 0) t = 0;
-        else if (t > 1) t = 1;
-        double cx = x1 + t * dx;
-        double cy = y1 + t * dy;
-        double sx = px - cx;
-        double sy = py - cy;
-        return sx * sx + sy * sy;
+        t = Math.max(0, Math.min(1, t));
+        double ix = x1 + t * dx;
+        double iy = y1 + t * dy;
+        double vx = px - ix;
+        double vy = py - iy;
+        return vx * vx + vy * vy;
     }
 }

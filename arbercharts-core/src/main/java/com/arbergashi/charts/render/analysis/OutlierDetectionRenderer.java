@@ -1,15 +1,12 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
-import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Ellipse2D;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-
+import com.arbergashi.charts.util.ChartScale;
 /**
  * Outlier detection overlay.
  *
@@ -19,11 +16,12 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class OutlierDetectionRenderer extends BaseRenderer {
 
     private final double[] pBuffer = new double[2];
-    private final Ellipse2D.Double ellipseCache = new Ellipse2D.Double();
     private double[] valBuffer = new double[256];
 
     public OutlierDetectionRenderer() {
@@ -37,8 +35,10 @@ public final class OutlierDetectionRenderer extends BaseRenderer {
         return 0.5 * (a[n / 2 - 1] + a[n / 2]);
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 5) return;
         double[] xData = model.getXData();
@@ -58,13 +58,13 @@ public final class OutlierDetectionRenderer extends BaseRenderer {
 
         double threshold = 3.5; // robust z-score threshold
 
-        Color base = seriesOrBase(model, context, 0);
-        Color mark = ColorUtils.withAlpha(base, 0.95f);
-        Color halo = ColorUtils.withAlpha(base, 0.25f);
+        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor mark = base;
+        ArberColor halo = base;
 
         double r = ChartScale.scale(4.0);
 
-        g2.setStroke(getCachedStroke((float) ChartScale.scale(1.5)));
+        canvas.setStroke((float) ChartScale.scale(1.5));
 
         for (int i = 0; i < count; i++) {
             double z = 0.6745 * (yData[i] - median) / mad;
@@ -75,18 +75,16 @@ public final class OutlierDetectionRenderer extends BaseRenderer {
             double y = pBuffer[1];
 
             if (isMultiColor()) {
-                Color point = themeSeries(context, i);
+                ArberColor point = themeSeries(context, i);
                 if (point == null) point = base;
-                halo = ColorUtils.withAlpha(point, 0.25f);
-                mark = ColorUtils.withAlpha(point, 0.95f);
+                halo = point;
+                mark = point;
             }
-            g2.setColor(halo);
-            ellipseCache.setFrame(x - r * 2, y - r * 2, r * 4, r * 4);
-            g2.fill(ellipseCache);
+            canvas.setColor(halo);
+            canvas.fillRect((float) (x - r * 2), (float) (y - r * 2), (float) (r * 4), (float) (r * 4));
 
-            g2.setColor(mark);
-            ellipseCache.setFrame(x - r, y - r, r * 2, r * 2);
-            g2.draw(ellipseCache);
+            canvas.setColor(mark);
+            canvas.drawRect((float) (x - r), (float) (y - r), (float) (r * 2), (float) (r * 2));
         }
     }
 }

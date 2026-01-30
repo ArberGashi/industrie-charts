@@ -1,12 +1,14 @@
 /**
- * Data model layer of the ArberCharts framework.
+ * Data model layer for ArberCharts.
  *
- * <p>Models expose chart data in a renderer-friendly form. The primary design goals are:</p>
- * <ul>
- *   <li><b>Performance:</b> prefer primitive arrays and predictable iteration to minimize GC pressure.</li>
- *   <li><b>Flexibility:</b> support standard XY series, financial OHLC, medical signals, and multi-dimensional data.</li>
- *   <li><b>Contracts:</b> renderers must iterate by {@link com.arbergashi.charts.model.ChartModel#getPointCount()},
- *       not by array length.</li>
- * </ul>
+ * <p>Provides zero-allocation models for financial, medical, and analytical data. Implementations
+ * often expose primitive arrays and require consumers to respect {@code getPointCount()}.</p>
+ *
+ * <p>Thread-safety: Several models support lock-free reads with concurrent writers; each model
+ * documents its own guarantees and limits. See docs/CONCURRENCY_MODEL.md for core semantics.</p>
+ *
+ * @author Arber Gashi
+ * @version 1.7.0
+ * @since 2026-01-30
  */
 package com.arbergashi.charts.model;

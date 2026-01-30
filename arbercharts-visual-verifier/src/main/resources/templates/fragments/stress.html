@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="grid" id="stressPanel" th:fragment="panel">
+    <div class="card">
+        <h3>Stress Metrics</h3>
+        <div class="toolbar">
+            <div class="badge"
+                 th:text="${metrics.poolContentionDelta > 0} ? 'Pool pressure detected' : 'Pool healthy'"
+                 th:style="${metrics.poolContentionDelta > 0} ? 'background: rgba(251, 191, 36, 0.2); color: #f59e0b;' : 'background: rgba(45, 212, 191, 0.15); color: var(--accent);'">
+                Pool healthy
+            </div>
+            <div class="badge" th:text="${metrics.count} + ' charts'">0 charts</div>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); padding: 12px 0 0;">
+            <div class="card">
+                <h4>Total (ms)</h4>
+                <div th:text="${#numbers.formatDecimal(metrics.totalMs,1,2)}">-</div>
+            </div>
+            <div class="card">
+                <h4>Avg (ms)</h4>
+                <div th:text="${#numbers.formatDecimal(metrics.avgMs,1,2)}">-</div>
+            </div>
+            <div class="card">
+                <h4>Charts/sec</h4>
+                <div th:text="${#numbers.formatDecimal(metrics.chartsPerSecond,1,2)}">-</div>
+            </div>
+            <div class="card">
+                <h4>Pool Active</h4>
+                <div th:text="${metrics.poolActive}">-</div>
+            </div>
+            <div class="card">
+                <h4>Pool Idle</h4>
+                <div th:text="${metrics.poolIdle}">-</div>
+            </div>
+            <div class="card">
+                <h4>Contention</h4>
+                <div th:text="${metrics.poolContentionDelta}">-</div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

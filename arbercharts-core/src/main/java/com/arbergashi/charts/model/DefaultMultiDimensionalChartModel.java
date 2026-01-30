@@ -1,10 +1,9 @@
 package com.arbergashi.charts.model;
+import com.arbergashi.charts.api.types.ArberColor;
 
-import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Default implementation for a multi-dimensional chart model.
  *
@@ -18,7 +17,7 @@ public class DefaultMultiDimensionalChartModel implements MultiDimensionalChartM
     private final List<String> dimensionLabels;
     private final AtomicLong updateStamp = new AtomicLong(0);
     private String name;
-    private Color color;
+    private ArberColor color;
 
     public DefaultMultiDimensionalChartModel(List<double[]> data, List<String> dimensionLabels) {
         if (data == null || data.isEmpty()) {
@@ -46,20 +45,22 @@ public class DefaultMultiDimensionalChartModel implements MultiDimensionalChartM
         return name;
     }
 
-    public void setName(String name) {
+    public DefaultMultiDimensionalChartModel setName(String name) {
         this.name = name;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
-    public Color getColor() {
+    public ArberColor getColor() {
         return color;
     }
 
     @Override
-    public void setColor(Color color) {
+    public DefaultMultiDimensionalChartModel setColor(ArberColor color) {
         this.color = color;
         updateStamp.incrementAndGet();
+        return this;
     }
 
     @Override
@@ -82,15 +83,11 @@ public class DefaultMultiDimensionalChartModel implements MultiDimensionalChartM
     } // Not applicable
 
 
-    public void addPoint(ChartPoint point) {
+    public void setPoint(ChartPoint point) {
         throw new UnsupportedOperationException("This model does not support direct point addition.");
     }
 
-    public void addPoints(List<ChartPoint> points) {
-        throw new UnsupportedOperationException("This model does not support direct point addition.");
-    }
-
-    public void setPoints(List<ChartPoint> points) {
+    public DefaultMultiDimensionalChartModel setPoints(List<ChartPoint> points) {
         throw new UnsupportedOperationException("This model does not support direct point addition.");
     }
 
@@ -99,7 +96,7 @@ public class DefaultMultiDimensionalChartModel implements MultiDimensionalChartM
         updateStamp.incrementAndGet();
     }
 
-    public void addChangeListener(ChartModelListener listener) {
+    public void setChangeListener(ChartModelListener listener) {
     }
 
     public void removeChangeListener(ChartModelListener listener) {

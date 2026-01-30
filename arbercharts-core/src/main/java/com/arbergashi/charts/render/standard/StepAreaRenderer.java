@@ -1,14 +1,15 @@
 package com.arbergashi.charts.render.standard;
 
-
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
+import com.arbergashi.charts.util.ColorUtils;
 import com.arbergashi.charts.util.MathUtils;
-
-import java.awt.*;
-import java.awt.geom.Path2D;
 
 /**
  * Step-area renderer: like an area chart, but with step transitions (horizontal then vertical).
@@ -17,6 +18,7 @@ import java.awt.geom.Path2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-15
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class StepAreaRenderer extends BaseRenderer {
 
@@ -27,8 +29,11 @@ public final class StepAreaRenderer extends BaseRenderer {
         super("stepArea");
     }
 
+    /**
+     * @since 1.5.0
+     */
     @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n0 = model.getPointCount();
         if (n0 < 2) return;
 
@@ -37,13 +42,13 @@ public final class StepAreaRenderer extends BaseRenderer {
         final int n = Math.min(n0, Math.min(xData.length, yData.length));
         if (n < 2) return;
 
-        Color c = getSeriesColor(model);
+        ArberColor c = getSeriesColor(model);
 
         context.mapToPixel(0, 0.0, p0);
         double zeroY = p0[1];
-        double baselineY = MathUtils.clamp(zeroY, context.plotBounds().getY(), context.plotBounds().getMaxY());
+        ArberRect bounds = context.getPlotBounds();
+        double baselineY = MathUtils.clamp(zeroY, bounds.minY(), bounds.maxY());
 
-        // Find first finite point.
         int first = -1;
         for (int i = 0; i < n; i++) {
             if (Double.isFinite(xData[i]) && Double.isFinite(yData[i])) {
@@ -53,16 +58,19 @@ public final class StepAreaRenderer extends BaseRenderer {
         }
         if (first < 0 || first + 1 >= n) return;
 
-        Path2D area = getPathCache();
-        area.reset();
+        int stepCount = 1 + (n - first - 1) * 2;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "stepArea.x", stepCount);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "stepArea.y", stepCount);
+
         context.mapToPixel(xData[first], yData[first], p0);
         if (!Double.isFinite(p0[0]) || !Double.isFinite(p0[1])) return;
-        area.moveTo(p0[0], baselineY);
-        area.lineTo(p0[0], p0[1]);
+        xs[0] = (float) p0[0];
+        ys[0] = (float) p0[1];
 
         double lastX = xData[first];
         double lastY = yData[first];
         int lastFinite = first;
+        int out = 1;
 
         for (int i = first + 1; i < n; i++) {
             double x = xData[i];
@@ -77,27 +85,41 @@ public final class StepAreaRenderer extends BaseRenderer {
                 continue;
             }
 
-            area.lineTo(p1[0], p0[1]);
-            area.lineTo(p1[0], p1[1]);
+            xs[out] = (float) p1[0];
+            ys[out] = (float) p0[1];
+            out++;
+            xs[out] = (float) p1[0];
+            ys[out] = (float) p1[1];
+            out++;
 
             lastX = x;
             lastY = y;
             lastFinite = i;
         }
 
-        if (lastFinite == first) return;
+        if (lastFinite == first || out < 2) return;
 
-        context.mapToPixel(xData[lastFinite], yData[lastFinite], p0);
-        if (!Double.isFinite(p0[0]) || !Double.isFinite(p0[1])) return;
-        area.lineTo(p0[0], baselineY);
-        area.closePath();
+        // Build polygon with baseline
+        float[] polyX = RendererAllocationCache.getFloatArray(this, "stepArea.poly.x", out + 2);
+        float[] polyY = RendererAllocationCache.getFloatArray(this, "stepArea.poly.y", out + 2);
+        int p = 0;
+        polyX[p] = xs[0];
+        polyY[p] = (float) baselineY;
+        p++;
+        for (int i = 0; i < out; i++) {
+            polyX[p] = xs[i];
+            polyY[p] = ys[i];
+            p++;
+        }
+        polyX[p] = xs[out - 1];
+        polyY[p] = (float) baselineY;
+        p++;
 
-        float alpha = 0.22f;
-        g2.setColor(com.arbergashi.charts.tools.RendererAllocationCache.getColor(this, "stepArea.fill", c.getRed(), c.getGreen(), c.getBlue(), (int) (alpha * 255)));
-        g2.fill(area);
+        canvas.setColor(ColorUtils.applyAlpha(c, 0.22f));
+        canvas.fillPolygon(polyX, polyY, p);
 
-        g2.setStroke(getCachedStroke(ChartScale.scale(2.0f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.setColor(c);
-        g2.draw(area);
+        canvas.setStroke(ChartScale.scale(2.0f));
+        canvas.setColor(c);
+        canvas.drawPolyline(xs, ys, out);
     }
 }

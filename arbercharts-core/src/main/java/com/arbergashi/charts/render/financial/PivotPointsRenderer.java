@@ -3,14 +3,12 @@ package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import javax.swing.*;
-import java.awt.*;
-
+import com.arbergashi.charts.util.ColorRegistry;
 /**
  * <h1>PivotPointsRenderer - Support/Resistance Pivot Points</h1>
  *
@@ -52,12 +50,15 @@ import java.awt.*;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2026-01-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class PivotPointsRenderer extends BaseRenderer {
 
     private final double[] pxL = new double[2];
     private final double[] pxR = new double[2];
-    private final Rectangle labelBounds = new Rectangle();
+    private final float[] lineX = new float[2];
+    private final float[] lineY = new float[2];
     private PivotMethod method = PivotMethod.STANDARD;
     // Cached pivot levels
     private transient ChartModel cachedModel;
@@ -72,8 +73,10 @@ public final class PivotPointsRenderer extends BaseRenderer {
         this.method = method;
     }
 
-    @Override
-    protected void drawData(Graphics2D g, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         final int n = model.getPointCount();
         if (n < 2) return;
 
@@ -81,75 +84,59 @@ public final class PivotPointsRenderer extends BaseRenderer {
         final PivotLevels pivots = cachedPivots;
         if (pivots == null) return;
 
-        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(g, context);
+        final IndicatorRendererSupport.Viewport vp = IndicatorRendererSupport.viewport(context);
 
-        final ChartTheme theme = resolveTheme(context);
-        final Color ppColor = theme.getAccentColor();
-        final Color r1Color = ColorUtils.adjustBrightness(theme.getBearishColor(), 1.0f);
-        final Color r2Color = ColorUtils.adjustBrightness(theme.getBearishColor(), 1.2f);
-        final Color r3Color = ColorUtils.adjustBrightness(theme.getBearishColor(), 1.4f);
-        final Color s1Color = ColorUtils.adjustBrightness(theme.getBullishColor(), 1.0f);
-        final Color s2Color = ColorUtils.adjustBrightness(theme.getBullishColor(), 1.2f);
-        final Color s3Color = ColorUtils.adjustBrightness(theme.getBullishColor(), 1.4f);
-
-        final Font baseFont = g.getFont();
-        final Font resolvedBase = (baseFont != null ? baseFont : UIManager.getFont("Label.font"));
-        final Font labelFont = resolvedBase
-                .deriveFont(Font.BOLD, ChartScale.uiFontSize(resolvedBase, 10.0f));
+        final ChartTheme theme = getResolvedTheme(context);
+        final ArberColor ppColor = theme.getAccentColor();
+        final ArberColor r1Color = ColorRegistry.adjustBrightness(theme.getBearishColor(), 1.0f);
+        final ArberColor r2Color = ColorRegistry.adjustBrightness(theme.getBearishColor(), 1.2f);
+        final ArberColor r3Color = ColorRegistry.adjustBrightness(theme.getBearishColor(), 1.4f);
+        final ArberColor s1Color = ColorRegistry.adjustBrightness(theme.getBullishColor(), 1.0f);
+        final ArberColor s2Color = ColorRegistry.adjustBrightness(theme.getBullishColor(), 1.2f);
+        final ArberColor s3Color = ColorRegistry.adjustBrightness(theme.getBullishColor(), 1.4f);
 
         final double xLeft = model.getX(0);
         final double xRight = model.getX(n - 1);
 
         // Draw resistance levels
-        drawPivotLevel(g, context, xLeft, xRight, pivots.r3, "R3", r3Color, 1.0f, labelFont, vp);
-        drawPivotLevel(g, context, xLeft, xRight, pivots.r2, "R2", r2Color, 1.5f, labelFont, vp);
-        drawPivotLevel(g, context, xLeft, xRight, pivots.r1, "R1", r1Color, 2.0f, labelFont, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.r3, r3Color, 1.0f, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.r2, r2Color, 1.5f, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.r1, r1Color, 2.0f, vp);
 
         // Draw pivot point
-        drawPivotLevel(g, context, xLeft, xRight, pivots.pp, "PP", ppColor, 2.5f, labelFont, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.pp, ppColor, 2.5f, vp);
 
         // Draw support levels
-        drawPivotLevel(g, context, xLeft, xRight, pivots.s1, "S1", s1Color, 2.0f, labelFont, vp);
-        drawPivotLevel(g, context, xLeft, xRight, pivots.s2, "S2", s2Color, 1.5f, labelFont, vp);
-        drawPivotLevel(g, context, xLeft, xRight, pivots.s3, "S3", s3Color, 1.0f, labelFont, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.s1, s1Color, 2.0f, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.s2, s2Color, 1.5f, vp);
+        drawPivotLevel(canvas, context, xLeft, xRight, pivots.s3, s3Color, 1.0f, vp);
     }
 
-    private void drawPivotLevel(Graphics2D g,
+    private void drawPivotLevel(ArberCanvas canvas,
                                 PlotContext context,
                                 double xLeft,
                                 double xRight,
                                 double level,
-                                String label,
-                                Color color,
+                                ArberColor color,
                                 float width,
-                                Font labelFont,
                                 IndicatorRendererSupport.Viewport vp) {
         context.mapToPixel(xLeft, level, pxL);
         context.mapToPixel(xRight, level, pxR);
 
         // quick y-clip rejection
         final double y = pxR[1];
-        if (y < vp.y() - 2.0 || y > vp.maxY() + 2.0) {
+        if (y < vp.getY() - 2.0 || y > vp.getMaxY() + 2.0) {
             return;
         }
 
         // Draw line
-        g.setColor(color);
-        g.setStroke(getCachedStroke(ChartScale.scale(width)));
-        g.draw(getLine(pxL[0], pxL[1], pxR[0], pxR[1]));
-
-        // Label at right edge (use cached glyph rendering via BaseRenderer)
-        final float labelX = (float) (pxR[0] + ChartScale.scale(5));
-        final float labelY = (float) pxR[1];
-
-        // optional background chip (no FontMetrics) - fixed paddings; works well for short labels.
-        final int chipW = Math.round(ChartScale.scale(26));
-        final int chipH = Math.round(ChartScale.scale(14));
-        labelBounds.setBounds((int) labelX - 2, (int) (labelY - chipH * 0.6f), chipW, chipH);
-        g.setColor(ColorUtils.withAlpha(resolveTheme(context).getBackground(), 0.80f));
-        g.fill(labelBounds);
-
-        drawLabel(g, label, labelFont, color, labelX, labelY + ChartScale.scale(4));
+        canvas.setColor(color);
+        canvas.setStroke(ChartScale.scale(width));
+        lineX[0] = (float) pxL[0];
+        lineY[0] = (float) pxL[1];
+        lineX[1] = (float) pxR[0];
+        lineY[1] = (float) pxR[1];
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
     private void ensureCache(ChartModel model) {
@@ -167,10 +154,10 @@ public final class PivotPointsRenderer extends BaseRenderer {
 
         cachedModel = model;
         cachedPointCount = n;
-        cachedPivots = calculatePivotPoints(model, n);
+        cachedPivots = getCalculatedPivotPoints(model, n);
     }
 
-    private PivotLevels calculatePivotPoints(ChartModel model, int n) {
+    private PivotLevels getCalculatedPivotPoints(ChartModel model, int n) {
         // Find high, low, close from the data
         double high = Double.NEGATIVE_INFINITY;
         double low = Double.POSITIVE_INFINITY;
@@ -186,14 +173,14 @@ public final class PivotPointsRenderer extends BaseRenderer {
         }
 
         return switch (method) {
-            case STANDARD -> calculateStandardPivots(high, low, close);
-            case FIBONACCI -> calculateFibonacciPivots(high, low, close);
-            case WOODIE -> calculateWoodiePivots(high, low, close, model.getY(0));
-            case CAMARILLA -> calculateCamarillaPivots(high, low, close);
+            case STANDARD -> getCalculatedStandardPivots(high, low, close);
+            case FIBONACCI -> getCalculatedFibonacciPivots(high, low, close);
+            case WOODIE -> getCalculatedWoodiePivots(high, low, close, model.getY(0));
+            case CAMARILLA -> getCalculatedCamarillaPivots(high, low, close);
         };
     }
 
-    private PivotLevels calculateStandardPivots(double high, double low, double close) {
+    private PivotLevels getCalculatedStandardPivots(double high, double low, double close) {
         double pp = (high + low + close) / 3.0;
         double range = high - low;
 
@@ -208,7 +195,7 @@ public final class PivotPointsRenderer extends BaseRenderer {
         );
     }
 
-    private PivotLevels calculateFibonacciPivots(double high, double low, double close) {
+    private PivotLevels getCalculatedFibonacciPivots(double high, double low, double close) {
         double pp = (high + low + close) / 3.0;
         double range = high - low;
 
@@ -223,7 +210,7 @@ public final class PivotPointsRenderer extends BaseRenderer {
         );
     }
 
-    private PivotLevels calculateWoodiePivots(double high, double low, double close, double ignoredOpen) {
+    private PivotLevels getCalculatedWoodiePivots(double high, double low, double close, double ignoredOpen) {
         double pp = (high + low + 2 * close) / 4.0;
         double range = high - low;
 
@@ -238,7 +225,7 @@ public final class PivotPointsRenderer extends BaseRenderer {
         );
     }
 
-    private PivotLevels calculateCamarillaPivots(double high, double low, double close) {
+    private PivotLevels getCalculatedCamarillaPivots(double high, double low, double close) {
         double range = high - low;
 
         return new PivotLevels(
@@ -258,8 +245,9 @@ public final class PivotPointsRenderer extends BaseRenderer {
     }
 
     @SuppressWarnings("unused")
-    public void setPivotMethod(PivotMethod method) {
+    public PivotPointsRenderer setPivotMethod(PivotMethod method) {
         this.method = method;
+        return this;
     }
 
     /**
@@ -276,7 +264,52 @@ public final class PivotPointsRenderer extends BaseRenderer {
         CAMARILLA
     }
 
-    private record PivotLevels(double pp, double r1, double r2, double r3,
-                               double s1, double s2, double s3) {
+    private static final class PivotLevels {
+        private double pp;
+        private double r1;
+        private double r2;
+        private double r3;
+        private double s1;
+        private double s2;
+        private double s3;
+
+        private PivotLevels(double pp, double r1, double r2, double r3,
+                            double s1, double s2, double s3) {
+            this.pp = pp;
+            this.r1 = r1;
+            this.r2 = r2;
+            this.r3 = r3;
+            this.s1 = s1;
+            this.s2 = s2;
+            this.s3 = s3;
+        }
+
+        public double getPp() {
+            return pp;
+        }
+
+        public double getR1() {
+            return r1;
+        }
+
+        public double getR2() {
+            return r2;
+        }
+
+        public double getR3() {
+            return r3;
+        }
+
+        public double getS1() {
+            return s1;
+        }
+
+        public double getS2() {
+            return s2;
+        }
+
+        public double getS3() {
+            return s3;
+        }
     }
 }

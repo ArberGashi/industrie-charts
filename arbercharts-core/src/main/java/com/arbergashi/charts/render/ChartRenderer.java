@@ -2,31 +2,31 @@ package com.arbergashi.charts.render;
 
 import com.arbergashi.charts.api.DefaultPlotContext;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
+import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.model.ChartModel;
 
-import java.awt.*;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import com.arbergashi.charts.api.types.ArberPoint;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-
 /**
  * Defines the contract for custom chart renderers.
  *
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2025-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public interface ChartRenderer {
     /**
-     * Renders the chart contents into the provided graphics context.
+     * Core render entry point using ArberCanvas (headless/bridge).
      *
-     * @param g2 graphics target (already configured by the panel)
-     * @param model data model for this layer
-     * @param context current plot context (bounds, scale, theme)
+     * <p>Default implementation is a no-op until renderers migrate to ArberCanvas.</p>
      */
-    void render(Graphics2D g2, ChartModel model, PlotContext context);
+    default void render(ArberCanvas canvas, ChartModel model, PlotContext context) {
+    }
 
     /**
      * Returns the nearest point index to the given pixel, if supported.
@@ -36,7 +36,7 @@ public interface ChartRenderer {
      * @param context current plot context
      * @return optional point index
      */
-    Optional<Integer> getPointAt(Point2D pixel, ChartModel model, PlotContext context);
+    Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context);
 
     /**
      * Returns the formatted tooltip text for a given data point index.
@@ -93,12 +93,11 @@ public interface ChartRenderer {
     /**
      * Renders a renderer-specific empty state. Called only when {@link #supportsEmptyState()} is true.
      *
-     * @param g2 graphics target
+     * @param canvas canvas target
      * @param model data model for this layer (empty)
      * @param context current plot context
      */
-    default void renderEmptyState(Graphics2D g2, ChartModel model, PlotContext context) {
-    }
+    default void renderEmptyState(ArberCanvas canvas, ChartModel model, PlotContext context) {}
 
     /**
      * Returns the human-readable renderer name for legends/tooltips.
@@ -129,7 +128,7 @@ public interface ChartRenderer {
      * @param model data model for this layer
      * @return a plot context instance
      */
-    default PlotContext createContext(Rectangle2D bounds, ChartModel model) {
+    default PlotContext getContext(ArberRect bounds, ChartModel model) {
         return new DefaultPlotContext(bounds, model, Double.NaN, Double.NaN, Double.NaN, Double.NaN);
     }
 }

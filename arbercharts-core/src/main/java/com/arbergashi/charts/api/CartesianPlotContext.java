@@ -1,7 +1,6 @@
 package com.arbergashi.charts.api;
 
-import java.awt.geom.Rectangle2D;
-
+import com.arbergashi.charts.core.geometry.ArberRect;
 /**
  * Standard {@link PlotContext} implementation for Cartesian coordinate systems.
  *
@@ -13,7 +12,7 @@ import java.awt.geom.Rectangle2D;
  * @since 2025-06-01
  */
 public class CartesianPlotContext implements PlotContext {
-    private final Rectangle2D bounds;
+    private final ArberRect bounds;
     private final double minX, maxX, minY, maxY;
     private final double scaleX, scaleY;
 
@@ -27,7 +26,7 @@ public class CartesianPlotContext implements PlotContext {
      * @param maxY   maximum visible Y value (data coordinates)
      * @throws IllegalArgumentException if {@code minX >= maxX} or {@code minY >= maxY}
      */
-    public CartesianPlotContext(Rectangle2D bounds, double minX, double maxX, double minY, double maxY) {
+    public CartesianPlotContext(ArberRect bounds, double minX, double maxX, double minY, double maxY) {
         this.bounds = bounds;
         this.minX = minX;
         this.maxX = maxX;
@@ -35,8 +34,8 @@ public class CartesianPlotContext implements PlotContext {
         this.maxY = maxY;
         double rx = maxX - minX;
         double ry = maxY - minY;
-        this.scaleX = (rx == 0) ? 0 : bounds.getWidth() / rx;
-        this.scaleY = (ry == 0) ? 0 : bounds.getHeight() / ry;
+        this.scaleX = (rx == 0) ? 0 : bounds.width() / rx;
+        this.scaleY = (ry == 0) ? 0 : bounds.height() / ry;
     }
 
     /**
@@ -52,8 +51,8 @@ public class CartesianPlotContext implements PlotContext {
     public void mapToPixel(double dataX, double dataY, double[] dest) {
         // Linear transformation: pixel = offset + (data - min) * scale
         // NOTE: Swing Y-axis is inverted (0 is top)
-        dest[0] = bounds.getX() + (dataX - minX) * scaleX;
-        dest[1] = (bounds.getY() + bounds.getHeight()) - (dataY - minY) * scaleY;
+        dest[0] = bounds.x() + (dataX - minX) * scaleX;
+        dest[1] = (bounds.y() + bounds.height()) - (dataY - minY) * scaleY;
     }
 
     /**
@@ -68,15 +67,15 @@ public class CartesianPlotContext implements PlotContext {
     @Override
     public void mapToData(double pixelX, double pixelY, double[] dest) {
         // Inverse of the linear transform used in mapToPixel
-        dest[0] = minX + (pixelX - bounds.getX()) / scaleX;
-        dest[1] = minY + ((bounds.getY() + bounds.getHeight()) - pixelY) / scaleY;
+        dest[0] = minX + (pixelX - bounds.x()) / scaleX;
+        dest[1] = minY + ((bounds.y() + bounds.height()) - pixelY) / scaleY;
     }
 
     /**
      * Returns the plot bounds in pixel coordinates.
      */
     @Override
-    public Rectangle2D plotBounds() {
+    public ArberRect getPlotBounds() {
         return bounds;
     }
 
@@ -84,7 +83,7 @@ public class CartesianPlotContext implements PlotContext {
      * @return minimum visible X value (data coordinates)
      */
     @Override
-    public double minX() {
+    public double getMinX() {
         return minX;
     }
 
@@ -92,7 +91,7 @@ public class CartesianPlotContext implements PlotContext {
      * @return maximum visible X value (data coordinates)
      */
     @Override
-    public double maxX() {
+    public double getMaxX() {
         return maxX;
     }
 
@@ -100,7 +99,7 @@ public class CartesianPlotContext implements PlotContext {
      * @return minimum visible Y value (data coordinates)
      */
     @Override
-    public double minY() {
+    public double getMinY() {
         return minY;
     }
 
@@ -108,7 +107,7 @@ public class CartesianPlotContext implements PlotContext {
      * @return maximum visible Y value (data coordinates)
      */
     @Override
-    public double maxY() {
+    public double getMaxY() {
         return maxY;
     }
 }

@@ -3,16 +3,14 @@ package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorUtils;
-
-import java.awt.*;
-import java.awt.geom.Line2D;
-import java.awt.geom.Rectangle2D;
-
 /**
  * <h1>ThresholdRenderer - Visual Threshold Indicator</h1>
  *
@@ -29,12 +27,12 @@ import java.awt.geom.Rectangle2D;
  * @author Arber Gashi
  * @version 1.0.0
  * @since 2024-06-01
+  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ *
  */
 public final class ThresholdRenderer extends BaseRenderer {
 
     private final double[] pBuffer = new double[2];
-    private final Rectangle2D.Double rectCache = new Rectangle2D.Double();
-    private final Line2D.Double lineCache = new Line2D.Double();
 
     private double cachedY;
     private String lastYStr;
@@ -56,8 +54,10 @@ public final class ThresholdRenderer extends BaseRenderer {
         return false; // Overlay renderer
     }
 
-    @Override
-    protected void drawData(Graphics2D g2, ChartModel model, PlotContext context) {
+    @Override/**
+ * @since 1.5.0
+ */
+    protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         String yStr = ChartAssets.getString("chart.render.threshold.y", "0");
         if (lastYStr == null || !lastYStr.equals(yStr)) {
             cachedY = parseDoubleSafe(yStr, 0.0);
@@ -69,32 +69,46 @@ public final class ThresholdRenderer extends BaseRenderer {
         context.mapToPixel(0, y, pBuffer);
         double py = pBuffer[1];
         // JDK 25: Use Math.clamp() to constrain y position to bounds
-        py = Math.clamp(py, context.plotBounds().getY(), context.plotBounds().getMaxY());
+        ArberRect bounds = context.getPlotBounds();
+        py = Math.clamp(py, bounds.y(), bounds.maxY());
 
-        final ChartTheme theme = resolveTheme(context);
-        Color base = isMultiColor() ? themeSeries(context, 0) : theme.getAccentColor();
+        final ChartTheme theme = getResolvedTheme(context);
+        ArberColor base = isMultiColor() ? themeSeries(context, 0) : theme.getAccentColor();
         if (base == null) base = theme.getAccentColor();
         float alpha = ChartAssets.getFloat("chart.render.threshold.alpha", 0.08f);
-        Color fill = ColorUtils.withAlpha(base, alpha);
+        ArberColor fill = base;
 
-        Rectangle2D b = context.plotBounds();
-
+        float rx;
+        float ry;
+        float rw;
+        float rh;
         if ("below".equalsIgnoreCase(mode)) {
-            rectCache.setRect(b.getX(), py, b.getWidth(), b.getMaxY() - py);
+            rx = (float) bounds.x();
+            ry = (float) py;
+            rw = (float) bounds.width();
+            rh = (float) (bounds.maxY() - py);
         } else {
-            rectCache.setRect(b.getX(), b.getY(), b.getWidth(), py - b.getY());
+            rx = (float) bounds.x();
+            ry = (float) bounds.y();
+            rw = (float) bounds.width();
+            rh = (float) (py - bounds.y());
         }
 
-        g2.setColor(fill);
-        g2.fill(rectCache);
+        canvas.setColor(fill);
+        canvas.fillRect(rx, ry, rw, rh);
 
         // Optional: draw the threshold line itself
         if (ChartAssets.getBoolean("chart.render.threshold.line", true)) {
             float w = ChartAssets.getFloat("chart.render.threshold.width", 1.0f);
-            g2.setStroke(getCachedStroke(ChartScale.scale(w)));
-            g2.setColor(ColorUtils.withAlpha(theme.getAxisLabelColor(), 0.85f));
-            lineCache.setLine(b.getX(), py, b.getMaxX(), py);
-            g2.draw(lineCache);
+            canvas.setStroke(ChartScale.scale(w));
+            canvas.setColor(theme.getAxisLabelColor());
+            float[] xs = RendererAllocationCache.getFloatArray(this, "threshold.line.x", 2);
+            float[] ys = RendererAllocationCache.getFloatArray(this, "threshold.line.y", 2);
+            xs[0] = (float) bounds.x();
+            ys[0] = (float) py;
+            xs[1] = (float) bounds.maxX();
+            ys[1] = (float) py;
+            canvas.drawPolyline(xs, ys, 2);
         }
     }
 }
