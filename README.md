@@ -1,5 +1,9 @@
 # ArberCharts
 
+![ci-core](https://github.com/ArberGashi/charts/actions/workflows/ci-core.yml/badge.svg?branch=main)
+![ci-compose](https://github.com/ArberGashi/charts/actions/workflows/ci-compose.yml/badge.svg?branch=main)
+![ci-qt-swift](https://github.com/ArberGashi/charts/actions/workflows/ci-qt-swift.yml/badge.svg?branch=main)
+
 ArberCharts is a premium Java charting framework built for production systems that demand
 deterministic rendering, high-end visuals, and developer-friendly APIs. It delivers
 **158 renderers** across Standard, Financial, Statistical, Specialized, Medical, and Analysis domains.
