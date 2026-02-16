@@ -2,10 +2,8 @@
 
 ## License Summary
 
-ArberCharts is distributed under a **dual licensing model**:
-
-### 1. Binary Artifacts (JAR Files)
-The compiled JAR files of ArberCharts are licensed under the **MIT License**.
+### Binary Artifacts (JAR Files)
+ArberCharts artifacts are licensed under the **MIT License**.
 
 This means you can:
 - ✅ Use ArberCharts in commercial and non-commercial projects
@@ -15,25 +13,22 @@ This means you can:
 
 See [LICENSE](LICENSE) for the full MIT License text.
 
-### 2. Source Code
-The ArberCharts source code is **proprietary** and **NOT open source**.
-
-You are NOT permitted to:
-- ❌ Access or obtain the ArberCharts source code (unless explicitly licensed)
-- ❌ Reverse engineer, decompile, or disassemble the JAR files
-- ❌ Create derivative works based on the internal implementation
-- ❌ Remove or alter copyright notices
+### Delivery Model
+Standard customer delivery is binary-first. Source access is not included by default.
+Separate commercial agreements may define additional source-access/support terms.
 
 ## What This Means for You
 
 ### As a Developer/Company:
-You can freely use ArberCharts in your projects by adding the JAR files as dependencies. You own your code that uses ArberCharts' public APIs. You can ship products that include ArberCharts without licensing fees.
+You can freely use ArberCharts in your projects by adding the JAR files as dependencies.
+You own your application code and can ship proprietary/closed-source products without runtime royalties.
+When redistributing ArberCharts artifacts, keep the MIT copyright/license notices.
 
 ### As a Contributor:
-We currently do not accept external contributions to the ArberCharts source code, as it remains proprietary.
+We currently do not accept external contributions in the standard delivery model.
 
 ### As an Enterprise:
-For source code access, custom modifications, or enterprise support agreements, please contact us at: **gashi@pro-business.ch**
+For custom modifications or enterprise support agreements, please contact: **gashi@pro-business.ch**
 
 ## Distribution
 
@@ -48,4 +43,3 @@ For licensing inquiries, contact: **gashi@pro-business.ch**
 ---
 
 **Copyright (c) 2024-2026 Arber Gashi. All rights reserved.**
-

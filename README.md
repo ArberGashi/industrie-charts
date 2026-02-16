@@ -1,6 +1,6 @@
 # ArberCharts 2.0.0
 
-![Zero-GC](https://img.shields.io/badge/Zero--GC-Guaranteed-brightgreen) ![Java 25](https://img.shields.io/badge/Java-25-orange) ![Renderers](https://img.shields.io/badge/Renderers-157-blue) ![License](https://img.shields.io/badge/License-MIT%20(binaries)-blue)
+![Zero-GC](https://img.shields.io/badge/Zero--GC-Guaranteed-brightgreen) ![Java 25](https://img.shields.io/badge/Java-25-orange) ![Renderers](https://img.shields.io/badge/Renderers-157-blue) ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ArberCharts is an enterprise-grade Java charting framework for mission-critical systems.
 It delivers deterministic rendering, lock-free streaming models, and a zero-GC rendering pipeline.
@@ -51,8 +51,14 @@ java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts
 
 ## License
 
-ArberCharts binaries are licensed under the MIT License.
-Source code is proprietary.
+ArberCharts runtime artifacts are distributed under the MIT License.
+You may use ArberCharts in commercial and non-commercial projects, including closed-source end products,
+as long as MIT copyright and license notice obligations are preserved on redistribution.
+
+Commercial model:
+- No runtime royalty for end products
+- Paid support, SLA, and services
+
 See `LICENSE`, `BINARY-LICENSE.md`, and `NOTICE`.
 
 ## Support

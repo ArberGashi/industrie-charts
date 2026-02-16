@@ -8,11 +8,12 @@ See the LICENSE file for the full license text.
 
 IMPORTANT LICENSING NOTICE:
 
-The MIT License applies ONLY to the compiled binary artifacts (JAR files)
-distributed by ArberCharts.
+ArberCharts artifacts are distributed under the MIT License.
+Closed-source end products are permitted under MIT.
+When redistributing artifacts, keep MIT copyright/license notices.
 
-The source code of ArberCharts is proprietary and NOT licensed under the
-MIT License.
+Standard customer delivery is binary-first.
+Source-access terms, if any, are governed by separate commercial agreements.
 
 ================================================================================
 
@@ -35,10 +36,9 @@ For a complete list of dependencies, see the POM files in each module.
 
 CONTACT:
 
-For licensing inquiries, enterprise source code licensing, or custom development:
+For licensing inquiries, support subscriptions, or custom development:
 
 Email: gashi@pro-business.ch
 Web: https://www.arbergashi.com
 
 ================================================================================
-

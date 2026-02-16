@@ -3,7 +3,7 @@
 ## General Questions
 
 ### Q: What license is ArberCharts under?
-**A:** The compiled JAR files are under the **MIT License**. The source code is proprietary.
+**A:** ArberCharts artifacts are under the **MIT License**.
 
 ### Q: Can I use ArberCharts in my commercial product?
 **A:** Yes! The MIT License allows commercial use without restrictions or fees.
@@ -15,23 +15,20 @@
 **A:** Yes, you can bundle the JAR files with your application.
 
 ### Q: Can I modify ArberCharts?
-**A:** You can extend and customize ArberCharts through its public APIs. However, the source code is proprietary and cannot be modified directly.
+**A:** You can extend and customize ArberCharts through its public APIs.
 
-## Source Code
+## Delivery & Source
 
 ### Q: Can I see the source code?
-**A:** The source code is proprietary and not publicly available.
+**A:** Standard customer delivery is binary-first. Source access is not part of the default support subscription.
 
 ### Q: Can I get access to the source code?
-**A:** Enterprise source code licensing is available. Contact gashi@pro-business.ch
+**A:** This can be discussed as a separate commercial agreement. Contact gashi@pro-business.ch
 
-### Q: Why isn't the source code public if it's MIT licensed?
-**A:** The MIT License only applies to the **binary artifacts** (JAR files), not the source code. This is a common dual-licensing model.
+### Q: Can my end product stay closed source?
+**A:** Yes. MIT allows integration into proprietary/closed-source products.
 
 ## Legal & Compliance
-
-### Q: Can I reverse engineer the JAR files?
-**A:** No. The license explicitly prohibits reverse engineering, decompilation, or disassembly.
 
 ### Q: What are my obligations under the MIT License?
 **A:** You must include the copyright notice and license text when distributing ArberCharts JAR files.
@@ -53,13 +50,13 @@
 **A:** Yes, as long as you include the license information.
 
 ### Q: Can I fork ArberCharts?
-**A:** You cannot fork the source code (it's proprietary), but you can create extensions and wrappers around the public APIs.
+**A:** If source is provided under MIT in a specific distribution, MIT terms apply for that distribution.
+For standard binary delivery, use extensions and wrappers around the public APIs.
 
 ## Enterprise
 
 ### Q: Do you offer enterprise support?
 **A:** Yes. Contact gashi@pro-business.ch for:
-- Source code licensing
 - Custom modifications
 - Priority support
 - Training and consulting
@@ -80,10 +77,10 @@
 - `arbercharts-spring-boot-starter` - Spring Boot auto-configuration
 - `arbercharts-visual-verifier` - Testing and verification platform
 
-All modules are under the MIT License (binaries only).
+All modules are delivered for runtime use under the MIT License.
 
 ### Q: Can I contribute to ArberCharts?
-**A:** We currently do not accept external contributions, as the source code is proprietary.
+**A:** We currently do not accept external contributions in the standard delivery model.
 
 ### Q: How do I report bugs?
 **A:** Email gashi@pro-business.ch or open an issue (if public tracker is available).
@@ -95,4 +92,3 @@ Contact: **gashi@pro-business.ch**
 ---
 
 **Copyright (c) 2024-2026 Arber Gashi. All rights reserved.**
-

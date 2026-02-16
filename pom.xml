@@ -22,7 +22,7 @@
             <name>MIT License</name>
             <url>https://opensource.org/licenses/MIT</url>
             <distribution>repo</distribution>
-            <comments>MIT License applies to binary artifacts only. Source code remains proprietary.</comments>
+            <comments>MIT License for distributed artifacts. Standard delivery is binary-first; support is commercial.</comments>
         </license>
     </licenses>
 
@@ -195,7 +195,7 @@
                                 <Implementation-Version>${project.version}</Implementation-Version>
                                 <Implementation-Vendor>Arber Gashi</Implementation-Vendor>
                                 <Implementation-Title>${project.name}</Implementation-Title>
-                                <License>MIT License (binaries only)</License>
+                                <License>MIT License</License>
                                 <License-URL>https://opensource.org/licenses/MIT</License-URL>
                             </manifestEntries>
                         </archive>

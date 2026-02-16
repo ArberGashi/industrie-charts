@@ -24,19 +24,10 @@ SOFTWARE.
 
 IMPORTANT NOTICE:
 
-This MIT License applies ONLY to the compiled binary artifacts (JAR files)
-distributed by ArberCharts. The source code of ArberCharts remains proprietary
-and is NOT licensed under the MIT License.
+ArberCharts customer delivery is typically binary-first.
+End products may remain closed source under MIT terms.
+When redistributing ArberCharts artifacts, keep this copyright
+notice and permission notice.
 
-You are free to:
-- Use the ArberCharts JAR files in your projects (commercial or non-commercial)
-- Distribute the ArberCharts JAR files
-- Modify and extend ArberCharts through its public APIs
-
-You are NOT permitted to:
-- Access, modify, or redistribute the ArberCharts source code
-- Reverse engineer, decompile, or disassemble the JAR files
-- Remove or alter any proprietary notices in the JAR files
-
-For source code licensing inquiries, please contact: gashi@pro-business.ch
-
+Support, SLA, and optional source-access arrangements are handled
+under separate commercial agreements.

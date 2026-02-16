@@ -1,6 +1,6 @@
 # ArberCharts Service Level Agreement (SLA)
 
-This Service Level Agreement (SLA) defines response targets for ArberCharts support requests. The SLA applies to customers with an active paid license that includes support. All response times are measured during Business Hours unless stated otherwise.
+This Service Level Agreement (SLA) defines response targets for ArberCharts support requests. The SLA applies to customers with an active paid support subscription. All response times are measured during Business Hours unless stated otherwise.
 
 ## 1. Business Hours & Time Zone
 
@@ -64,4 +64,3 @@ At ArberCharts' discretion, repeated SLA violations may be compensated with serv
 ## 8. Contact
 
 Support & licensing: **gashi@pro-business.ch**
-
