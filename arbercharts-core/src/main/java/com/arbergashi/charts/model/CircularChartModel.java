@@ -8,6 +8,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 /**
  * Fixed-capacity ring-buffer model optimized for realtime streams.
  *
@@ -20,11 +22,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * if called separately.</p>
  *
  * <p>Capacity is rounded to the next power-of-two to enable fast index masking.</p>
-  * @since 1.5.0
+  * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class CircularChartModel implements ChartModel {
+    private static final Logger LOGGER = Logger.getLogger(CircularChartModel.class.getName());
 
     private static final VarHandle HEAD;
     private static final VarHandle TAIL;
@@ -188,9 +191,10 @@ public final class CircularChartModel implements ChartModel {
 
     @Override
     public long getTimestampNanos(int index) {
+        long stamp = updateStamp.get();
         ReadCache cache = readCache.get();
-        if (!cache.valid || cache.index != index) {
-            fillCache(index, cache);
+        if (!cache.valid || cache.index != index || cache.updateStamp != stamp) {
+            fillCache(index, cache, stamp);
         }
         return cache.timestampNanos;
     }
@@ -538,7 +542,11 @@ public final class CircularChartModel implements ChartModel {
 
     private void notifyListeners() {
         for (ChartModelListener listener : listeners) {
-            listener.modelChanged();
+            try {
+                listener.modelChanged();
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING, "ChartModel listener failed and was isolated", ex);
+            }
         }
     }
 
@@ -551,9 +559,10 @@ public final class CircularChartModel implements ChartModel {
     private double readValue(int index, ValueComponent component) {
         int count = getPointCount();
         if (index < 0 || index >= count) return 0.0;
+        long stamp = updateStamp.get();
         ReadCache cache = readCache.get();
-        if (!cache.valid || cache.index != index) {
-            fillCache(index, cache);
+        if (!cache.valid || cache.index != index || cache.updateStamp != stamp) {
+            fillCache(index, cache, stamp);
         }
         return switch (component) {
             case X -> cache.x;
@@ -567,9 +576,10 @@ public final class CircularChartModel implements ChartModel {
     private long readMeta(int index, MetaComponent component) {
         int count = getPointCount();
         if (index < 0 || index >= count) return 0L;
+        long stamp = updateStamp.get();
         ReadCache cache = readCache.get();
-        if (!cache.valid || cache.index != index) {
-            fillCache(index, cache);
+        if (!cache.valid || cache.index != index || cache.updateStamp != stamp) {
+            fillCache(index, cache, stamp);
         }
         return switch (component) {
             case PROVENANCE -> cache.provenanceFlag & 0xFFL;
@@ -577,7 +587,7 @@ public final class CircularChartModel implements ChartModel {
         };
     }
 
-    private void fillCache(int index, ReadCache cache) {
+    private void fillCache(int index, ReadCache cache, long expectedStamp) {
         long t = (long) TAIL.getAcquire(this);
         int idx = (int) ((t + index) & mask);
         double x;
@@ -618,6 +628,7 @@ public final class CircularChartModel implements ChartModel {
                 cache.provenanceFlag = provenance;
                 cache.sourceId = sourceId;
                 cache.timestampNanos = timestampNano;
+                cache.updateStamp = expectedStamp;
                 return;
             }
             if ((++spins & 0x3F) == 0) {
@@ -681,6 +692,7 @@ public final class CircularChartModel implements ChartModel {
         private byte provenanceFlag;
         private short sourceId;
         private long timestampNanos;
+        private long updateStamp;
     }
 
     private enum ValueComponent {

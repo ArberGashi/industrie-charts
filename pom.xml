@@ -9,7 +9,7 @@
     <version>2.0.0</version>
     <packaging>pom</packaging>
     <name>ArberCharts</name>
-    <description>Enterprise-grade Java charting framework. Zero-GC, 158 renderers, Java 25.</description>
+    <description>Enterprise-grade Java charting framework. Zero-GC, 157 renderers, Java 25.</description>
     <url>https://www.arbergashi.com</url>
 
     <organization>
@@ -67,9 +67,9 @@
                  Example: mvn -Darbercharts.buildDirSuffix=-local clean package -->
             <arbercharts.buildDirSuffix></arbercharts.buildDirSuffix>
 
-        <!-- v2.0: FlatLaf 4.x when available (currently using 3.7 for v1.7.0-LTS) -->
+        <!-- v2.0 baseline: FlatLaf 3.7 (upgrade tracked separately) -->
         <flatlaf.version>3.7</flatlaf.version>
-        <!-- TODO v2.0: Update to 4.0+ when released in 2026 -->
+        <!-- TODO: Evaluate FlatLaf 4.x once stable for this codebase -->
         <spring.boot.version>4.0.2</spring.boot.version>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
@@ -276,6 +276,63 @@
 	                </plugins>
 	            </build>
 	        </profile>
+        <profile>
+            <id>stress</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>--add-modules jdk.incubator.vector</argLine>
+                            <systemPropertyVariables>
+                                <arbercharts.stress>true</arbercharts.stress>
+                                <arbercharts.stress.default>true</arbercharts.stress.default>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>quality-gate</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>enforce-build-baseline</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireMavenVersion>
+                                            <version>[3.9.0,)</version>
+                                        </requireMavenVersion>
+                                        <requireJavaVersion>
+                                            <version>[25,)</version>
+                                        </requireJavaVersion>
+                                        <banDuplicatePomDependencyVersions/>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <configuration>
+                            <doclint>all,-missing</doclint>
+                            <failOnError>true</failOnError>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>docs</id>
             <build>

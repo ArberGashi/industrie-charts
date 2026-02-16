@@ -7,7 +7,7 @@
  * <h2>Zero-GC Philosophy</h2>
  * <p>NO allocations are permitted in render hot paths. Every frame must render
  * without creating new objects on the heap. This eliminates GC pauses and
- * guarantees <1ms p99 latency.
+ * guarantees &lt;1ms p99 latency.
  *
  * <h2>Key Components</h2>
  * <ul>
@@ -65,8 +65,6 @@
  * </ul>
  *
  * @see com.arbergashi.charts.engine.allocation.ZeroAllocPool
- * @see <a href="../../../../../docs/ZERO_GC_POLICY.md">Zero-GC Policy</a>
  * @since 2.0.0
  */
 package com.arbergashi.charts.engine.allocation;
-

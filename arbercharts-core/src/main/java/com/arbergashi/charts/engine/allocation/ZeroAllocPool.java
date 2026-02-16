@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>Performance Impact</h2>
  * <p>With Zero-GC rendering:
  * <ul>
- *   <li>p99 latency: <1ms (vs 5-10ms with allocations)</li>
+ *   <li>p99 latency: &lt;1ms (vs 5-10ms with allocations)</li>
  *   <li>GC pauses: ZERO during active rendering</li>
  *   <li>Throughput: 10,000+ renders/sec sustained</li>
  *   <li>Memory: Constant heap usage (no sawtooth pattern)</li>
@@ -353,5 +353,4 @@ class BufferPool {
         floatBuffer.remove();
     }
 }
-
 

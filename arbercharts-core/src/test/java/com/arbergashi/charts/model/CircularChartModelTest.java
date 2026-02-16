@@ -26,4 +26,18 @@ class CircularChartModelTest {
         assertEquals(30.0, model.getY(2), 0.0001);
         assertEquals(40.0, model.getY(3), 0.0001);
     }
+
+    @Test
+    void readCacheRefreshesWhenModelAdvances() {
+        CircularChartModel model = new CircularChartModel(2);
+
+        model.setXY(1, 10);
+        model.setXY(2, 20);
+        assertEquals(1.0, model.getX(0), 0.0001);
+
+        model.setXY(3, 30);
+
+        assertEquals(2.0, model.getX(0), 0.0001);
+        assertEquals(3.0, model.getX(1), 0.0001);
+    }
 }
