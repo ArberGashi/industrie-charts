@@ -62,7 +62,7 @@ public class DefaultChartModel implements ChartModel {
      * @param name series name
      */
     public DefaultChartModel(String name) {
-        this.name = name;
+        this.name = (name == null || name.isBlank()) ? "Series" : name;
     }
 
     /**
@@ -72,7 +72,7 @@ public class DefaultChartModel implements ChartModel {
      * @param color series color
      */
     public DefaultChartModel(String name, ArberColor color) {
-        this.name = name;
+        this.name = (name == null || name.isBlank()) ? "Series" : name;
         this.color = color;
     }
 
@@ -92,6 +92,7 @@ public class DefaultChartModel implements ChartModel {
      */
     public double getX(int index) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return xData[index];
         }
     }
@@ -104,6 +105,7 @@ public class DefaultChartModel implements ChartModel {
      */
     public double getY(int index) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return yData[index];
         }
     }
@@ -111,6 +113,7 @@ public class DefaultChartModel implements ChartModel {
     @Override
     public double getMin(int index) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return minData[index];
         }
     }
@@ -118,6 +121,7 @@ public class DefaultChartModel implements ChartModel {
     @Override
     public double getMax(int index) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return maxData[index];
         }
     }
@@ -125,6 +129,7 @@ public class DefaultChartModel implements ChartModel {
     @Override
     public double getWeight(int index) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return weightData[index];
         }
     }
@@ -140,6 +145,7 @@ public class DefaultChartModel implements ChartModel {
      */
     public double getValue(int index, int component) {
         synchronized (dataLock) {
+            if (index < 0 || index >= size) return 0.0;
             return switch (component) {
                 case 0 -> xData[index];
                 case 1 -> yData[index];
@@ -335,7 +341,7 @@ public class DefaultChartModel implements ChartModel {
      */
     public DefaultChartModel setName(String name) {
         synchronized (dataLock) {
-            this.name = name;
+            this.name = (name == null || name.isBlank()) ? "Series" : name;
         }
         invalidate();
         return this;
@@ -427,7 +433,13 @@ public class DefaultChartModel implements ChartModel {
 
     protected void fireModelChanged() {
         if (dispatchOnEdt && dispatchExecutor != null) {
-            dispatchExecutor.execute(this::notifyListeners);
+            try {
+                dispatchExecutor.execute(this::notifyListeners);
+                return;
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING, "Dispatch executor rejected listener notification; falling back to caller thread", ex);
+            }
+            notifyListeners();
             return;
         }
         notifyListeners();

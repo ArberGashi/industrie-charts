@@ -22,9 +22,9 @@ import java.util.logging.Logger;
  * if called separately.</p>
  *
  * <p>Capacity is rounded to the next power-of-two to enable fast index masking.</p>
-  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 2.0.0
+ * @author Arber Gashi
+ * @version 2.0.0
  */
 public final class CircularChartModel implements ChartModel {
     private static final Logger LOGGER = Logger.getLogger(CircularChartModel.class.getName());
@@ -275,7 +275,7 @@ public final class CircularChartModel implements ChartModel {
     }
 
     public CircularChartModel setName(String name) {
-        this.name = name != null ? name : "Series";
+        this.name = (name == null || name.isBlank()) ? "Series" : name;
         invalidate();
         return this;
     }
@@ -534,7 +534,13 @@ public final class CircularChartModel implements ChartModel {
 
     private void fireModelChanged() {
         if (dispatchOnEdt && dispatchExecutor != null) {
-            dispatchExecutor.execute(this::notifyListeners);
+            try {
+                dispatchExecutor.execute(this::notifyListeners);
+                return;
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING, "Dispatch executor rejected listener notification; falling back to caller thread", ex);
+            }
+            notifyListeners();
             return;
         }
         notifyListeners();
