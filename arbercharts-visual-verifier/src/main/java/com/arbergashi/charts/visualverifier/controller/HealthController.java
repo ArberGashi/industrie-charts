@@ -1,7 +1,9 @@
 package com.arbergashi.charts.visualverifier.controller;
 
 import com.arbergashi.charts.visualverifier.service.RendererCatalogService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;

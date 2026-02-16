@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -221,4 +220,3 @@ public class VisualRegressionService {
 
     private record PixelComparisonResult(boolean matches, double matchPercentage, int totalPixels, int diffPixels) {}
 }
-

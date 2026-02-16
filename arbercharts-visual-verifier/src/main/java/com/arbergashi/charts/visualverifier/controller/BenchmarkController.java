@@ -2,7 +2,11 @@ package com.arbergashi.charts.visualverifier.controller;
 
 import com.arbergashi.charts.visualverifier.dto.BenchmarkResult;
 import com.arbergashi.charts.visualverifier.service.BenchmarkService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller for performance benchmarking.

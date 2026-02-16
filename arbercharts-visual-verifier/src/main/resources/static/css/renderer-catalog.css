@@ -271,6 +271,16 @@
     transform: scale(1.1);
 }
 
+.icon-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.icon-btn:disabled:hover {
+    background: white;
+}
+
 /* Card Preview */
 
 .card-preview {
@@ -283,6 +293,18 @@
     position: relative;
     width: 100%;
     padding-bottom: 60%; /* 5:3 aspect ratio */
+}
+
+.renderer-card-modern.size-sm .preview-container {
+    padding-bottom: 52%;
+}
+
+.renderer-card-modern.size-md .preview-container {
+    padding-bottom: 60%;
+}
+
+.renderer-card-modern.size-lg .preview-container {
+    padding-bottom: 72%;
 }
 
 .preview-canvas {
@@ -461,6 +483,15 @@
     font-weight: 600;
     color: #111827;
     font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+}
+
+.card-stats .stat-label {
+    color: #6b7280;
+}
+
+.card-stats .stat-value {
+    font-weight: 600;
+    color: #111827;
 }
 
 /* Animation Indicator */
@@ -790,6 +821,10 @@ body[data-theme="dark"] .renderer-class {
 }
 
 body[data-theme="dark"] .stat-value {
+    color: #f9fafb;
+}
+
+body[data-theme="dark"] .card-stats .stat-value {
     color: #f9fafb;
 }
 

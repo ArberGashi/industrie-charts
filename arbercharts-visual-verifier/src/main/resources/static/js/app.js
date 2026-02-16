@@ -48,10 +48,32 @@
 
         cards.forEach(function(card) {
             var canvas = card.querySelector('.preview-canvas');
+            var rendererClass = canvas && canvas.dataset.rendererClass;
             var size = detectSizeKey(canvas);
             cardState.set(card, { theme: globalTheme, size: size });
             syncCardControlState(card, globalTheme, size);
+            applyCardSizeClass(card, size);
+            applyAnimationCapability(card, rendererClass);
         });
+    }
+
+    function applyAnimationCapability(card, rendererClass) {
+        var simpleName = rendererClass ? rendererClass.split('.').pop() : '';
+        var isAnimated = Array.isArray(window.ANIMATED_RENDERERS) &&
+            window.ANIMATED_RENDERERS.indexOf(simpleName) !== -1;
+        card.classList.toggle('animation-capable', isAnimated);
+
+        var animateBtn = card.querySelector('.icon-btn[data-action="animate"]');
+        if (animateBtn) {
+            animateBtn.disabled = !isAnimated;
+            animateBtn.setAttribute('aria-disabled', isAnimated ? 'false' : 'true');
+            animateBtn.title = isAnimated ? 'Animate' : 'Animation not supported';
+        }
+    }
+
+    function applyCardSizeClass(card, size) {
+        card.classList.remove('size-sm', 'size-md', 'size-lg');
+        card.classList.add('size-' + size);
     }
 
     function detectSizeKey(canvas) {
@@ -194,6 +216,7 @@
 
         state.size = nextSize;
         syncCardControlState(card, state.theme, state.size);
+        applyCardSizeClass(card, state.size);
 
         var canvas = card.querySelector('.preview-canvas');
         if (canvas) {
@@ -363,6 +386,11 @@
     }
 
     function toggleAnimation(card, canvas) {
+        if (!card.classList.contains('animation-capable')) {
+            notify('Animation not supported for this renderer', 'info');
+            return;
+        }
+
         var existing = animationTimers.get(card);
         if (existing) {
             clearInterval(existing);
