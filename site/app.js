@@ -202,8 +202,8 @@ const dictionary = {
   cta_title: { de: "Bereit für das nächste Level an Performance?", en: "Ready for the next level of performance?" },
   cta_body: { de: "Laden Sie die Demo herunter und erleben Sie 158 Renderer in Aktion. Kostenlos für Einzelentwickler.", en: "Download the demo and experience 158 renderers in action. Free for individual developers." },
   cta_download: { de: "Starter-Framework herunterladen", en: "Download starter framework" },
-  cta_license: { de: "Lizenz erwerben", en: "Purchase license" },
-  footer_rights: { de: "© 2026 Arber Gashi. All rights reserved.", en: "© 2026 Arber Gashi. All rights reserved." },
+  cta_license: { de: "Support-Plan anfragen", en: "Request support plan" },
+  footer_rights: { de: "© 2024-2026 Arber Gashi. All rights reserved.", en: "© 2024-2026 Arber Gashi. All rights reserved." },
   footer_license: { de: "MIT-Artefakte. Closed-Source-Endprodukte erlaubt. Kommerziell ueber Support/SLA.", en: "MIT artifacts. Closed-source end products allowed. Commercial via support/SLA." },
   footer_note: {
     de: "MIT-Artefakte. Closed-Source-Endprodukte erlaubt. Kommerziell ueber Support/SLA.",
@@ -255,7 +255,7 @@ const dictionary = {
   product_legend_title: { de: "Legenden & Crosshair", en: "Legends & crosshair" },
   product_legend_body: { de: "Legenden, Crosshair-Overlays, praezise Tooltips.", en: "Legends, crosshair overlays, precise tooltips." },
   product_renderers: { de: "Renderer-Bibliothek", en: "Renderer Library" },
-  product_renderers_title: { de: "157 Renderer.", en: "157 renderers." },
+  product_renderers_title: { de: "158 Renderer.", en: "158 renderers." },
   product_renderers_note: { de: "Jeder Renderer liefert Default-Themes und Demo-Presets.", en: "Each renderer ships with default themes and demo presets." },
   product_domains_title: { de: "Domain-Abdeckung", en: "Domain coverage" },
   product_domains_body: {
@@ -544,17 +544,17 @@ const dictionary = {
   pricing_row_updates_enterprise: { de: "Inklusive (v2.x Updates)", en: "Included (v2.x updates)" },
   pricing_notice_title: { de: "Lizenz-Überblick", en: "License overview" },
   pricing_notice_body: {
-    de: "Einzelentwickler entwickeln kostenlos. Für Teams und kommerzielle Distribution gelten Lizenzpakete.",
-    en: "Individual developers build for free. Team and distribution licensing applies for commercial use."
+    de: "MIT-Artefakte koennen kommerziell und nicht-kommerziell genutzt werden. Kommerzielle Zusammenarbeit erfolgt ueber Support-/SLA-Plaene.",
+    en: "MIT artifacts can be used commercially and non-commercially. Commercial engagement is handled through support/SLA plans."
   },
-  pricing_notice_b1: { de: "Einzelentwickler: freie Nutzung der v2.0.0 Binaerartefakte fuer Evaluation und private Projekte.", en: "Individuals: free use of v2.0.0 binaries for evaluation and private projects." },
+  pricing_notice_b1: { de: "MIT-Artefakte duerfen in proprietaeren Endprodukten eingesetzt werden (inkl. kommerzieller Distribution).", en: "MIT artifacts may be used in proprietary end products (including commercial distribution)." },
   pricing_notice_b4: { de: "Studierende, Universitäten und Hochschulen: kostenfreie Nutzung für Lehre und Forschung.", en: "Students, universities, and higher education institutions: free use for teaching and research." },
   pricing_notice_b2: { de: "Kommerzielle Sicherheit: v2.0.0 Build-Linie ist der alleinige Wartungsstand.", en: "Commercial safety: v2.0.0 is the single maintained release line." },
-  pricing_notice_b3: { de: "Wartung: Aktive Lizenznehmer erhalten Zugriff auf alle v2.x Updates und Optimierungen.", en: "Maintenance: active licensees receive all v2.x updates and optimizations." },
-  pricing_note_title: { de: "Transparente Jahreslizenzen", en: "Transparent annual licenses" },
+  pricing_notice_b3: { de: "Wartung: Aktive Support-Kunden erhalten priorisierte Betreuung und SLA-Ziele.", en: "Maintenance: active support customers receive prioritized assistance and SLA targets." },
+  pricing_note_title: { de: "Transparentes Supportmodell", en: "Transparent support model" },
   pricing_note_body: {
-    de: "Alle Preise verstehen sich als jährliche Gebühr. Darin enthalten sind sämtliche Updates auf neue Versionen (inkl. Major-Releases) sowie technischer Support.",
-    en: "All prices are annual fees. They include all updates to new versions (including major releases) and technical support."
+    de: "Kosten entstehen ueber Support-Abonnements, SLA-Ziele und Engineering-Services. Die Artefakte bleiben unter MIT nutzbar.",
+    en: "Costs are tied to support subscriptions, SLA targets, and engineering services. Artifacts remain usable under MIT."
   },
   pricing_note_lockin_title: { de: "Kein Vendor Lock-in:", en: "No vendor lock-in:" },
   pricing_note_lockin_body: {
