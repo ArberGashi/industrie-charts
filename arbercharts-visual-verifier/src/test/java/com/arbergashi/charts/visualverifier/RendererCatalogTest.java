@@ -32,4 +32,13 @@ public class RendererCatalogTest {
                 () -> service.getRenderer("com.arbergashi.charts.render.common.PerformanceAuditRenderer")
         );
     }
+
+    @Test
+    void duplicateConflictRendererIsRejected() {
+        RendererCatalogService service = new RendererCatalogService();
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.getRenderer("com.arbergashi.charts.render.specialized.CandlestickHollowRenderer")
+        );
+    }
 }
