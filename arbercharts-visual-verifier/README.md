@@ -8,6 +8,12 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.2-green.svg)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
+## Lizenz & Commercial Model
+
+- ArberCharts-Artefakte werden unter MIT ausgeliefert.
+- Endprodukte duerfen closed source bleiben.
+- Umsatzmodell fuer ArberCharts: Support, SLA und Engineering Services.
+
 ---
 
 ## 🎯 **Features**
@@ -345,4 +351,3 @@ Contributions sind willkommen! Bitte beachten Sie:
 **Author:** Arber Gashi  
 **Website:** https://arbercharts.com  
 **Support:** [GitHub Issues](https://github.com/arbergashi/arbercharts/issues)
-

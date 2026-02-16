@@ -204,10 +204,10 @@ const dictionary = {
   cta_download: { de: "Starter-Framework herunterladen", en: "Download starter framework" },
   cta_license: { de: "Lizenz erwerben", en: "Purchase license" },
   footer_rights: { de: "© 2026 Arber Gashi. All rights reserved.", en: "© 2026 Arber Gashi. All rights reserved." },
-  footer_license: { de: "MIT-Lizenz für Binärartefakte. Quellcode proprietär.", en: "MIT license for binary artifacts. Source code proprietary." },
+  footer_license: { de: "MIT-Artefakte. Closed-Source-Endprodukte erlaubt. Kommerziell ueber Support/SLA.", en: "MIT artifacts. Closed-source end products allowed. Commercial via support/SLA." },
   footer_note: {
-    de: "MIT-Lizenz fuer Binaerartefakte. Quellcode proprietaer.",
-    en: "MIT license for binary artifacts. Source code proprietary."
+    de: "MIT-Artefakte. Closed-Source-Endprodukte erlaubt. Kommerziell ueber Support/SLA.",
+    en: "MIT artifacts. Closed-source end products allowed. Commercial via support/SLA."
   },
   footer_tagline: { de: "High-Performance Java Charts für geschäftskritische Systeme.", en: "High-performance Java charts for mission-critical systems." },
   footer_legal: { de: "Rechtliches", en: "Legal" },

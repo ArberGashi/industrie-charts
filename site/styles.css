@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
   --bg: #050505;
@@ -12,7 +12,7 @@
   --muted: #848d9a;
   --radius: 20px;
   --shadow-ui: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
-  --font-main: "Inter", -apple-system, system-ui, sans-serif;
+  --font-main: "Sora", "Space Grotesk", -apple-system, system-ui, sans-serif;
   --content-width: 1100px;
   --bg-2: var(--bg-subtle);
   --card: var(--surface);
@@ -1228,4 +1228,134 @@ h1, h2, h3 {
 .ac-logo span {
   color: var(--accent); /* Konsistenz statt Rot */
   text-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* ============================================
+   Home Revision 2.0
+   ============================================ */
+
+.home-rev {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(31, 176, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 0% 10%, rgba(10, 155, 120, 0.16), transparent 58%),
+    linear-gradient(180deg, #040913 0%, #060d1a 45%, #05070d 100%);
+}
+
+.home-main {
+  padding-top: 28px;
+}
+
+.rev-hero {
+  text-align: left;
+  padding: 86px 0 40px;
+  max-width: 920px;
+}
+
+.rev-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(118, 222, 255, 0.35);
+  background: rgba(14, 28, 42, 0.72);
+  color: #a6dbff;
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.rev-hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(2.2rem, 4.6vw, 4.25rem);
+  letter-spacing: -0.04em;
+  line-height: 1.03;
+  max-width: 860px;
+}
+
+.rev-sub {
+  margin: 0;
+  max-width: 760px;
+  color: #b2bfce;
+  font-size: clamp(1.02rem, 1.3vw, 1.2rem);
+}
+
+.rev-hero .hero-cta {
+  margin-top: 28px;
+}
+
+.rev-proof-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  margin: 4px 0 44px;
+}
+
+.rev-proof {
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  background: rgba(8, 16, 29, 0.72);
+  border: 1px solid rgba(165, 206, 255, 0.18);
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.62);
+}
+
+.rev-proof h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.rev-proof p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #a8b6c7;
+}
+
+.rev-section {
+  padding-top: 16px;
+}
+
+.rev-lane .card-media {
+  height: 188px;
+}
+
+.rev-license .card {
+  background: linear-gradient(140deg, rgba(15, 38, 59, 0.66) 0%, rgba(13, 26, 37, 0.8) 50%, rgba(12, 34, 28, 0.78) 100%);
+  border-color: rgba(144, 213, 255, 0.35);
+}
+
+.rev-final-cta .card {
+  background: linear-gradient(132deg, rgba(20, 31, 48, 0.88) 0%, rgba(16, 47, 60, 0.85) 100%);
+  border-color: rgba(146, 222, 197, 0.34);
+}
+
+.rev-final-cta h3 {
+  margin-top: 0;
+}
+
+@media (min-width: 760px) {
+  .rev-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1080px) {
+  .rev-proof-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .rev-hero {
+    padding-top: 64px;
+  }
+
+  .rev-hero .hero-cta {
+    width: 100%;
+  }
+
+  .rev-hero .btn {
+    width: 100%;
+  }
 }
