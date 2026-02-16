@@ -1,6 +1,6 @@
-# Renderer Catalog (1.7.0-LTS)
+# Renderer Catalog (2.0.0)
 
-ArberCharts ships with **158 concrete renderer classes** across standard, financial, statistical,
+ArberCharts ships with **157 concrete renderer classes** across standard, financial, statistical,
 analysis, specialized, medical, and infrastructure overlays.
 
 Note on duplicate class names:

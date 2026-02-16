@@ -1084,7 +1084,7 @@ a {
   100% { transform: translateX(-50%); }
 }
 
-/* --- v1.3.0 visual overrides --- */
+/* --- visual overrides --- */
 :root {
   /* Tiefere Farbpalette fuer mehr Dimension */
   --bg: #050505;

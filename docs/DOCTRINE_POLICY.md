@@ -39,7 +39,7 @@ Every contribution must conform to these rules. Violations are rejected.
 
 ## 5. Compatibility Window
 
-- The `com.arbergashi.charts.ui` package is removed in v1.7.0 LTS.
+- The `com.arbergashi.charts.ui` package is removed.
 - Do not introduce new `ui.*` references or stubs.
 - Use `platform.swing`, `platform.export`, and `render.*` instead.
 

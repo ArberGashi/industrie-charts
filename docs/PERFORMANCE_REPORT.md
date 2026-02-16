@@ -1,30 +1,20 @@
-## Performance Report (v1.7.0 LTS Baseline Lock)
+## Performance Report (v2.0.0)
 
-ArberCharts v1.7.0 LTS establishes the zero-allocation rendering baseline for the LTS cycle. The
-render pipeline now operates without per-frame object creation in the hot paths, reducing
-GC pressure and stabilizing p99 frame times for real-time workloads.
+ArberCharts 2.0.0 defines the current performance baseline for production use.
+The render pipeline targets deterministic frame time and zero-allocation behavior in hot paths.
 
-### Zero-Alloc Milestones
+### Baseline Principles
 
-- **Grids (Medical/Analysis/Financial/Default)**: stroke allocations moved to `StrokeCache`.
-- **Predictive layers**: alpha color generation moved to `ColorCache`, dash arrays reused.
-- **Financial buffers**: `HighLowRenderer` and `WaterfallRenderer` now recycle rectangle buffers.
-- **Statistical overlays**: histogram and box plot strokes centralized, dash arrays reused.
-- **Specialized charts**: horizon palettes reused; chord diagram uses shared stroke cache.
+- No per-frame `new Color(...)` or `new BasicStroke(...)` in render loops.
+- Reusable buffers and caches for repeated geometry.
+- Theme and palette reuse instead of transient object creation.
 
-### Hot-Path Allocation Policy
+### Validation
 
-- No `new Color(...)`, `new BasicStroke(...)`, or per-frame geometry allocation in render loops.
-- Reusable buffers and cached shapes are used for repeated geometry.
-- Palettes are cached and reused; updates occur only on theme changes or capacity growth.
+- `mvn -pl arbercharts-core test`
+- `mvn -pl arbercharts-swing-bridge test`
+- Architecture and zero-GC rules enforced via test suite.
 
-### Test Validation
+### Scope
 
-- `mvn -pl arbercharts-core clean test`
-- Architecture doctrine tests enforce layer isolation and headless domain purity.
-
-### LTS Baseline Scope
-
-This report freezes the v1.7.0 LTS performance baseline. Any change
-that reintroduces per-frame allocations or violates the render hot-path policy must be
-justified and benchmarked against this baseline.
+This baseline applies to ArberCharts 2.0.0 only.

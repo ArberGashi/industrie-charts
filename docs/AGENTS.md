@@ -14,7 +14,7 @@
 - `mvn clean package` builds all modules and produces JARs in each module `target/`.
 - `mvn -pl arbercharts-core test` runs core unit tests (JUnit Jupiter).
 - `mvn -pl arbercharts-demo -am package` builds the demo JAR with dependencies.
-- `java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-1.7.0-LTS.jar` runs the demo.
+- `java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-2.0.0.jar` runs the demo.
 - `mvn -Pperf test` runs performance tests tagged for JMH.
 
 ## Coding Style & Naming Conventions

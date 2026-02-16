@@ -1,71 +1,55 @@
-# ArberCharts 1.7.0-LTS User Guide
+# ArberCharts 2.0.0 User Guide
 
-ArberCharts is a high‑performance Java charting framework built for mission‑critical systems.
-This guide is written for developers integrating the framework into JVM desktop or server applications,
-and for teams using native bridges (Qt/Swift) where available.
+ArberCharts 2.0.0 is a high-performance Java charting framework for desktop and server workloads.
 
-## Downloads
+## Requirements
 
-All official artifacts are published on GitHub Releases:
-https://github.com/ArberGashi/charts/releases
+- Java 25
+- Maven 3.9+
 
-- **JVM Starter (Core + Swing + Server)**: `arbercharts-starter-1.7.0-LTS.jar`
-- **Compose Bridge**: `arbercharts-compose-bridge-1.7.0-LTS.jar`
-- **Qt Bridge (macOS arm64)**: `arbercharts-qt-bridge-macos-1.7.0-LTS.zip`
-- **Swift Bridge (macOS arm64)**: `arbercharts-swift-bridge-macos-1.7.0-LTS.zip`
-  - Includes `.xcframework` + `arbercharts-core.dylib`
+## Modules
 
-## Platform Matrix
+- `arbercharts-core`: rendering engine, models, renderer catalog
+- `arbercharts-swing-bridge`: Swing integration and interactive panel
+- `arbercharts-server-bridge`: headless image rendering for backend services
+- `arbercharts-spring-boot-starter`: Spring Boot auto-configuration
+- `arbercharts-starter`: bundled JVM starter artifact
 
-- **JVM Desktop/Server**: Starter JAR (Core + Swing + Server)
-- **Compose Desktop**: Starter JAR + Compose Bridge
-- **Qt (native)**: macOS arm64 ZIP (Windows/Linux planned)
-- **Swift (native)**: macOS arm64 only in v1.7.0‑LTS
+## Quick Start
 
-## Quick Start (JVM)
+```xml
+<dependency>
+    <groupId>com.arbergashi</groupId>
+    <artifactId>arbercharts-starter</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
 
-Use the **starter JAR** for all JVM integrations. It contains the core plus Swing and Server bridges.
+Build:
 
-Minimal setup:
-- Add the starter JAR to your classpath.
-- Create a `ChartModel`, choose a renderer, and attach it to a Swing panel or server renderer.
+```bash
+mvn clean package
+```
 
-## Compose Desktop
+Run demo:
 
-Compose integrations require:
-- `arbercharts-starter-1.7.0-LTS.jar`
-- `arbercharts-compose-bridge-1.7.0-LTS.jar`
+```bash
+java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-2.0.0.jar
+```
 
-The Compose bridge is a thin adapter; it does not bundle core or Kotlin runtime dependencies.
+## Data Model Contract
 
-## Qt Bridge (macOS arm64)
+- Always treat `getPointCount()` as logical size.
+- Arrays returned by `getXData()` / `getYData()` may exceed logical size.
+- For realtime streams, use `CircularChartModel`.
 
-The Qt bridge is shipped as a native ZIP for macOS arm64. It includes the native binary and headers.
+## Platform Focus
 
-## Swift Bridge (macOS arm64)
+- Swing desktop UI
+- Spring Boot / headless backend rendering
 
-The Swift bridge is shipped as a macOS arm64 `.xcframework` packaged in the ZIP.
-It requires `arbercharts-core.dylib` (included in the ZIP).
+## Additional References
 
-## Data Model Contract (Important)
-
-- Always use `getPointCount()` as the logical size.
-- Arrays from `getXData()` / `getYData()` may be larger than the logical size.
-- For high‑frequency streams, use `CircularChartModel`.
-
-## Scaling & Compliance
-
-For regulated environments, use the scaling and calibration rules defined in `COMPLIANCE.md`.
-
-## Renderer Catalog
-
-A full renderer catalog is available in `RENDERER_CATALOG.md`.
-
-## Licensing
-
-Licensing terms and usage rights are defined in `LICENSING.md`.
-
-## Support
-
-gashi@pro-business.ch
-https://www.arbergashi.com
+- `QUICK_START.md`
+- `RENDERER_CATALOG.md`
+- `LICENSING.md`
