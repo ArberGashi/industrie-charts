@@ -732,6 +732,16 @@
         flex-wrap: nowrap;
         overflow-x: auto;
     }
+
+    .card-controls {
+        position: static;
+        transform: none;
+        opacity: 1;
+        pointer-events: all;
+        justify-content: center;
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.35);
+    }
 }
 
 /* ============================================
@@ -758,16 +768,28 @@ body[data-theme="dark"] .card-title {
     color: #f9fafb;
 }
 
-body[data-theme="dark"] .stat-value {
-    color: #f9fafb;
-}
-
 body[data-theme="dark"] .category-nav {
     background: #1f2937;
+    box-shadow: none;
 }
 
 body[data-theme="dark"] .category-nav-btn {
     background: #111827;
+    color: #e5e7eb;
+    border-color: #374151;
+}
+
+body[data-theme="dark"] .category-header-modern {
+    border-bottom-color: #374151;
+}
+
+body[data-theme="dark"] .category-count,
+body[data-theme="dark"] .stat-label,
+body[data-theme="dark"] .renderer-class {
+    color: #9ca3af;
+}
+
+body[data-theme="dark"] .stat-value {
     color: #f9fafb;
 }
 
@@ -783,4 +805,3 @@ body[data-theme="dark"] .modal-header {
 body[data-theme="dark"] .stat-row {
     background: #111827;
 }
-
