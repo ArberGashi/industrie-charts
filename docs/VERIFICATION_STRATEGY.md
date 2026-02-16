@@ -22,6 +22,8 @@
 - **jqwik** for property-based testing of data models.
 - **Approval Tests** or image diff tooling for render regression.
 - **RendererGuidelinesChecker** for zero-allocation enforcement.
+- **Checkstyle quality gate** (`config/checkstyle/arbercharts-gate.xml`) for stable static hygiene checks on Java 25.
+- **Maven Enforcer** for dependency/plugin/build baseline governance.
 
 ## Execution Notes
 - Property tests run via `mvn -pl arbercharts-core test`.
@@ -34,7 +36,12 @@
 | Job | Command | Purpose |
 | --- | --- | --- |
 | core-tests | mvn -pl arbercharts-core test | Unit + jqwik + visual smoke |
-| guidelines-check | mvn -pl arbercharts-core -Pguidelines-check verify | Zero-alloc enforcement |
+| quality-gate | mvn -pl arbercharts-core -Pquality-gate validate | Enforcer + Checkstyle hard gate |
+
+## Java 25 Compatibility Policy
+- The mandatory quality gate must only use tools that parse Java 25 bytecode reliably.
+- Incompatible analyzers (for example older PMD/SpotBugs/JaCoCo paths) are not part of the blocking gate.
+- Static governance is enforced through the compatible checkstyle/enforcer pipeline until bytecode-compatible alternatives are adopted.
 
 ## Scope
 This strategy documents verification expectations and is paired with targeted zero-allocation remediation in core renderers as needed.

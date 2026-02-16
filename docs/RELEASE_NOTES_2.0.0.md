@@ -24,6 +24,7 @@ The product focus is JVM-first with Java 25.
 - Java 25 baseline with Vector API readiness
 - Spring Boot 4.0.2 starter integration
 - Visual Verifier HTTP APIs and catalog tooling
+- Java 25 compatible quality gate (`-Pquality-gate`) with Enforcer + Checkstyle
 
 ## Renderer Coverage
 

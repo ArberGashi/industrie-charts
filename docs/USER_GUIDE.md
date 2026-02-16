@@ -31,6 +31,12 @@ Build:
 mvn clean package
 ```
 
+Run quality gate:
+
+```bash
+mvn -pl arbercharts-core -Pquality-gate validate
+```
+
 Run demo:
 
 ```bash
