@@ -64,12 +64,16 @@ public interface StatisticalChartModel extends ChartModel {
 
     @Override
     default double getMin(int index) {
-        return getLowData()[index];
+        double[] arr = getLowData();
+        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        return arr[index];
     }
 
     @Override
     default double getMax(int index) {
-        return getHighData()[index];
+        double[] arr = getHighData();
+        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        return arr[index];
     }
 
     @Override

@@ -100,17 +100,24 @@ public class DefaultSignalChartModel implements SignalChartModel {
 
     @Override
     public double getX(int index) {
-        return xData[physicalIndex(index)];
+        int idx = physicalIndex(index);
+        if (idx < 0 || idx >= xData.length) return 0.0;
+        return xData[idx];
     }
 
     @Override
     public double getY(int index) {
-        return channelData[0][physicalIndex(index)];
+        int idx = physicalIndex(index);
+        if (idx < 0 || idx >= channelData[0].length) return 0.0;
+        return channelData[0][idx];
     }
 
     @Override
     public double getValue(int index, int channel) {
-        return channelData[channel][physicalIndex(index)];
+        if (channel < 0 || channel >= channelData.length) return 0.0;
+        int idx = physicalIndex(index);
+        if (idx < 0 || idx >= channelData[channel].length) return 0.0;
+        return channelData[channel][idx];
     }
 
     @Override
@@ -137,6 +144,7 @@ public class DefaultSignalChartModel implements SignalChartModel {
 
     @Override
     public double[] getChannelData(int channel) {
+        if (channel < 0 || channel >= channelData.length) return ChartModel.EMPTY_DOUBLE;
         return channelData[channel];
     }
 
@@ -198,8 +206,8 @@ public class DefaultSignalChartModel implements SignalChartModel {
     }
 
     private int physicalIndex(int logicalIndex) {
+        if (logicalIndex < 0 || logicalIndex >= size) return -1;
         if (!circular) return logicalIndex;
-        if (size == 0) return 0;
         int start = (writeIndex - size);
         if (start < 0) start += xData.length;
         int idx = start + logicalIndex;

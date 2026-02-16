@@ -114,16 +114,19 @@ public class DefaultFinancialChartModel implements FinancialChartModel {
 
     @Override
     public double getX(int index) {
+        if (index < 0 || index >= size) return 0.0;
         return xData[index];
     }
 
     @Override
     public double getY(int index) {
+        if (index < 0 || index >= size) return 0.0;
         return closeData[index];
     }
 
     @Override
     public double getWeight(int index) {
+        if (index < 0 || index >= size) return 0.0;
         return openData[index];
     }
 
