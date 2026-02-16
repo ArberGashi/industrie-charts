@@ -1,6 +1,5 @@
 package com.arbergashi.charts.render.circular;
 
-import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberPoint;

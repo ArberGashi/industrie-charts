@@ -2,7 +2,6 @@ package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberPoint;
-import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;

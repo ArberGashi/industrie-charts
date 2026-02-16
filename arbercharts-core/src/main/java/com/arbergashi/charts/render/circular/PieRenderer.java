@@ -9,8 +9,6 @@ import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
-import com.arbergashi.charts.util.ChartAssets;
-import com.arbergashi.charts.util.ChartScale;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;

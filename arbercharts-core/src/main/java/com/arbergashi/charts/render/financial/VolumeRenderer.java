@@ -11,7 +11,6 @@ import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
-import com.arbergashi.charts.util.ChartAssets;
 /**
  * Professional, zero-allocation volume bar renderer.
  *

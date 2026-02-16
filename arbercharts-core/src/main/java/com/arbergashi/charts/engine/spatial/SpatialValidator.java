@@ -1,6 +1,5 @@
 package com.arbergashi.charts.engine.spatial;
 
-import java.util.Arrays;
 
 /**
  * Internal validation utility for spatial projection consistency.

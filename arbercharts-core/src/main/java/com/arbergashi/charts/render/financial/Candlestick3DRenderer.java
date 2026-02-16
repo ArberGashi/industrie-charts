@@ -11,7 +11,6 @@ import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.AbstractSpatialLayer;
 import com.arbergashi.charts.util.ChartAssets;
 
-import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 
 /**

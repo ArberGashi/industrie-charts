@@ -1,6 +1,5 @@
 package com.arbergashi.charts.render.financial;
 
-import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;

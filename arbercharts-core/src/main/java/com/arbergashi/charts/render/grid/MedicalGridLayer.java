@@ -4,7 +4,6 @@ import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
-import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 import com.arbergashi.charts.engine.spatial.SpatialProjector;

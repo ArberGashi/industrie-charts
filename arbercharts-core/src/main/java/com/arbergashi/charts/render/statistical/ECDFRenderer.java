@@ -10,7 +10,6 @@ import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 
-import java.util.Arrays;
 /**
  * Professional, zero-allocation ECDF (Empirical CDF) Renderer.
  *

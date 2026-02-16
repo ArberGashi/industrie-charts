@@ -82,6 +82,7 @@
 	        <maven.deploy.plugin.version>3.1.2</maven.deploy.plugin.version>
 	        <junit.jupiter.version>5.11.2</junit.jupiter.version>
 	        <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
+            <maven.checkstyle.plugin.version>3.5.0</maven.checkstyle.plugin.version>
 	    </properties>
 
     <dependencyManagement>
@@ -325,6 +326,26 @@
             <id>quality-gate</id>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>${maven.checkstyle.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>checkstyle-quality-gate</id>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/arbercharts-gate.xml</configLocation>
+                                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                                    <failsOnError>true</failsOnError>
+                                    <violationSeverity>error</violationSeverity>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-enforcer-plugin</artifactId>

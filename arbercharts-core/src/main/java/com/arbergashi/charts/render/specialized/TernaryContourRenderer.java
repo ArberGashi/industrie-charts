@@ -1,6 +1,5 @@
 package com.arbergashi.charts.render.specialized;
 
-import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
