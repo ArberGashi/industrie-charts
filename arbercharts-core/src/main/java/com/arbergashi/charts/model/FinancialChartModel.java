@@ -5,9 +5,9 @@ package com.arbergashi.charts.model;
  * <p>Provides typed accessors for Open/High/Low/Close values in primitive arrays,
  * optimized for zero-allocation rendering in financial renderers.</p>
  *
- * @since 2025-06-01
+ * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public interface FinancialChartModel extends ChartModel {
 

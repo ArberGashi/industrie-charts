@@ -6,9 +6,9 @@ package com.arbergashi.charts.model;
  * for real-time streams. Implementations should be zero-allocation in the
  * render path.</p>
  *
- * @since 2025-06-01
+ * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public interface SignalChartModel extends ChartModel {
 

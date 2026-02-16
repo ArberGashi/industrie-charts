@@ -14,9 +14,9 @@ import java.util.logging.Logger;
  * than the logical size. Consumers must always bound iteration by
  * {@link #getPointCount()}.</p>
  *
- * @since 2025-06-01
+ * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public class DefaultFinancialChartModel implements FinancialChartModel {
     private static final Logger LOGGER = Logger.getLogger(DefaultFinancialChartModel.class.getName());
