@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 /**
  * Default {@link FinancialChartModel} implementation backed by primitive arrays.
  *
@@ -17,6 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
   * @version 1.7.0
  */
 public class DefaultFinancialChartModel implements FinancialChartModel {
+    private static final Logger LOGGER = Logger.getLogger(DefaultFinancialChartModel.class.getName());
+
     private final AtomicLong updateStamp = new AtomicLong(0);
     private final List<ChartModelListener> listeners = new CopyOnWriteArrayList<>();
     private String name = "Financial Series";
@@ -201,7 +205,7 @@ public class DefaultFinancialChartModel implements FinancialChartModel {
 
     @Override
     public void setChangeListener(ChartModelListener listener) {
-        listeners.add(listener);
+        if (listener != null) listeners.add(listener);
     }
 
     @Override
@@ -215,7 +219,13 @@ public class DefaultFinancialChartModel implements FinancialChartModel {
 
     protected void fireModelChanged() {
         if (dispatchOnEdt && dispatchExecutor != null) {
-            dispatchExecutor.execute(this::notifyListeners);
+            try {
+                dispatchExecutor.execute(this::notifyListeners);
+                return;
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING, "Dispatch executor rejected listener notification; falling back to caller thread", ex);
+            }
+            notifyListeners();
             return;
         }
         notifyListeners();
@@ -223,6 +233,12 @@ public class DefaultFinancialChartModel implements FinancialChartModel {
 
     private void notifyListeners() {
         if (listeners.isEmpty()) return;
-        for (var l : listeners) l.modelChanged();
+        for (var l : listeners) {
+            try {
+                l.modelChanged();
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING, "ChartModel listener failed and was isolated", ex);
+            }
+        }
     }
 }

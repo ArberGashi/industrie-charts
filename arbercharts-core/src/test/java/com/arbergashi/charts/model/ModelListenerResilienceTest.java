@@ -83,6 +83,111 @@ class ModelListenerResilienceTest {
     }
 
     @Test
+    void signalModelIsolatesFailingListener() {
+        withModelLoggerSuppressed(DefaultSignalChartModel.class, () -> {
+        DefaultSignalChartModel model = new DefaultSignalChartModel(1, 8);
+        AtomicInteger called = new AtomicInteger();
+
+        model.setChangeListener(() -> {
+            throw new RuntimeException("boom");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setSample(1.0, new double[]{2.0});
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
+    void signalModelFallsBackWhenDispatchExecutorRejects() {
+        withModelLoggerSuppressed(DefaultSignalChartModel.class, () -> {
+        DefaultSignalChartModel model = new DefaultSignalChartModel(1, 8);
+        AtomicInteger called = new AtomicInteger();
+
+        model.setDispatchOnEdt(true);
+        model.setDispatchExecutor(command -> {
+            throw new RejectedExecutionException("rejected");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setSample(1.0, new double[]{2.0});
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
+    void financialModelIsolatesFailingListener() {
+        withModelLoggerSuppressed(DefaultFinancialChartModel.class, () -> {
+        DefaultFinancialChartModel model = new DefaultFinancialChartModel("series");
+        AtomicInteger called = new AtomicInteger();
+
+        model.setChangeListener(() -> {
+            throw new RuntimeException("boom");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setOHLC(1.0, 1.0, 2.0, 0.5, 1.5);
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
+    void financialModelFallsBackWhenDispatchExecutorRejects() {
+        withModelLoggerSuppressed(DefaultFinancialChartModel.class, () -> {
+        DefaultFinancialChartModel model = new DefaultFinancialChartModel("series");
+        AtomicInteger called = new AtomicInteger();
+
+        model.setDispatchOnEdt(true);
+        model.setDispatchExecutor(command -> {
+            throw new RejectedExecutionException("rejected");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setOHLC(1.0, 1.0, 2.0, 0.5, 1.5);
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
+    void statisticalModelIsolatesFailingListener() {
+        withModelLoggerSuppressed(DefaultStatisticalChartModel.class, () -> {
+        DefaultStatisticalChartModel model = new DefaultStatisticalChartModel("series");
+        AtomicInteger called = new AtomicInteger();
+
+        model.setChangeListener(() -> {
+            throw new RuntimeException("boom");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setBoxPlot(1.0, 2.0, 1.0, 3.0, 0.5, 3.5, "p1");
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
+    void statisticalModelFallsBackWhenDispatchExecutorRejects() {
+        withModelLoggerSuppressed(DefaultStatisticalChartModel.class, () -> {
+        DefaultStatisticalChartModel model = new DefaultStatisticalChartModel("series");
+        AtomicInteger called = new AtomicInteger();
+
+        model.setDispatchOnEdt(true);
+        model.setDispatchExecutor(command -> {
+            throw new RejectedExecutionException("rejected");
+        });
+        model.setChangeListener(called::incrementAndGet);
+
+        model.setBoxPlot(1.0, 2.0, 1.0, 3.0, 0.5, 3.5, "p1");
+
+        assertEquals(1, called.get());
+        });
+    }
+
+    @Test
     void defaultModelOutOfRangeAccessorsReturnSafeDefaults() {
         DefaultChartModel model = new DefaultChartModel("series");
         model.setXY(1.0, 2.0);
