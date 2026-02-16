@@ -241,9 +241,8 @@ public class SimpleChart {
         this.streamingEnabled = true;
 
         throw new UnsupportedOperationException(
-            "Streaming will be implemented in v2.0.1. " +
-            "Current version: v2.0.0 focuses on static charts. " +
-            "For now, use addData() with manual updates."
+            "Streaming is not available in ArberCharts 2.0.0. " +
+            "Use addData() with manual updates."
         );
     }
 
@@ -291,9 +290,8 @@ public class SimpleChart {
      */
     public SimpleChart exportToPNG(String filename) {
         throw new UnsupportedOperationException(
-            "PNG export will be implemented in v2.0.1. " +
-            "Current version: v2.0.0 focuses on interactive display. " +
-            "Use screen capture or wait for v2.0.1 release."
+            "PNG export is not available in ArberCharts 2.0.0. " +
+            "Use interactive display via show()."
         );
     }
 
@@ -306,9 +304,8 @@ public class SimpleChart {
      */
     public SimpleChart exportToSVG(String filename) {
         throw new UnsupportedOperationException(
-            "SVG export will be implemented in v2.0.1. " +
-            "Current version: v2.0.0 focuses on interactive display. " +
-            "Use screen capture or wait for v2.0.1 release."
+            "SVG export is not available in ArberCharts 2.0.0. " +
+            "Use interactive display via show()."
         );
     }
 
@@ -329,4 +326,3 @@ public class SimpleChart {
         return this;
     }
 }
-

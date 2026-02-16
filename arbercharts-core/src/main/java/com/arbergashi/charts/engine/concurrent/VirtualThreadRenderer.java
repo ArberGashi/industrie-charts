@@ -125,9 +125,8 @@ public final class VirtualThreadRenderer {
     public CompletableFuture<byte[]> renderPngAsync(Object model) {
         return CompletableFuture.supplyAsync(() -> {
             throw new UnsupportedOperationException(
-                "Async PNG rendering will be implemented in v2.0.1. " +
-                "Current version v2.0.0 focuses on interactive display. " +
-                "Use Charts.lineChart().show() for now."
+                "Async PNG rendering is not available in ArberCharts 2.0.0. " +
+                "Use Charts.lineChart().show() for interactive display."
             );
         }, executor);
     }
@@ -142,9 +141,8 @@ public final class VirtualThreadRenderer {
     public CompletableFuture<String> renderSvgAsync(Object model) {
         return CompletableFuture.supplyAsync(() -> {
             throw new UnsupportedOperationException(
-                "Async SVG rendering will be implemented in v2.0.1. " +
-                "Current version v2.0.0 focuses on interactive display. " +
-                "Use Charts.lineChart().show() for now."
+                "Async SVG rendering is not available in ArberCharts 2.0.0. " +
+                "Use Charts.lineChart().show() for interactive display."
             );
         }, executor);
     }
@@ -178,4 +176,3 @@ public final class VirtualThreadRenderer {
         return executor;
     }
 }
-
