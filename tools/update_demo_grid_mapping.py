@@ -1,89 +1,67 @@
 #!/usr/bin/env python3
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FACTORY = ROOT / 'arbercharts-demo/src/main/java/com/arbergashi/charts/rendererpanels/DemoPanelFactory.java'
+CATALOG = ROOT / 'arbercharts-demo/src/main/resources/data/renderer-catalog.txt'
 OUTPUT = ROOT / 'docs/DEMO_GRID_MAPPING.md'
 
 HEADER = """# Demo Grid Mapping (Core Grid Layers)
 
-> **Auto-generated** from `DemoPanelFactory.resolveGridLayer`. Do not edit manually.
+> **Auto-generated** from `arbercharts-demo` (`RendererCatalog` + `DemoApplication.configureGrid`). Do not edit manually.
 > Run `python3 tools/update_demo_grid_mapping.py` to refresh.
 
-This document records the authoritative demo grid mapping used by `DemoPanelFactory`. Each demo panel consumes a core grid layer based on domain-specific best practice.
+This document records the demo grid mapping used by the Swing demo application.
 """
 
 
-def extract_titles(method: str, text: str) -> set[str]:
-    m = re.search(rf'private static boolean {method}\(String title\) \{{([\s\S]*?)\n\s*\}}', text)
-    if not m:
-        return set()
-    block = m.group(1)
-    return set(re.findall(r'"([^"]+)"', block))
+def parse_catalog(text: str) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split("|")
+        if len(parts) != 2:
+            continue
+        category = parts[0].strip().lower()
+        class_name = parts[1].strip()
+        if not category or not class_name:
+            continue
+        out.append((category, class_name))
+    return out
+
+
+def simple_name(class_name: str) -> str:
+    i = class_name.rfind(".")
+    return class_name[i + 1:] if i >= 0 else class_name
 
 
 def main() -> int:
-    factory_text = FACTORY.read_text(encoding='utf-8')
+    catalog_text = CATALOG.read_text(encoding="utf-8")
+    entries = parse_catalog(catalog_text)
+    if not entries:
+        raise SystemExit(f"Renderer catalog is empty: {CATALOG}")
 
-    titles = sorted({
-        m.group(1)
-        for m in re.finditer(r'case "([^"]+)" -> [A-Za-z0-9_]+\.create\(\);', factory_text)
-    })
-
-    financial = extract_titles('isFinancialChart', factory_text)
-    medical = extract_titles('isMedicalChart', factory_text)
-    analysis = extract_titles('isAnalysisChart', factory_text)
-    statistical = extract_titles('isStatisticalChart', factory_text)
-
-    log = {"FFT", "Spectrogram", "Medical Spectrogram"}
-    polar = {"Radar Chart", "Polar Chart", "Polar Line", "Nightingale Rose", "Wind Rose", "Dependency Wheel", "Polar Advanced"}
-    smith = {"Smith Chart"}
-    geo = {"Geo Tactical"}
-    iso = {"Isometric Blueprint"}
-    ternary = {"Ternary Phase", "Ternary Contour", "Ternary Plot"}
+    smith_renderers = {"SmithChartRenderer", "VSWRCircleRenderer"}
 
     mapping: dict[str, str] = {}
-    for t in titles:
-        if t in log:
-            mapping[t] = 'LogarithmicGridLayer'
-        elif t in smith:
-            mapping[t] = 'SmithChartGridLayer'
-        elif t in geo:
-            mapping[t] = 'GeoGridLayer'
-        elif t in iso:
-            mapping[t] = 'IsometricGridLayer'
-        elif t in ternary:
-            mapping[t] = 'TernaryGridLayer'
-        elif t in polar:
-            mapping[t] = 'PolarGridLayer'
-        elif t in medical:
-            mapping[t] = 'MedicalGridLayer'
-        elif t in financial:
-            mapping[t] = 'FinancialGridLayer'
-        elif t in analysis:
-            mapping[t] = 'AnalysisGridLayer'
-        elif t in statistical:
-            mapping[t] = 'StatisticalGridLayer'
+    for category, class_name in entries:
+        name = simple_name(class_name)
+        if category == "medical":
+            mapping[name] = "MedicalGridLayer"
+        elif name in smith_renderers:
+            mapping[name] = "SmithChartGridLayer"
         else:
-            mapping[t] = 'DefaultGridLayer'
+            mapping[name] = "DefaultGridLayer"
 
     from collections import defaultdict
     groups: dict[str, list[str]] = defaultdict(list)
-    for title, grid in mapping.items():
-        groups[grid].append(title)
+    for name, grid in mapping.items():
+        groups[grid].append(name)
 
     order = [
         'MedicalGridLayer',
-        'LogarithmicGridLayer',
-        'FinancialGridLayer',
-        'AnalysisGridLayer',
-        'StatisticalGridLayer',
-        'PolarGridLayer',
         'SmithChartGridLayer',
-        'GeoGridLayer',
-        'IsometricGridLayer',
-        'TernaryGridLayer',
         'DefaultGridLayer',
     ]
 

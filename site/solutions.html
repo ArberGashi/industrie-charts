@@ -63,6 +63,7 @@
       <section class="hero">
         <h1 data-i18n="solutions_title">Solutions & Integration</h1>
         <p data-i18n="solutions_subtitle">Use-cases und Einbindung in eigene Entwicklungsprozesse.</p>
+        <p class="muted" data-i18n="solutions_predictive_note">Predictive Intelligence (lokal, deterministisch) für Vorhersagen und Anomalie-Tracking.</p>
       </section>
 
       <section class="section">
@@ -200,10 +201,10 @@
             <h3 data-i18n="solutions_export_title">Export Pipeline</h3>
             <p data-i18n="solutions_export_body">PNG, SVG oder PDF für Reports und Kunden.</p>
             <div class="code-block">
-<pre>// v1.7.0 LTS Thread-safe Export
-ChartExportService.saveAsPng(panel, "report.png");
-// Zero-GC Theme Transition
-panel.setTheme(ChartThemes.DARK, true);</pre>
+<pre>// v2.0.0 Thread-safe Export
+ChartExportService.exportPng(panel, new File("report.png"));
+// Theme switch (runtime-safe)
+panel.setTheme(ChartThemes.getDarkTheme());</pre>
             </div>
           </div>
           <div class="card">
@@ -219,9 +220,9 @@ panel.setTheme(ChartThemes.DARK, true);</pre>
             <p data-i18n="solutions_theme_body">Light/Dark, eigene Paletten, Lokalisierung.</p>
           </div>
           <div class="card">
-            <h3 data-i18n="solutions_download_title">Download Core</h3>
-            <p data-i18n="solutions_download_body">Core Framework für Entwickler und Integrationsteams.</p>
-            <a class="btn" href="/downloads/arbercharts-core-1.7.0-LTS.jar" data-i18n="solutions_download_cta">Core JAR herunterladen</a>
+            <h3 data-i18n="solutions_download_title">Download Starter</h3>
+            <p data-i18n="solutions_download_body">Starter Bundle für Entwickler und Integrationsteams.</p>
+            <a class="btn" href="/downloads/arbercharts-starter-2.0.0.jar" data-i18n="solutions_download_cta">Starter JAR herunterladen</a>
           </div>
         </div>
       </section>
@@ -283,6 +284,42 @@ panel.setTheme(ChartThemes.DARK, true);</pre>
           </div>
         </div>
       </section>
+
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstuetzte Betriebssysteme (aktuelle Versionen)</h2>
+          <p class="muted" data-i18n="compat_body">Die nativen Bridges sind fuer aktuelle OS-Versionen ausgelegt. JVM-Stacks laufen plattformuebergreifend.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon (arm64). Swift/Qt nativ.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">JVM-Stacks fuer Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">JVM-Stacks auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
+        </div>
+      </section>
     </main>
 
                 <footer class="ac-footer">
@@ -318,8 +355,8 @@ panel.setTheme(ChartThemes.DARK, true);</pre>
 
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
-          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+          <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
         </div>
       </div>
     </footer>

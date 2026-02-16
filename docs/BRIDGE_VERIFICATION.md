@@ -7,14 +7,14 @@ This document captures minimal manual verification steps for bridge modules that
 - Swing Bridge (`arbercharts-swing-bridge`)
 - Server Bridge (`arbercharts-server-bridge`)
 - Qt Bridge (`arbercharts-qt-bridge`)
-- Swift Bridge (`arbercharts-swift-bridge`)
+- Swift Bridge (`arbercharts-swift-bridge`, macOS arm64 only)
 
 ## Status Summary
 - **Swing Bridge**: automated smoke test added (line drawing correctness). Unit tests pass.
 - **Compose Bridge**: manual verification required (no CI setup available).
 - **Server Bridge**: manual verification required (headless render pipeline).
 - **Qt Bridge**: manual verification required (QML/Quick integration + native buffer decoding).
-- **Swift Bridge**: manual verification required (CoreGraphics render path).
+- **Swift Bridge**: manual verification required (CoreGraphics render path, macOS only).
 
 ## Manual Verification Checklist
 
@@ -45,7 +45,7 @@ This document captures minimal manual verification steps for bridge modules that
   - Frame updates without crash.
   - Clipping is respected (e.g., use a smaller viewport).
 
-### 5) Swift Bridge (SwiftUI)
+### 5) Swift Bridge (SwiftUI, macOS arm64)
 - Use `ArberChartView` in a basic SwiftUI scene.
 - Verify:
   - The view renders without crashing.
@@ -54,6 +54,7 @@ This document captures minimal manual verification steps for bridge modules that
 
 ## Known Constraints
 - Compose/Qt/Swift verification is currently manual due to missing CI setup.
+- Swift bridge is macOS arm64 only in v1.7.0-LTS (iOS/iPadOS not supported).
 - Native buffer parsing in Qt/Swift assumes well‑formed buffers; malformed buffers are not sanitized.
 
 ## Recommendation
@@ -62,7 +63,7 @@ Until CI is available for Compose/Qt/Swift, include a manual verification step i
 ## CI Notes (GitHub Actions)
 - Core/Swing/Server run on macOS/Windows/Linux via `.github/workflows/ci-core.yml`.
 - Compose builds on macOS/Linux via `.github/workflows/ci-compose.yml`.
-- Qt/Swift build on macOS via `.github/workflows/ci-qt-swift.yml` and require native artifacts.
+- Qt/Swift build on macOS via `.github/workflows/ci-qt-swift.yml` and require native artifacts (Swift is macOS only).
 
 ### Qt/Swift Native Artifacts
 Qt and Swift builds need the native headers + dylib:\n`ARBER_NATIVE_PATH` must point to a folder containing `arbercharts-core.h` and `libarbercharts-core.dylib`.\nTwo options:\n- Set `ARBER_NATIVE_PATH` as a GitHub Actions secret.\n- Or provide `dist/native` in the repository (CI will auto‑detect it).

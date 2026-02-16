@@ -11,6 +11,7 @@ import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.DefaultFinancialChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.ChartRenderer;
 import com.arbergashi.charts.render.SpatialChunkRenderer;
 import com.arbergashi.charts.render.financial.CandlestickRenderer;
@@ -107,13 +108,42 @@ public final class ServerRenderService {
             Arrays.fill(session.canvas.pixels(), 0);
 
             ArberRect bounds = new ArberRect(0, 0, width, height);
+            double viewMinY = Double.NaN;
+            double viewMaxY = Double.NaN;
+            if (model instanceof FinancialChartModel fin) {
+                double[] lows = fin.getLowData();
+                double[] highs = fin.getHighData();
+                int count = Math.min(fin.getPointCount(), Math.min(lows.length, highs.length));
+                double min = Double.POSITIVE_INFINITY;
+                double max = Double.NEGATIVE_INFINITY;
+                for (int i = 0; i < count; i++) {
+                    double low = lows[i];
+                    double high = highs[i];
+                    if (Double.isFinite(low)) {
+                        min = Math.min(min, low);
+                    }
+                    if (Double.isFinite(high)) {
+                        max = Math.max(max, high);
+                    }
+                }
+                if (min != Double.POSITIVE_INFINITY && max != Double.NEGATIVE_INFINITY) {
+                    if (min == max) {
+                        double pad = Math.abs(min) * 0.01 + 1e-6;
+                        min -= pad;
+                        max += pad;
+                    }
+                    viewMinY = min;
+                    viewMaxY = max;
+                }
+            }
+
             DefaultPlotContext context = new DefaultPlotContext(
                     bounds,
                     model,
                     Double.NaN,
                     Double.NaN,
-                    Double.NaN,
-                    Double.NaN,
+                    viewMinY,
+                    viewMaxY,
                     theme != null ? theme : ChartThemes.getDarkTheme(),
                     null
             );

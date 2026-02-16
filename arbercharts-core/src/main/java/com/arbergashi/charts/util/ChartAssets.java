@@ -283,6 +283,13 @@ public final class ChartAssets {
     }
 
     private static void loadDefaults() {
+        try (InputStream in = ChartAssets.class.getClassLoader().getResourceAsStream("themes/charts.properties")) {
+            if (in != null) {
+                properties.load(in);
+            }
+        } catch (Exception ignored) {
+            // Optional theme defaults.
+        }
         try (InputStream in = ChartAssets.class.getClassLoader().getResourceAsStream("i18n/charts.properties")) {
             if (in != null) {
                 properties.load(in);

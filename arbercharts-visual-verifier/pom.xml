@@ -7,11 +7,12 @@
     <parent>
         <groupId>com.arbergashi</groupId>
         <artifactId>arber-charts-parent</artifactId>
-        <version>1.7.0-LTS</version>
+        <version>2.0.0</version>
     </parent>
 
     <artifactId>arbercharts-visual-verifier</artifactId>
     <name>ArberCharts Visual Verifier</name>
+    <description>Server-side testing platform for all 158 ArberCharts renderers</description>
     <packaging>jar</packaging>
 
     <properties>
@@ -38,6 +39,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
             <version>${spring.boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

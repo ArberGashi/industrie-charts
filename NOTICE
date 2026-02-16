@@ -1,0 +1,44 @@
+ArberCharts
+Copyright (c) 2024-2026 Arber Gashi
+
+This product is licensed under the MIT License.
+See the LICENSE file for the full license text.
+
+================================================================================
+
+IMPORTANT LICENSING NOTICE:
+
+The MIT License applies ONLY to the compiled binary artifacts (JAR files)
+distributed by ArberCharts.
+
+The source code of ArberCharts is proprietary and NOT licensed under the
+MIT License.
+
+================================================================================
+
+THIRD-PARTY DEPENDENCIES:
+
+ArberCharts may include or depend on third-party libraries. Each library
+retains its own license. Please refer to the respective library documentation
+for licensing information.
+
+Key dependencies:
+- FlatLaf (Apache License 2.0)
+- FlatLaf Inter Font (Apache License 2.0)
+- Spring Framework (Apache License 2.0)
+- Spring Boot (Apache License 2.0)
+- JUnit Jupiter (Eclipse Public License 2.0)
+
+For a complete list of dependencies, see the POM files in each module.
+
+================================================================================
+
+CONTACT:
+
+For licensing inquiries, enterprise source code licensing, or custom development:
+
+Email: gashi@pro-business.ch
+Web: https://www.arbergashi.com
+
+================================================================================
+

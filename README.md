@@ -1,106 +1,128 @@
-# ArberCharts
+# ArberCharts 2.0.0
 
-![ci-core](https://github.com/ArberGashi/charts/actions/workflows/ci-core.yml/badge.svg?branch=main)
-![ci-compose](https://github.com/ArberGashi/charts/actions/workflows/ci-compose.yml/badge.svg?branch=main)
-![ci-qt-swift](https://github.com/ArberGashi/charts/actions/workflows/ci-qt-swift.yml/badge.svg?branch=main)
+![Zero-GC](https://img.shields.io/badge/Zero--GC-Guaranteed-brightgreen) ![Java 25](https://img.shields.io/badge/Java-25-orange) ![Renderers](https://img.shields.io/badge/Renderers-157-blue) ![License](https://img.shields.io/badge/License-Proprietary-red)
 
-ArberCharts is a premium Java charting framework built for production systems that demand
-deterministic rendering, high-end visuals, and developer-friendly APIs. It delivers
-**158 renderers** across Standard, Financial, Statistical, Specialized, Medical, and Analysis domains.
+**ArberCharts** is an enterprise-grade Java charting framework built for mission-critical systems.
+It delivers deterministic rendering, zero-GC performance, and a deep renderer catalog across
+Financial, Medical, Statistical, Specialized, and Analysis domains.
 
-DOCTRINE COMPLIANT (v1.7.0-LTS)  
-Layer Isolation: Certified | Headless Core: Verified | Legacy Bridges: Isolated
+## 🚀 What's New in v2.0.0
 
-## Index
+- **Java 25 Baseline** — Virtual Threads, Vector API, Pattern Matching
+- **Streamlined Architecture** — Focus on Swing + Spring Boot
+- **157 Production Renderers** — All verified and documented
+- **Zero-GC Guarantee** — No allocations in hot render paths
+- **Visual Verifier** — Server-side testing platform included
 
-- Strategy & Policy:
-  - `docs/EXECUTIVE_SUMMARY.md`
-  - `docs/DOCTRINE_POLICY.md`
-- Demo Mapping:
-  - `docs/DEMO_GRID_MAPPING.md`
-- Performance & Stability:
-  - `docs/PERFORMANCE_REPORT.md`
-- Upgrade & Migration:
-  - `docs/MIGRATION_GUIDE_v1.7.md`
-  - `docs/v1.7.0_BREAKING_CHANGES.md`
+## ⚡ Quick Start (2 Lines of Code)
 
-## Important Note
+```java
+Charts.lineChart()
+    .addData(1, 10, 2, 20, 3, 15, 4, 30)
+    .show();
+```
 
-This public repository is used for releases and documentation.  
-The source code is proprietary and distributed under license.
+**That's it!** Beautiful, interactive charts with zero configuration.
 
-## Product Strengths
+### More Examples
 
-- **Zero-GC rendering mindset**: allocation-free render loops to avoid micro-stutters.
-- **CircularChartModel**: lock-free ring buffer for real-time data (EKG/finance).
-- **Zero-GC theme pipeline**: color flyweights and smooth theme transitions.
-- **Fluent API with ArberChartBuilder**: assemble charts in a few readable lines.
-- **158 renderers**: deep coverage for Financial, Medical, Statistical, and Specialized charts.
-- **Presentation-grade UI features**: legends, tooltips, crosshair, grid layers.
-- **Export pipeline**: PNG/SVG/PDF for reporting and distribution.
-- **Java Swing native integration**: built for desktop UI with precise rendering control.
-- **Spring Boot friendly**: clean integration for services + desktop delivery workflows.
-- **JDK 25 optimized**: tuned for modern runtime performance.
-- **Demo app**: a complete showcase for evaluation and client presentations.
+```java
+// Real-time streaming (4 lines)
+Charts.streamingLineChart(1000)
+    .title("CPU Usage")
+    .startStreaming(() -> getCpuUsage())
+    .show();
 
-## Use Cases
+// With styling (6 lines)
+Charts.lineChart()
+    .title("Sales 2026")
+    .xLabel("Month")
+    .yLabel("Revenue (CHF)")
+    .theme("obsidian")
+    .addData(1, 100, 2, 150, 3, 200)
+    .show();
+```
 
-- **Medical & Life Sciences**: real-time ECG/EEG with sweep-erase and high-precision crosshair.
-- **Financial Engineering**: candlesticks, Ichimoku, Renko, Volume Profile, technical overlays.
-- **Advanced Analytics**: Sankey, Network, Hexbin, FFT, regression and anomaly detection.
-- **Industrial & Engineering**: control charts, heatmaps, Delaunay/Voronoi, multivariate analysis.
+**[→ Full Quick Start Guide](docs/QUICK_START.md)**
+
+---
+
+- **ZERO-GC Rendering** 🔥 - Guaranteed zero allocations in hot paths, <1ms p99 latency
+- **158 renderers** with production‑grade visuals
+- **Lock‑free streaming models** for real‑time data (medical/finance)
+- **Headless core** with platform bridges for desktop and server
+- **Deterministic playback** for audits and forensic replays
+- **Export pipeline** for PNG/SVG/PDF
+
+## 📦 Maven Dependencies
+
+### Swing Applications
+```xml
+<dependency>
+    <groupId>com.arbergashi</groupId>
+    <artifactId>arbercharts-swing-bridge</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+### Spring Boot Applications
+```xml
+<dependency>
+    <groupId>com.arbergashi</groupId>
+    <artifactId>arbercharts-spring-boot-starter</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+### Full Bundle (All-in-One)
+```xml
+<dependency>
+    <groupId>com.arbergashi</groupId>
+    <artifactId>arbercharts-starter</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+## Platform Support
+
+| Platform | Module | Status |
+|----------|--------|--------|
+| **Swing Desktop** | `arbercharts-swing-bridge` | ✅ Production |
+| **Spring Boot** | `arbercharts-spring-boot-starter` | ✅ Production |
+| **Server Headless** | `arbercharts-server-bridge` | ✅ Production |
 
 ## Documentation
 
-All documentation now lives under `docs/`.
+Public docs shipped with this repository:
+- `USER_GUIDE.md`
+- `RENDERER_CATALOG.md`
+- `LICENSING.md`
+- `RELEASE_NOTES_2.0.0.md`
+- `MIGRATION_GUIDE.md`
 
-- `docs/PERFORMANCE_REPORT.md`
-- `docs/EXECUTIVE_SUMMARY.md`
-- `docs/AUDIT_RESPONSE_v1.7.md`
-- `docs/AUDIT_CLOSURE_MATRIX_v1.7.md`
-- `docs/API_NAMING_REVIEW_v1.7.md`
-- `docs/BRIDGE_VERIFICATION.md`
-- `docs/CI_SETUP.md`
-- `docs/MIGRATION_GUIDE_v1.7.md`
-- `docs/v1.7.0_BREAKING_CHANGES.md`
-- `docs/DOCTRINE_POLICY.md`
-- `docs/DEMO_GRID_MAPPING.md`
-- `docs/USER_GUIDE.md`
-- `docs/RENDERER_CATALOG.md`
+## Demo & Showcase
 
-To refresh the demo grid mapping during builds, run the docs profile:
-
+Run the demo application:
 ```bash
-mvn clean install -Pdocs
-```
-
-## Downloads
-
-Release assets are published on GitHub Releases:
-https://github.com/ArberGashi/charts/releases
-
-- Core JAR: `arbercharts-core-1.7.0-LTS.jar`
-- Starter (Core + Swing + Server): `arbercharts-starter-1.7.0-LTS.jar`
-- Compose Bridge: `arbercharts-compose-bridge-1.7.0-LTS.jar`
-- Qt Bridge (native, per‑OS ZIP): `arbercharts-qt-bridge-<os>-1.7.0-LTS.zip`
-- Swift Bridge (native, per‑OS ZIP): `arbercharts-swift-bridge-<os>-1.7.0-LTS.zip`
-- Installers: macOS (.dmg), Windows (.msi), Linux (.deb)
-
-## Quick Start (Demo)
-
-```bash
-java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo-1.7.0-LTS.jar
+cd arbercharts-demo
+mvn exec:java
 ```
 
 ## System Requirements
 
-- Java 25 recommended
+- **Java 25** required (baseline for v2.0)
+- Any OS with JVM support (Windows, macOS, Linux)
 
-## License (Proprietary)
+## License
 
-- Individual Developer License: free for development & evaluation
-- Team License: required for small and large teams
-- Runtime/Distribution License: required for commercial products shipped to end customers
+ArberCharts binaries (JAR files) are licensed under the **MIT License**.
+
+This means you can:
+- ✅ Use ArberCharts in commercial and non-commercial projects
+- ✅ Distribute ArberCharts with your applications
+- ✅ Modify and extend through public APIs
+
+**Note**: The source code remains proprietary. See [LICENSE](LICENSE) and [BINARY-LICENSE.md](BINARY-LICENSE.md) for details.
 
 ## Support
 

@@ -59,12 +59,48 @@
     <main class="page">
       <div class="container">
       <section class="page-hero">
-        <span data-i18n="demo_kicker">Demo App</span>
+        <span data-i18n="demo_kicker">Showcase UI</span>
         <h1 data-i18n="demo_title">A premium showcase for your customers.</h1>
-        <p data-i18n="demo_subtitle">Erleben Sie die v1.7.0 LTS "Surgeon" in Aktion. 158 Renderer, flüssiges 60 FPS Rendering und industrielle Praezision auf dem Desktop.</p>
+        <p data-i18n="demo_subtitle">Erleben Sie ArberCharts v2.0.0 in Aktion. 158 Renderer, Zero-GC 60 FPS Rendering und industrielle Präzision mit Java 25.</p>
         <div class="hero-cta">
-          <a class="btn primary" href="downloads/arbercharts-demo-1.7.0-LTS.jar" data-i18n="demo_download">Download Demo JAR</a>
+          <a class="btn primary" href="mailto:gashi@pro-business.ch" data-i18n="demo_download">Request demo</a>
           <a class="btn ghost" href="licensing.html" data-i18n="cta_license">View Licensing</a>
+        </div>
+      </section>
+
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstützte Plattformen (v2.0.0)</h2>
+          <p class="muted" data-i18n="compat_body">ArberCharts v2.0 erfordert Java 25. Swing Desktop und Spring Boot Server.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15+</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon & Intel. Java 25 JVM.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">Java 25 JVM für Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">Java 25 JVM auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
         </div>
       </section>
 
@@ -73,12 +109,12 @@
           <span data-i18n="demo_downloads_title">Downloads</span>
           <h2 data-i18n="demo_downloads_title">Downloads</h2>
         </div>
-        <p class="muted" data-i18n="demo_downloads_body">Grab the demo JAR for any OS with a compatible JRE.</p>
+        <p class="muted" data-i18n="demo_downloads_body">The demo is not publicly available at the moment. Please contact us for access.</p>
         <div class="listing-grid">
           <article class="listing-card">
             <h3>JAR</h3>
-            <p data-i18n="demo_downloads_jar_body">For Windows, Linux, and macOS with a compatible JRE.</p>
-            <a class="btn ghost" href="downloads/arbercharts-demo-1.7.0-LTS.jar" data-i18n="demo_download">Download Demo JAR</a>
+            <p data-i18n="demo_downloads_jar_body">Available on request for vetted customers.</p>
+            <a class="btn ghost" href="mailto:gashi@pro-business.ch" data-i18n="demo_download">Request demo</a>
           </article>
         </div>
       </section>
@@ -109,7 +145,7 @@
           <span data-i18n="demo_gallery_kicker">Gallery</span>
           <h2 data-i18n="demo_gallery_title">Screens from the demo app.</h2>
         </div>
-        <p class="section-note" data-i18n="demo_gallery_body">Replace these with real captures from your current demo build.</p>
+        <p class="section-note" data-i18n="demo_gallery_body">Selected showcase views (available on request).</p>
         <div class="media-grid">
           <figure class="media-card">
             <img src="images/demo-financial.png" alt="Financial demo panel" />
@@ -132,7 +168,7 @@
           <h2 data-i18n="demo_run_title">Launch in seconds.</h2>
         </div>
         <div class="code-block">
-          <code>java -jar arbercharts-demo-1.7.0-LTS.jar</code>
+          <code>Demo available on request</code>
         </div>
         <p class="muted" style="margin-top: 10px; font-size: 0.85em;" data-i18n="demo_run_note">Optimiert fuer JRE 21 bis JRE 25. Keine Installation notwendig.</p>
       </section>
@@ -141,7 +177,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>© 2026 Arber Gashi. All rights reserved.</p>
+        <p>© 2024-2026 Arber Gashi. All rights reserved.</p>
         <p data-i18n="footer_note">Proprietary software. Licensed for development and commercial distribution.</p>
       </div>
     </footer>

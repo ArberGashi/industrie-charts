@@ -62,7 +62,7 @@
     <main class="container">
       <section class="hero">
         <h1 data-i18n="products_title">Produkte</h1>
-        <p data-i18n="products_subtitle">ArberCharts Core Framework und Demo-App für Evaluation und Vertrieb.</p>
+        <p data-i18n="products_subtitle">ArberCharts Starter-Framework und Showcase UI auf Anfrage.</p>
       </section>
 
       <section class="section">
@@ -77,24 +77,40 @@
               <li data-i18n="products_core_b3">Themes, i18n und Export Pipeline.</li>
             </ul>
             <div class="btn-row">
-              <a class="btn" href="/downloads/arbercharts-core-1.7.0-LTS.jar" data-i18n="products_core_cta">Core JAR</a>
-              <a class="btn ghost" href="https://github.com/arbergashi/arbercharts/releases/tag/v1.7.0-LTS" target="_blank" rel="noopener">GitHub Release</a>
+              <a class="btn" href="/downloads/arbercharts-starter-2.0.0.jar" data-i18n="products_core_cta">Starter JAR</a>
+              <a class="btn ghost" href="https://github.com/ArberGashi/charts/releases/tag/v2.0.0" target="_blank" rel="noopener">GitHub Release</a>
             </div>
           </div>
           <div class="card">
             <img class="card-media" src="images/medicalsweep.png" alt="ArberCharts Demo" />
-            <h3 data-i18n="products_demo_title">Demo-App</h3>
-            <p data-i18n="products_demo_body">Referenz-Panels für Financial und Medical sowie Spezial-Renderer.</p>
+            <h3 data-i18n="products_demo_title">Showcase UI (internal)</h3>
+            <p data-i18n="products_demo_body">Demo and showcase views are currently available on request only.</p>
             <ul class="card-list">
-              <li data-i18n="products_demo_b1">Showcase für 158 Renderer.</li>
-              <li data-i18n="products_demo_b2">Best-Practice Layouts und Interaktionen.</li>
-              <li data-i18n="products_demo_b3">Ideal für Evaluierung und Präsentation.</li>
+              <li data-i18n="products_demo_b1">Renderer demos for financial and medical.</li>
+              <li data-i18n="products_demo_b2">Best-practice layouts and interactions.</li>
+              <li data-i18n="products_demo_b3">Contact us for access and evaluation.</li>
             </ul>
             <div class="btn-row">
-              <a class="btn" href="/downloads/arbercharts-demo-1.7.0-LTS.jar" data-i18n="products_demo_cta">Demo JAR</a>
-              <a class="btn ghost" href="https://github.com/arbergashi/arbercharts/releases/tag/v1.7.0-LTS" target="_blank" rel="noopener">GitHub Release</a>
+              <a class="btn" href="mailto:gashi@pro-business.ch" data-i18n="products_demo_cta">Contact us</a>
+              <a class="btn ghost" href="https://github.com/ArberGashi/charts/releases/tag/v2.0.0" target="_blank" rel="noopener">GitHub Release</a>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <span data-i18n="products_bridges_kicker">Bridges</span>
+          <h2 data-i18n="products_bridges_title">Bridge downloads</h2>
+          <p class="muted" data-i18n="products_bridges_body">Compose, Qt, and Swift are distributed as separate artifacts.</p>
+        </div>
+        <div class="card">
+          <div class="btn-row">
+            <a class="btn ghost" href="/downloads/arbercharts-compose-bridge-1.7.0-LTS.jar" data-i18n="products_bridges_compose">Compose Bridge</a>
+            <a class="btn ghost" href="/downloads/arbercharts-qt-bridge-macos-1.7.0-LTS.zip" data-i18n="products_bridges_qt">Qt Bridge (macOS)</a>
+            <a class="btn ghost" href="/downloads/arbercharts-swift-bridge-macos-1.7.0-LTS.zip" data-i18n="products_bridges_swift">Swift Bridge (macOS)</a>
+          </div>
+          <p class="muted" data-i18n="products_bridges_note">Qt/Swift: macOS arm64 only. Compose: desktop JVM.</p>
         </div>
       </section>
 
@@ -129,6 +145,10 @@
             <p data-i18n="products_highlight_ui_body">Legend, Crosshair, Tooltips und Grid-Layer ab Werk.</p>
           </div>
           <div class="card">
+            <h3 data-i18n="products_highlight_predict_title">Predictive intelligence</h3>
+            <p data-i18n="products_highlight_predict_body">Local, deterministic forecasts and anomaly indicators without cloud dependency.</p>
+          </div>
+          <div class="card">
             <h3 data-i18n="products_highlight_domains_title">Domain Suites</h3>
             <p data-i18n="products_highlight_domains_body">Medical und Financial Renderer mit Industry-Grade Features.</p>
           </div>
@@ -136,6 +156,42 @@
             <h3 data-i18n="products_highlight_special_title">Specialized Visuals</h3>
             <p data-i18n="products_highlight_special_body">Sankey, Sunburst, Delaunay, Voronoi und mehr.</p>
           </div>
+        </div>
+      </section>
+
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstuetzte Betriebssysteme (aktuelle Versionen)</h2>
+          <p class="muted" data-i18n="compat_body">Die nativen Bridges sind fuer aktuelle OS-Versionen ausgelegt. JVM-Stacks laufen plattformuebergreifend.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon (arm64). Swift/Qt nativ.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">JVM-Stacks fuer Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">JVM-Stacks auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
         </div>
       </section>
 
@@ -148,21 +204,26 @@
           <div class="card">
             <h3 data-i18n="products_example_basic_title">Standard Chart</h3>
             <div class="code-block">
-<pre>ChartModel model = ModelBuilder.line()
-    .add("Series A", 2, 4, 6, 5, 7)
+<pre>ChartModel model = ModelBuilder.of("Series A")
+    .setXY(0, 2)
+    .setXY(1, 4)
+    .setXY(2, 6)
+    .setXY(3, 5)
+    .setXY(4, 7)
     .build();
 
 ArberChartPanel panel = ArberChartBuilder.of()
     .addLayer(model, new LineRenderer())
-    .withTheme(ChartThemes.defaultLight())
+    .withTheme(ChartThemes.getLightTheme())
     .buildPanel();</pre>
             </div>
           </div>
           <div class="card">
             <h3 data-i18n="products_example_fin_title">Financial Overlay</h3>
             <div class="code-block">
-<pre>ChartModel model = ModelBuilder.financial()
-    .add("AAPL", new OHLCBar(100, 110, 98, 105))
+<pre>ChartModel model = ModelBuilder.of("AAPL")
+    .setOHLC(0, 100, 110, 98, 105)
+    .setOHLC(1, 105, 112, 104, 110)
     .build();
 
 ArberChartPanel panel = ArberChartBuilder.of()
@@ -174,8 +235,10 @@ ArberChartPanel panel = ArberChartBuilder.of()
           <div class="card">
             <h3 data-i18n="products_example_med_title">Medical Sweep</h3>
             <div class="code-block">
-<pre>ChartModel model = ModelBuilder.medical()
-    .add("ECG", sampleBuffer)
+<pre>ChartModel model = ModelBuilder.of("ECG")
+    .setXY(0, 0.12)
+    .setXY(1, 0.18)
+    .setXY(2, -0.05)
     .build();
 
 ArberChartPanel panel = ArberChartBuilder.of()
@@ -309,8 +372,8 @@ ArberChartPanel panel = ArberChartBuilder.of()
 
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
-          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+          <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
         </div>
       </div>
     </footer>

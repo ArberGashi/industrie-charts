@@ -61,74 +61,115 @@
     <div class="mobile-backdrop" aria-hidden="true"></div>
     <main class="container">
       <section class="hero">
-        <h1 data-i18n="pricing_title">Faire Preise für High-End Performance.</h1>
-        <p data-i18n="pricing_subtitle">Einzelentwickler kostenlos. Team-Lizenzen statt Sitzplatzmodell.</p>
+        <h1 data-i18n="pricing_title">Free to Use. MIT Licensed.</h1>
+        <p data-i18n="pricing_subtitle">ArberCharts binaries are free under MIT License. Optional enterprise support available.</p>
       </section>
 
       <section class="section">
         <div class="card">
-          <h3 data-i18n="pricing_notice_title">Lizenz-Überblick</h3>
-          <p data-i18n="pricing_notice_body">Einzelentwickler entwickeln kostenlos. Für Teams und kommerzielle Distribution gelten Lizenzpakete.</p>
+          <h3 data-i18n="pricing_notice_title">License Overview</h3>
+          <p data-i18n="pricing_notice_body">ArberCharts JAR files are licensed under the <strong>MIT License</strong> - completely free for commercial and non-commercial use.</p>
           <ul>
-            <li data-i18n="pricing_notice_b1">Einzelentwickler: freie Nutzung für Development & Evaluation.</li>
-            <li data-i18n="pricing_notice_b4">Studierende, Universitäten und Hochschulen: kostenfreie Nutzung.</li>
-            <li data-i18n="pricing_notice_b2">Teams: Staffelpreise je nach Produktlinie.</li>
-            <li data-i18n="pricing_notice_b3">Distribution: erforderlich bei Auslieferung an Endkunden.</li>
+            <li data-i18n="pricing_notice_b1">✅ Free for individuals and companies</li>
+            <li data-i18n="pricing_notice_b4">✅ Free for students and universities</li>
+            <li data-i18n="pricing_notice_b2">✅ Commercial distribution allowed</li>
+            <li data-i18n="pricing_notice_b3">✅ No licensing fees required</li>
           </ul>
+          <p style="margin-top: 1rem;"><strong>Note:</strong> Source code remains proprietary. Enterprise source code licensing available on request.</p>
         </div>
         <div class="card">
-          <h3 data-i18n="support_policy_title">LTS Support-Policy</h3>
-          <p data-i18n="support_policy_body">Unterstuetzt wird ausschliesslich ArberCharts v1.7.0 LTS. Aeltere Versionen sind abgekündigt und duerfen nicht fuer neue Releases verwendet werden. Produktionsanwendungen sind exklusiv mit v1.7.0 LTS auszuliefern.</p>
+          <h3 data-i18n="support_policy_title">Version 2.0.0 Support Policy</h3>
+          <p data-i18n="support_policy_body">ArberCharts v2.0.0 (Java 25) is the current stable version. Community support via email. Priority support available for enterprise customers.</p>
+        </div>
+      </section>
+
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstützte Plattformen (v2.0.0)</h2>
+          <p class="muted" data-i18n="compat_body">ArberCharts v2.0 erfordert Java 25. Fokus auf Swing Desktop und Spring Boot Server.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15+</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon (arm64) & Intel. Java 25 JVM.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">Java 25 JVM für Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">Java 25 JVM auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
         </div>
       </section>
 
       <section class="section">
+        <div class="section-title">
+          <h2 data-i18n="pricing_enterprise_title">Optional Enterprise Support</h2>
+          <p class="muted" data-i18n="pricing_enterprise_body">ArberCharts is free under MIT License. Enterprise customers can purchase optional support packages.</p>
+        </div>
         <div class="table-wrap">
           <table class="table">
             <thead>
               <tr>
                 <th data-i18n="pricing_th_feature">Feature</th>
-                <th data-i18n="pricing_th_dev">Developer</th>
-                <th data-i18n="pricing_th_startup">Startup</th>
-                <th data-i18n="pricing_th_pro">Professional</th>
-                <th data-i18n="pricing_th_enterprise">Enterprise</th>
+                <th data-i18n="pricing_th_free">Free (MIT)</th>
+                <th data-i18n="pricing_th_pro">Professional Support</th>
+                <th data-i18n="pricing_th_enterprise">Enterprise Support</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td data-i18n="pricing_row_price">Preis</td>
-                <td data-i18n="pricing_row_price_dev">CHF 0</td>
-                <td data-i18n="pricing_row_price_startup">CHF 499</td>
-                <td data-i18n="pricing_row_price_pro">CHF 1'299</td>
-                <td data-i18n="pricing_row_price_enterprise">CHF 3'999</td>
+                <td data-i18n="pricing_row_price">Price</td>
+                <td data-i18n="pricing_row_price_free"><strong>CHF 0</strong></td>
+                <td data-i18n="pricing_row_price_pro">CHF 2'999/year</td>
+                <td data-i18n="pricing_row_price_enterprise">CHF 9'999/year</td>
               </tr>
               <tr>
-                <td data-i18n="pricing_row_unit">Einheit</td>
-                <td data-i18n="pricing_row_unit_dev">Pro Entwickler</td>
-                <td data-i18n="pricing_row_unit_startup">Pro Produkt / Jahr</td>
-                <td data-i18n="pricing_row_unit_pro">Unlimitierte Entwickler</td>
-                <td data-i18n="pricing_row_unit_enterprise">Unlimitierte Produkte</td>
+                <td data-i18n="pricing_row_license">License</td>
+                <td data-i18n="pricing_row_license_free">MIT License</td>
+                <td data-i18n="pricing_row_license_pro">MIT License</td>
+                <td data-i18n="pricing_row_license_enterprise">MIT + Source Access</td>
               </tr>
               <tr>
-                <td data-i18n="pricing_row_target">Zielgruppe</td>
-                <td data-i18n="pricing_row_target_dev">Evaluation & Dev</td>
-                <td data-i18n="pricing_row_target_startup">Kleine Unternehmen</td>
-                <td data-i18n="pricing_row_target_pro">Mittelstand / Teams</td>
-                <td data-i18n="pricing_row_target_enterprise">Konzern / OEM</td>
+                <td data-i18n="pricing_row_target">Target</td>
+                <td data-i18n="pricing_row_target_free">All Users</td>
+                <td data-i18n="pricing_row_target_pro">Companies with SLA needs</td>
+                <td data-i18n="pricing_row_target_enterprise">Corporations / OEM</td>
               </tr>
               <tr>
                 <td data-i18n="pricing_row_support">Support</td>
-                <td data-i18n="pricing_row_support_dev">Community</td>
-                <td data-i18n="pricing_row_support_startup">E-Mail</td>
-                <td data-i18n="pricing_row_support_pro">Priority (48h)</td>
-                <td data-i18n="pricing_row_support_enterprise">VIP (24h) + SLA</td>
+                <td data-i18n="pricing_row_support_free">Community (Email)</td>
+                <td data-i18n="pricing_row_support_pro">Priority (24h)</td>
+                <td data-i18n="pricing_row_support_enterprise">VIP (12h) + SLA</td>
               </tr>
               <tr>
-                <td data-i18n="pricing_row_updates">Updates</td>
-                <td data-i18n="pricing_row_updates_dev">Inklusive</td>
-                <td data-i18n="pricing_row_updates_startup">Inklusive</td>
-                <td data-i18n="pricing_row_updates_pro">Inklusive</td>
-                <td data-i18n="pricing_row_updates_enterprise">Inklusive</td>
+                <td data-i18n="pricing_row_source">Source Code Access</td>
+                <td data-i18n="pricing_row_source_free">No</td>
+                <td data-i18n="pricing_row_source_pro">No</td>
+                <td data-i18n="pricing_row_source_enterprise">Yes</td>
+              </tr>
+              <tr>
+                <td data-i18n="pricing_row_custom">Custom Development</td>
+                <td data-i18n="pricing_row_custom_free">No</td>
+                <td data-i18n="pricing_row_custom_pro">Available (extra fee)</td>
+                <td data-i18n="pricing_row_custom_enterprise">Included (limited hours)</td>
               </tr>
             </tbody>
           </table>
@@ -137,10 +178,17 @@
 
       <section class="section">
         <div class="card">
-          <h3 data-i18n="pricing_note_title">Transparente Jahreslizenzen</h3>
-          <p data-i18n="pricing_note_body">Alle Preise verstehen sich als jährliche Gebühr. Darin enthalten sind sämtliche Updates auf neue Versionen (inkl. Major Releases) sowie technischer Support.</p>
-          <p data-i18n="pricing_note_lockin_title"><strong>Kein Vendor Lock-in:</strong></p>
-          <p data-i18n="pricing_note_lockin_body">Sollten Sie Ihre Lizenz nicht erneuern, bleibt die zum Zeitpunkt des Ablaufens aktuelle Version von ArberCharts in Ihren bereits ausgelieferten Produkten voll funktionsfähig. Sie zahlen lediglich für den Zugang zu neuen Features und Support.</p>
+          <h3 data-i18n="pricing_note_title">MIT License - What It Means</h3>
+          <p data-i18n="pricing_note_body">The MIT License gives you complete freedom to use ArberCharts in any project, commercial or non-commercial, without any fees or restrictions.</p>
+          <p><strong>You can:</strong></p>
+          <ul>
+            <li>Use ArberCharts in commercial products</li>
+            <li>Distribute ArberCharts with your applications</li>
+            <li>Modify and extend through public APIs</li>
+            <li>Sell products that include ArberCharts</li>
+          </ul>
+          <p style="margin-top: 1rem;"><strong>Source Code:</strong></p>
+          <p data-i18n="pricing_note_lockin_body">The source code remains proprietary. Enterprise customers can purchase source code access for custom modifications and deeper integration.</p>
         </div>
       </section>
 
@@ -203,8 +251,8 @@
 
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
-          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+          <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
         </div>
       </div>
     </footer>

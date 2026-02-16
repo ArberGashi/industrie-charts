@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.arbergashi</groupId>
         <artifactId>arber-charts-parent</artifactId>
-        <version>1.7.0-LTS</version>
+        <version>2.0.0</version>
     </parent>
 
     <artifactId>arbercharts-spring-boot-starter</artifactId>
@@ -28,6 +28,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
             <version>${spring.boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <version>${spring.boot.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>

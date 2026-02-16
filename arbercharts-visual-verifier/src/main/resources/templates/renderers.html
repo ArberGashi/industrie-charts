@@ -1,52 +1,181 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-  <head th:replace="fragments/layout :: head('ArberCharts Renderers')"></head>
-  <body data-theme="dark">
-    <header th:replace="fragments/layout :: header('renderers')"></header>
-    <main class="page">
-      <section class="hero">
-        <div>
-          <h1>Renderer gallery</h1>
-          <p>Browse curated renderer previews by domain. Each tile is rendered live using the same engine customers deploy in production.</p>
-        </div>
-        <div class="card">
-          <h3>Filter focus</h3>
-          <div class="grid">
-            <button class="btn ghost is-active" type="button" data-filter="all">All</button>
-            <button class="btn ghost" type="button" data-filter="medical">Medical</button>
-            <button class="btn ghost" type="button" data-filter="financial">Financial</button>
-            <button class="btn ghost" type="button" data-filter="analysis">Engineering</button>
-            <button class="btn ghost" type="button" data-filter="circular">Circular</button>
-            <button class="btn ghost" type="button" data-filter="network">Network</button>
-            <button class="btn ghost" type="button" data-filter="spatial" th:if="${vectorAvailable}">Spatial 3D</button>
-          </div>
-        </div>
-      </section>
+<head th:replace="~{fragments/layout :: head('ArberCharts - 157 Professional Renderers')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: header('renderers')}"></header>
 
-      <section class="section" th:if="${!vectorAvailable}">
-        <div class="card">
-          <h3>Vector API required for spatial renderers</h3>
-          <p>Enable the JDK Vector API to unlock spatial charts in this gallery.</p>
-          <div class="code-block">JAVA_TOOL_OPTIONS="--add-modules jdk.incubator.vector" mvn -pl arbercharts-visual-verifier spring-boot:run</div>
-        </div>
-      </section>
-
-      <div th:each="group : ${groups}">
-        <section class="section">
-          <h2 th:text="${group.name}">Domain</h2>
-          <div class="grid wide chart-grid">
-            <div class="card" th:each="chart : ${group.charts}" th:attr="data-card-domain=${chart.domain}">
-              <div class="chart-meta">
-                <h3 th:text="${chart.label}">Chart</h3>
-                <span class="badge" th:text="${chart.domain}">domain</span>
-              </div>
-              <img th:attr="data-type=${chart.type}, data-domain=${chart.domain}" data-width="920" data-height="520" alt="chart" />
+<main class="main">
+    <!-- Hero Header -->
+    <div class="hero-header">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span class="gradient-text">ArberCharts</span> Renderer Catalog
+            </h1>
+            <p class="hero-subtitle">
+                Professional-grade rendering engine with 157 production renderers
+            </p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-value" th:text="${totalCount}">157</div>
+                    <div class="hero-stat-label">Renderers</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value" th:text="${#maps.size(groups)}">11</div>
+                    <div class="hero-stat-label">Categories</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value" th:text="${vectorAvailable ? '✓' : '✗'}">✓</div>
+                    <div class="hero-stat-label">Vector API</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">⚡</div>
+                    <div class="hero-stat-label">ZERO-GC</div>
+                </div>
             </div>
-          </div>
-        </section>
-      </div>
-    </main>
-    <footer th:replace="fragments/layout :: footer"></footer>
-    <div th:replace="fragments/layout :: scripts"></div>
-  </body>
+        </div>
+    </div>
+
+    <!-- Category Navigation -->
+    <div class="category-nav">
+        <button class="category-nav-btn active" data-category="all">
+            🎨 All Renderers
+        </button>
+        <button th:each="entry : ${groups}"
+                class="category-nav-btn"
+                th:attr="data-category=${entry.key},data-color=${categoryColors.get(entry.key)}"
+                th:style="'--category-color: ' + ${categoryColors.get(entry.key)}">
+            <span th:text="${categoryIcons.get(entry.key)}"></span>
+            <span th:text="${entry.key}"></span>
+            <span class="badge" th:text="${#lists.size(entry.value)}"></span>
+        </button>
+    </div>
+
+    <!-- Renderer Categories -->
+    <div th:each="entry : ${groups}" class="category-section" th:attr="data-category=${entry.key}">
+        <div class="category-header-modern">
+            <div class="category-header-left">
+                <span class="category-icon"
+                      th:text="${categoryIcons.get(entry.key)}"
+                      th:style="'color: ' + ${categoryColors.get(entry.key)}"></span>
+                <h2 class="category-title" th:text="${entry.key}">Category</h2>
+                <span class="category-count" th:text="${#lists.size(entry.value)} + ' renderers'"></span>
+            </div>
+            <div class="category-header-right">
+                <span class="category-color-bar" th:style="'background: ' + ${categoryColors.get(entry.key)}"></span>
+            </div>
+        </div>
+
+        <div class="renderer-grid-modern">
+            <div class="renderer-card-modern"
+                 th:each="renderer : ${entry.value}"
+                 th:attr="data-category=${entry.key},data-renderer=${renderer.className}">
+
+                <!-- Card Header -->
+                <div class="card-header-modern">
+                    <div class="card-title-area">
+                        <h3 class="card-title" th:text="${renderer.simpleName}">Renderer</h3>
+                        <span class="card-badge"
+                              th:text="${entry.key}"
+                              th:style="'background: ' + ${categoryColors.get(entry.key)}"></span>
+                    </div>
+                    <div class="card-actions">
+                        <button class="icon-btn" title="Animate" data-action="animate">
+                            <span>▶</span>
+                        </button>
+                        <button class="icon-btn" title="Benchmark" data-action="benchmark">
+                            <span>⏱</span>
+                        </button>
+                        <button class="icon-btn" title="Full Screen" data-action="fullscreen">
+                            <span>⛶</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chart Preview with Animation Support -->
+                <div class="card-preview">
+                    <div class="preview-container">
+                        <canvas class="preview-canvas"
+                                th:attr="data-renderer-class=${renderer.className},data-category=${entry.key}"
+                                data-width="800"
+                                data-height="480"></canvas>
+                        <div class="preview-overlay">
+                            <div class="preview-loading">
+                                <div class="spinner"></div>
+                                <span>Rendering...</span>
+                            </div>
+                            <div class="preview-error">
+                                <span>⚠</span>
+                                <span class="error-message">Render failed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Controls (shown on hover) -->
+                    <div class="card-controls">
+                        <div class="theme-switch">
+                            <button data-theme="light" class="active">☀️</button>
+                            <button data-theme="dark">🌙</button>
+                        </div>
+                        <div class="size-controls">
+                            <button data-size="sm">S</button>
+                            <button data-size="md" class="active">M</button>
+                            <button data-size="lg">L</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer with Stats -->
+                <div class="card-footer-modern">
+                    <div class="card-meta">
+                        <code class="renderer-class" th:text="${renderer.className}">com.arbergashi.Renderer</code>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Render:</span>
+                            <span class="stat-value render-time">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">FPS:</span>
+                            <span class="stat-value fps-counter">60</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animation Showcase Banner -->
+    <div class="showcase-banner">
+        <div class="showcase-content">
+            <h3>🎬 Animation Capabilities</h3>
+            <p>ArberCharts supports real-time animations for financial tickers, medical waveforms, predictive forecasts, and more</p>
+            <button class="btn-primary" data-action="demo-animations">
+                View Animation Demos
+            </button>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<!-- Load app.js for canvas-based rendering -->
+<script th:src="@{/js/app.js}"></script>
+
+<!-- Enhanced Scripts for Animations -->
+<script th:inline="javascript">
+    // Category colors from server
+    const CATEGORY_COLORS = /*[[${categoryColors}]]*/ {};
+
+    // Animation-capable renderers
+    const ANIMATED_RENDERERS = [
+        'LiveEKGRenderer',
+        'LiveTickerRenderer',
+        'RealtimeWaveformRenderer',
+        'StreamingCandleRenderer',
+        'PredictiveShadowRenderer',
+        'MarketDepthRenderer'
+    ];
+</script>
+</body>
 </html>
+

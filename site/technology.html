@@ -98,6 +98,42 @@
         </div>
       </section>
 
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstützte Plattformen (v2.0.0)</h2>
+          <p class="muted" data-i18n="compat_body">ArberCharts v2.0 fokussiert auf Java 25 mit Swing Desktop und Spring Boot Server.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15+</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon (arm64) & Intel. Java 25 JVM.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">Java 25 JVM für Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">Java 25 JVM auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
+        </div>
+      </section>
+
       <section class="section">
         <div class="section-title">
           <span data-i18n="tech_docs_kicker">JavaDocs</span>
@@ -108,9 +144,6 @@
           <a class="btn" href="/javadoc/index.html" target="_blank" rel="noopener" data-i18n="tech_docs_cta">Dokumentation öffnen</a>
           <a class="btn ghost" href="/javadoc-swing/index.html" target="_blank" rel="noopener" data-i18n="tech_docs_swing_cta">Swing Bridge JavaDocs</a>
           <a class="btn ghost" href="/javadoc-server/index.html" target="_blank" rel="noopener" data-i18n="tech_docs_server_cta">Server Bridge JavaDocs</a>
-          <a class="btn ghost" href="/bridges/compose.html" data-i18n="tech_docs_compose_cta">Compose Bridge Docs</a>
-          <a class="btn ghost" href="/bridges/swift.html" data-i18n="tech_docs_swift_cta">Swift Bridge Docs</a>
-          <a class="btn ghost" href="/bridges/qt.html" data-i18n="tech_docs_qt_cta">Qt Bridge Docs</a>
         </div>
       </section>
     </main>
@@ -148,8 +181,8 @@
 
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
-          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+          <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
         </div>
       </div>
     </footer>

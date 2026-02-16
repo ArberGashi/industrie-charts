@@ -133,24 +133,70 @@ public class NiceScale {
         return niceMax;
     }
 
+    /** Cached tick array to avoid repeated allocations (Zero-GC). */
+    private double[] cachedTicks = new double[32];
+    private int cachedTickCount = 0;
+
     /**
      * Returns an array of tick positions from {@link #getNiceMin()} to {@link #getNiceMax()}
      * spaced by {@link #getTickSpacing()}.
+     *
+     * <p><strong>Note:</strong> The returned array is reused internally. Copy if needed beyond
+     * the current frame.</p>
      *
      * @return an array of tick values. Returns an empty array if spacing is non-positive
      *         or if the computed number of ticks is non-positive.
      */
     public double[] getTicks() {
-        if (tickSpacing <= 0) return new double[]{};
+        if (tickSpacing <= 0) {
+            cachedTickCount = 0;
+            return cachedTicks;
+        }
         int count = (int) Math.round((niceMax - niceMin) / tickSpacing) + 1;
-        if (count <= 0) return new double[]{};
-        double[] ticks = new double[count];
+        if (count <= 0) {
+            cachedTickCount = 0;
+            return cachedTicks;
+        }
+
+        // Resize cached array if needed (rare, Zero-GC friendly)
+        if (count > cachedTicks.length) {
+            cachedTicks = new double[Math.max(count, cachedTicks.length * 2)];
+        }
+
+        cachedTickCount = count;
         double v = niceMin;
         for (int i = 0; i < count; i++) {
-            ticks[i] = v;
+            cachedTicks[i] = v;
             v += tickSpacing;
         }
-        return ticks;
+        return cachedTicks;
+    }
+
+    /**
+     * Returns the number of valid ticks in the array returned by {@link #getTicks()}.
+     *
+     * @return tick count for Zero-GC iteration
+     */
+    public int getTickCount() {
+        return cachedTickCount;
+    }
+
+    /**
+     * Iterates over tick values without allocating a new array.
+     *
+     * <p><strong>Zero-GC:</strong> Use this method for allocation-free tick iteration.</p>
+     *
+     * @param consumer callback invoked for each tick value
+     */
+    public void forEachTick(java.util.function.DoubleConsumer consumer) {
+        if (tickSpacing <= 0) return;
+        int count = (int) Math.round((niceMax - niceMin) / tickSpacing) + 1;
+        if (count <= 0) return;
+        double v = niceMin;
+        for (int i = 0; i < count; i++) {
+            consumer.accept(v);
+            v += tickSpacing;
+        }
     }
 
     /**

@@ -2,7 +2,7 @@ package com.arbergashi.charts.spring.autoconfigure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "arber.charts")
+@ConfigurationProperties(prefix = "arbercharts.server")
 public final class ArberChartsProperties {
     /**
      * Size of the render session pool.

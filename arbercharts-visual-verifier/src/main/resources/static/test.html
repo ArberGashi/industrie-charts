@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - ArberCharts Visual Verifier</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            background: #f9fafb;
+        }
+        h1 {
+            color: #1f2937;
+        }
+        .test-section {
+            background: white;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            max-width: 100%;
+            background: white;
+        }
+        .loading {
+            color: #6366f1;
+            font-weight: 600;
+        }
+        .success {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 ArberCharts Visual Verifier - API Test</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Direct API Call via Image Tag</h2>
+        <p>Loading chart via &lt;img&gt; tag...</p>
+        <div id="test1-status" class="test-result loading">Loading...</div>
+        <img id="test1-img"
+             src="/api/renderer?className=com.arbergashi.charts.render.standard.LineRenderer&width=800&height=480&theme=light"
+             alt="Test Chart 1"
+             style="max-width: 100%; border: 2px solid #e5e7eb; border-radius: 8px;">
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Canvas Rendering via Image Load</h2>
+        <p>Loading chart and drawing to canvas...</p>
+        <div id="test2-status" class="test-result loading">Loading...</div>
+        <canvas id="test2-canvas" width="800" height="480"></canvas>
+        <button onclick="loadToCanvas()">Retry</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Multiple Renderers</h2>
+        <p>Loading different renderer types...</p>
+        <div id="test3-status" class="test-result loading">Loading...</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <img src="/api/renderer?className=com.arbergashi.charts.render.standard.AreaRenderer&width=400&height=300&theme=light"
+                 alt="Area Chart"
+                 style="width: 100%; border: 2px solid #e5e7eb; border-radius: 8px;">
+            <img src="/api/renderer?className=com.arbergashi.charts.render.standard.BarRenderer&width=400&height=300&theme=light"
+                 alt="Bar Chart"
+                 style="width: 100%; border: 2px solid #e5e7eb; border-radius: 8px;">
+            <img src="/api/renderer?className=com.arbergashi.charts.render.financial.CandlestickRenderer&width=400&height=300&theme=light"
+                 alt="Candlestick Chart"
+                 style="width: 100%; border: 2px solid #e5e7eb; border-radius: 8px;">
+        </div>
+    </div>
+
+    <script>
+        // Test 1: Image tag
+        document.getElementById('test1-img').onload = function() {
+            document.getElementById('test1-status').textContent = '✓ SUCCESS: Image loaded via <img> tag';
+            document.getElementById('test1-status').className = 'test-result success';
+        };
+        document.getElementById('test1-img').onerror = function() {
+            document.getElementById('test1-status').textContent = '✗ ERROR: Failed to load image';
+            document.getElementById('test1-status').className = 'test-result error';
+        };
+
+        // Test 2: Canvas rendering
+        function loadToCanvas() {
+            const canvas = document.getElementById('test2-canvas');
+            const ctx = canvas.getContext('2d');
+            const status = document.getElementById('test2-status');
+
+            status.textContent = 'Loading...';
+            status.className = 'test-result loading';
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f3f4f6';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            img.onload = function() {
+                try {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    status.textContent = '✓ SUCCESS: Image loaded and drawn to canvas';
+                    status.className = 'test-result success';
+                } catch (error) {
+                    status.textContent = '✗ ERROR: Failed to draw to canvas - ' + error.message;
+                    status.className = 'test-result error';
+                }
+            };
+
+            img.onerror = function() {
+                status.textContent = '✗ ERROR: Failed to load image for canvas';
+                status.className = 'test-result error';
+            };
+
+            img.src = '/api/renderer?className=com.arbergashi.charts.render.standard.ColumnRenderer&width=800&height=480&theme=light&t=' + Date.now();
+        }
+
+        // Auto-load canvas test
+        loadToCanvas();
+
+        // Test 3: Count loaded images
+        let loadedCount = 0;
+        document.querySelectorAll('#test3-status + div img').forEach((img, index) => {
+            img.onload = function() {
+                loadedCount++;
+                document.getElementById('test3-status').textContent = `✓ Loaded ${loadedCount}/3 images`;
+                if (loadedCount === 3) {
+                    document.getElementById('test3-status').className = 'test-result success';
+                }
+            };
+            img.onerror = function() {
+                document.getElementById('test3-status').textContent = `✗ ERROR: Failed to load image ${index + 1}`;
+                document.getElementById('test3-status').className = 'test-result error';
+            };
+        });
+    </script>
+</body>
+</html>
+

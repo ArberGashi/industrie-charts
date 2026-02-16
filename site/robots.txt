@@ -1,5 +1,5 @@
 # ArberCharts - High-Performance Java Charting
-# v1.7.0 LTS Release
+# v2.0.0 Release
 
 User-agent: *
 Allow: /

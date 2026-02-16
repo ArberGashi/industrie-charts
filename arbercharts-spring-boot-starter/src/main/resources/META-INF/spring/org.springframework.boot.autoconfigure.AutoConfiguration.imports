@@ -1,1 +1,2 @@
 com.arbergashi.charts.spring.autoconfigure.ArberChartsAutoConfiguration
+com.arbergashi.charts.spring.autoconfigure.ChartAutoConfiguration

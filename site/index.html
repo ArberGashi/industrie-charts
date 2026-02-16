@@ -62,9 +62,9 @@
     <main class="container">
       <section class="hero">
         <h1 data-i18n="hero_title">High-performance charting engine for Java 25</h1>
-        <p data-i18n="hero_subtitle">Version 1.7.0 LTS "Surgeon" — Jetzt mit zertifiziertem Lock-free Core & Zero-GC Pipeline für absolute Datenintegrität.</p>
+        <p data-i18n="hero_subtitle">158 Renderer. Zero-GC Pipeline. Predictive Intelligence (lokal, deterministisch).</p>
         <div class="hero-cta">
-          <a class="btn primary" href="products.html" data-i18n="cta_free">Core herunterladen</a>
+          <a class="btn primary" href="products.html" data-i18n="cta_free">Starter herunterladen</a>
           <a class="btn" href="licensing.html" data-i18n="cta_business">Pricing ansehen</a>
         </div>
       </section>
@@ -189,7 +189,7 @@
             <div class="code-block">
 <pre>ArberChartPanel panel = ArberChartBuilder.of()
     .addLayer(model, new LineRenderer())
-    .withTheme(ChartThemes.defaultDark())
+    .withTheme(ChartThemes.getDarkTheme())
     .buildPanel();</pre>
             </div>
           </div>
@@ -375,12 +375,48 @@
         </div>
       </section>
 
+      <section class="section" id="compat">
+        <div class="section-title">
+          <span data-i18n="compat_kicker">Kompatibilitaet</span>
+          <h2 data-i18n="compat_title">Unterstuetzte Betriebssysteme (aktuelle Versionen)</h2>
+          <p class="muted" data-i18n="compat_body">Die nativen Bridges sind fuer aktuelle OS-Versionen ausgelegt. JVM-Stacks laufen plattformuebergreifend.</p>
+        </div>
+        <div class="grid cols-3">
+          <div class="card">
+            <h3 data-i18n="compat_macos_title">macOS 15</h3>
+            <p data-i18n="compat_macos_body">Apple Silicon (arm64). Swift/Qt nativ.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_windows_title">Windows 11</h3>
+            <p data-i18n="compat_windows_body">JVM-Stacks fuer Desktop/Server.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="compat_linux_title">Ubuntu 24.04 LTS</h3>
+            <p data-i18n="compat_linux_body">JVM-Stacks auf glibc 2.39+.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="quickstart">
+        <div class="section-title">
+          <span data-i18n="quickstart_kicker">Quick Start</span>
+          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
+          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
+        </div>
+        <div class="card">
+          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, new LineRenderer())
+    .withTheme(ChartThemes.getDarkTheme())
+    .buildPanel();</code></pre>
+        </div>
+      </section>
+
       <section class="section" id="cta">
         <div class="card">
           <h3 data-i18n="cta_title">Bereit für das nächste Level an Performance?</h3>
           <p data-i18n="cta_body">Laden Sie die Demo herunter und erleben Sie 158 Renderer in Aktion. Kostenlos für alle Entwickler.</p>
           <div class="hero-cta">
-            <a class="btn primary" href="products.html" data-i18n="cta_download">Core-Framework herunterladen</a>
+            <a class="btn primary" href="products.html" data-i18n="cta_download">Starter-Framework herunterladen</a>
             <a class="btn" href="licensing.html" data-i18n="cta_license">Lizenz erwerben</a>
           </div>
         </div>
@@ -420,8 +456,8 @@
 
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
-          <p data-i18n="footer_rights">© 2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">Proprietary software. Licensed for commercial distribution.</p>
+          <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
         </div>
       </div>
     </footer>

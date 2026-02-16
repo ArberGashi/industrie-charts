@@ -343,13 +343,49 @@ public final class DefaultPlotContext implements PlotContext {
 
     private static double getCalculatedMinY(ChartModel m) {
         if (m == null) return 0.0;
+        if (m instanceof com.arbergashi.charts.model.FinancialChartModel fin) {
+            double[] range = getFinancialRange(fin);
+            if (range != null) {
+                return range[0];
+            }
+        }
         double min = m.getDataRange()[2];
         return min > 0 ? 0.0 : min; // baseline 0 for positive-only datasets
     }
 
     private static double getCalculatedMaxY(ChartModel m) {
         if (m == null) return 1.0;
+        if (m instanceof com.arbergashi.charts.model.FinancialChartModel fin) {
+            double[] range = getFinancialRange(fin);
+            if (range != null) {
+                return range[1];
+            }
+        }
         double max = m.getDataRange()[3];
         return max * 1.1; // 10% headroom
+    }
+
+    private static double[] getFinancialRange(com.arbergashi.charts.model.FinancialChartModel fin) {
+        double[] lows = fin.getLowData();
+        double[] highs = fin.getHighData();
+        if (lows == null || highs == null) return null;
+        int count = Math.min(fin.getPointCount(), Math.min(lows.length, highs.length));
+        if (count <= 0) return null;
+        double min = Double.POSITIVE_INFINITY;
+        double max = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < count; i++) {
+            double low = lows[i];
+            double high = highs[i];
+            if (Double.isFinite(low)) {
+                min = Math.min(min, low);
+            }
+            if (Double.isFinite(high)) {
+                max = Math.max(max, high);
+            }
+        }
+        if (min == Double.POSITIVE_INFINITY || max == Double.NEGATIVE_INFINITY) return null;
+        double span = Math.max(1e-9, max - min);
+        double pad = span * 0.05;
+        return new double[]{min - pad, max + pad};
     }
 }
