@@ -4,6 +4,7 @@ import com.arbergashi.charts.visualverifier.service.RendererCatalogService;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -21,5 +22,14 @@ public class RendererCatalogTest {
     void knownRendererIsResolvable() {
         RendererCatalogService service = new RendererCatalogService();
         assertNotNull(service.getRenderer("com.arbergashi.charts.render.standard.LineRenderer"));
+    }
+
+    @Test
+    void incompatibleCatalogEntryIsRejected() {
+        RendererCatalogService service = new RendererCatalogService();
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.getRenderer("com.arbergashi.charts.render.common.PerformanceAuditRenderer")
+        );
     }
 }

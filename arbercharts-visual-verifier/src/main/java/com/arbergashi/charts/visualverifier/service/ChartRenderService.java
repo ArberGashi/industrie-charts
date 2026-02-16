@@ -3,8 +3,15 @@ package com.arbergashi.charts.visualverifier.service;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.bridge.server.ServerRenderService;
+import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
+import com.arbergashi.charts.render.analysis.VectorFieldRenderer;
+import com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer;
+import com.arbergashi.charts.render.financial.PredictiveCandleRenderer;
+import com.arbergashi.charts.render.forensic.PlaybackStatusRenderer;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.ChartRenderer;
+import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
+import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.visualverifier.RendererDemoDataFactory;
 import com.arbergashi.charts.visualverifier.RendererCatalogEntry;
 import com.arbergashi.charts.visualverifier.dto.RenderRequest;
@@ -119,10 +126,36 @@ public class ChartRenderService {
             if (!ChartRenderer.class.isAssignableFrom(clazz)) {
                 throw new IllegalArgumentException("Class is not a ChartRenderer: " + className);
             }
-            return (ChartRenderer) clazz.getDeclaredConstructor().newInstance();
+            try {
+                return (ChartRenderer) clazz.getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException ignored) {
+                return instantiateWithKnownCompatibilityDefaults(className);
+            }
         } catch (Exception e) {
             throw new IllegalArgumentException("Cannot instantiate renderer: " + className, e);
         }
+    }
+
+    private ChartRenderer instantiateWithKnownCompatibilityDefaults(String className) {
+        return switch (className) {
+            case "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer" ->
+                    new PlaybackStatusRenderer(null);
+            case "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer" ->
+                    new CircularLatencyOverlayRenderer(null);
+            case "com.arbergashi.charts.render.predictive.AnomalyGapRenderer" ->
+                    new AnomalyGapRenderer(new PredictiveShadowRenderer());
+            case "com.arbergashi.charts.render.financial.PredictiveCandleRenderer" ->
+                    new PredictiveCandleRenderer(new PredictiveShadowRenderer());
+            case "com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer" ->
+                    new AdaptiveFunctionRenderer(x -> Math.sin(x * 0.05));
+            case "com.arbergashi.charts.render.analysis.VectorFieldRenderer" ->
+                    new VectorFieldRenderer((x, y, out) -> {
+                        out[0] = -y;
+                        out[1] = x;
+                        return true;
+                    });
+            default -> throw new IllegalArgumentException("No compatible constructor strategy for: " + className);
+        };
     }
 
     private ChartTheme resolveTheme(String themeName) {
