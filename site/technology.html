@@ -3,28 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ArberCharts | Zero-GC High-Performance Java 25 Charting</title>
-    <meta name="title" content="ArberCharts | Zero-GC High-Performance Java 25 Charting" />
-    <meta name="description" content="The mission-critical charting engine for Java 25. 158 renderers for Medical, Financial, and Engineering. Zero-GC pipeline for smooth 60 FPS real-time data." />
-    <meta name="keywords" content="ArberCharts, Java 25 Charts, Zero-GC Rendering, Real-time Charting Java, Medical Waveforms, Financial Charting Library, Swing Charting, High Performance Data Viz" />
-    <meta name="author" content="Arber Gashi" />
-    <meta name="theme-color" content="#050505" />
-    <link rel="canonical" href="https://www.arbergashi.com/" />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.arbergashi.com/" />
-    <meta property="og:title" content="ArberCharts — Mission-Critical Java Visualization" />
-    <meta property="og:description" content="158 Renderers. Zero-GC Pipeline. Designed for high-stakes medical and financial systems using Java 25." />
-    <meta property="og:image" content="https://www.arbergashi.com/images/og-preview.png" />
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://www.arbergashi.com/" />
-    <meta property="twitter:title" content="ArberCharts — Zero-GC Java Charting" />
-    <meta property="twitter:description" content="Stop-the-world GC is the enemy. ArberCharts is the solution. High-performance rendering for modern JDKs." />
-    <meta property="twitter:image" content="https://www.arbergashi.com/images/og-preview.png" />
+    <title>ArberCharts 2.0 | Technology</title>
+    <meta
+      name="description"
+      content="ArberCharts 2.0 technology stack: Java 25 baseline, zero-GC rendering, lock-aware model strategy, and compatibility-focused renderer architecture."
+    />
     <link rel="icon" href="favicon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -59,95 +43,119 @@
     </header>
 
     <div class="mobile-backdrop" aria-hidden="true"></div>
+
     <main class="container">
-      <section class="hero">
-        <h1 data-i18n="technology_title">Technology</h1>
-        <p data-i18n="technology_subtitle">The architecture behind 158 renderers: Java 25 native performance, zero-GC, and lock-free concurrency.</p>
+      <section class="hero funnel-hero">
+        <p class="rev-pill">Technology Foundations</p>
+        <h1>Built for deterministic rendering on modern Java 25 systems</h1>
+        <p>
+          ArberCharts 2.0 focuses on predictable runtime behavior,
+          low allocation pressure, and compatibility-first renderer design
+          for long-running professional applications.
+        </p>
+        <div class="hero-cta">
+          <a class="btn primary" href="/javadoc/index.html" target="_blank" rel="noopener">Open JavaDocs</a>
+          <a class="btn" href="contact.html">Talk to engineering</a>
+        </div>
       </section>
 
       <section class="section">
         <div class="section-title">
-          <span data-i18n="tech_stack_kicker">The stack</span>
-          <h2 data-i18n="tech_stack_title">Built for eternity</h2>
+          <span>Core Principles</span>
+          <h2>Engineering standards behind the 2.0 line</h2>
+        </div>
+        <div class="plan-grid">
+          <article class="plan-card">
+            <h3>Zero-GC Rendering Discipline</h3>
+            <ul class="stack-list">
+              <li>Renderer paths optimized for low transient allocation</li>
+              <li>Static-frame reuse strategies for heavy fill workloads</li>
+              <li>Stable frame pacing in sustained sessions</li>
+            </ul>
+          </article>
+          <article class="plan-card">
+            <h3>Thread-Safe Model Access</h3>
+            <ul class="stack-list">
+              <li>Background writers with EDT-consistent reads</li>
+              <li>Compatibility checks for renderer/model pairing</li>
+              <li>Defensive fallbacks instead of undefined states</li>
+            </ul>
+          </article>
+          <article class="plan-card">
+            <h3>HiDPI and Visual Fidelity</h3>
+            <ul class="stack-list">
+              <li>Crisp rendering strategy for retina and 4K targets</li>
+              <li>Calibration-sensitive domains kept scale-stable</li>
+              <li>Consistent color and theme behavior across renderers</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <span>Architecture Snapshot</span>
+          <h2>How teams typically integrate ArberCharts 2.0</h2>
         </div>
         <div class="grid cols-2">
           <div class="card">
-            <h3 data-i18n="tech_stack_java_title">Java 25 ready</h3>
-            <p data-i18n="tech_stack_java_body">Uses modern JVM features for maximum execution speed.</p>
+            <h3>Data and Model Layer</h3>
+            <p>
+              Domain streams feed specialized models.
+              Models maintain update stamps and are prepared for concurrent access patterns.
+            </p>
+            <div class="code-block">
+<pre>model.append(sample);
+if (model.getUpdateStamp() != lastStamp) {
+  panel.repaint();
+}</pre>
+            </div>
           </div>
           <div class="card">
-            <h3 data-i18n="tech_stack_zerogc_title">Zero-GC pipeline</h3>
-            <p data-i18n="tech_stack_zerogc_body">Avoiding object creation in the render loop prevents GC pauses.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tech_stack_lockfree_title">Lock-free models</h3>
-            <p data-i18n="tech_stack_lockfree_body">Thread-safe data processing without performance hits from mutexes.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tech_zero_title">Zero-GC Rendering Pipeline</h3>
-            <p data-i18n="tech_zero_body">Flyweight-Pattern und primitive Caches eliminieren Heap-Allokationen im Render-Loop. JMH-validiert unter 1e-5 B/op.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tech_model_title">Optimistic Concurrency</h3>
-            <p data-i18n="tech_model_body">Sequence-Guards für das Circular-Modell sichern konsistente Reads, während Writer mit 1000Hz+ streamen.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tech_jdk_title">JDK 25 & Concurrency</h3>
-            <p data-i18n="tech_jdk_body">VarHandles und Memory-Barriers für lock-free Datenmodelle. Zertifiziert durch 100s-Stress-Tests ohne Datenkorruption.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="compat">
-        <div class="section-title">
-          <span data-i18n="compat_kicker">Kompatibilitaet</span>
-          <h2 data-i18n="compat_title">Unterstützte Plattformen (v2.0.0)</h2>
-          <p class="muted" data-i18n="compat_body">ArberCharts v2.0 fokussiert auf Java 25 mit Swing Desktop und Spring Boot Server.</p>
-        </div>
-        <div class="grid cols-3">
-          <div class="card">
-            <h3 data-i18n="compat_macos_title">macOS 15+</h3>
-            <p data-i18n="compat_macos_body">Apple Silicon (arm64) & Intel. Java 25 JVM.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="compat_windows_title">Windows 11</h3>
-            <p data-i18n="compat_windows_body">Java 25 JVM für Desktop/Server.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="compat_linux_title">Ubuntu 24.04</h3>
-            <p data-i18n="compat_linux_body">Java 25 JVM auf glibc 2.39+.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="quickstart">
-        <div class="section-title">
-          <span data-i18n="quickstart_kicker">Quick Start</span>
-          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
-          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
-        </div>
-        <div class="card">
-          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
-    .addLayer(model, new LineRenderer())
+            <h3>Rendering and UI Layer</h3>
+            <p>
+              Renderers are attached through <code>ArberChartBuilder</code> and controlled with
+              theme- and compatibility-aware defaults for predictable output.
+            </p>
+            <div class="code-block">
+<pre>ArberChartPanel panel = ArberChartBuilder.of()
+    .addLayer(model, renderer)
     .withTheme(ChartThemes.getDarkTheme())
-    .buildPanel();</code></pre>
+    .buildPanel();</pre>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="section">
         <div class="section-title">
-          <span data-i18n="tech_docs_kicker">JavaDocs</span>
-          <h2 data-i18n="tech_docs_title">Core API Documentation</h2>
+          <span>Technology Gallery</span>
+          <h2>Renderer quality under diverse visual workloads</h2>
         </div>
+        <div class="gallery-grid shot-grid">
+          <div class="gallery-item"><img src="images/heatmap.png" alt="Heatmap" /><span>Dense fill rendering</span></div>
+          <div class="gallery-item"><img src="images/medicalsweep.png" alt="Medical sweep" /><span>Real-time waveform continuity</span></div>
+          <div class="gallery-item"><img src="images/parallelcoordinates.png" alt="Parallel Coordinates" /><span>Multivariate data density</span></div>
+          <div class="gallery-item"><img src="images/voronoi.png" alt="Voronoi" /><span>Geometric computation visuals</span></div>
+        </div>
+      </section>
+
+      <section class="section">
         <div class="card">
-          <p data-i18n="tech_docs_body">Die JavaDocs für das Core-Modul sind öffentlich verfügbar.</p>
-          <a class="btn" href="/javadoc/index.html" target="_blank" rel="noopener" data-i18n="tech_docs_cta">Dokumentation öffnen</a>
-          <a class="btn ghost" href="/javadoc/index.html" target="_blank" rel="noopener" data-i18n="tech_docs_swing_cta">API JavaDocs</a>
+          <h3>Version policy</h3>
+          <p>
+            ArberCharts 2.0 is the single maintained line.
+            Previous generations are not marketed and not actively maintained.
+          </p>
+          <div class="hero-cta">
+            <a class="btn primary" href="products.html">View 2.0 product line</a>
+            <a class="btn" href="licensing.html">Licensing and support</a>
+          </div>
         </div>
       </section>
     </main>
 
-                <footer class="ac-footer">
+    <footer class="ac-footer">
       <div class="ac-container">
         <div class="ac-brand">
           <h2 class="ac-logo">ARBER<span>CHARTS</span></h2>
@@ -181,7 +189,7 @@
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
           <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT artifacts. Closed-source end products allowed. Commercial via support/SLA.</p>
         </div>
       </div>
     </footer>

@@ -1334,6 +1334,69 @@ h1, h2, h3 {
   margin-top: 0;
 }
 
+.funnel-hero {
+  text-align: left;
+  max-width: 900px;
+}
+
+.funnel-hero .hero-cta {
+  justify-content: flex-start;
+}
+
+.plan-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+.plan-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+}
+
+.plan-card h3 {
+  margin-top: 0;
+}
+
+.stack-list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  display: grid;
+  gap: 8px;
+}
+
+.shot-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.btn.ghost {
+  background: transparent;
+}
+
+@media (min-width: 760px) {
+  .plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1080px) {
+  .plan-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .shot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 760px) {
   .rev-proof-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

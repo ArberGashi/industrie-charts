@@ -3,28 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ArberCharts | Zero-GC High-Performance Java 25 Charting</title>
-    <meta name="title" content="ArberCharts | Zero-GC High-Performance Java 25 Charting" />
-    <meta name="description" content="The mission-critical charting engine for Java 25. 158 renderers for Medical, Financial, and Engineering. Zero-GC pipeline for smooth 60 FPS real-time data." />
-    <meta name="keywords" content="ArberCharts, Java 25 Charts, Zero-GC Rendering, Real-time Charting Java, Medical Waveforms, Financial Charting Library, Swing Charting, High Performance Data Viz" />
-    <meta name="author" content="Arber Gashi" />
-    <meta name="theme-color" content="#050505" />
-    <link rel="canonical" href="https://www.arbergashi.com/" />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.arbergashi.com/" />
-    <meta property="og:title" content="ArberCharts — Mission-Critical Java Visualization" />
-    <meta property="og:description" content="158 Renderers. Zero-GC Pipeline. Designed for high-stakes medical and financial systems using Java 25." />
-    <meta property="og:image" content="https://www.arbergashi.com/images/og-preview.png" />
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://www.arbergashi.com/" />
-    <meta property="twitter:title" content="ArberCharts — Zero-GC Java Charting" />
-    <meta property="twitter:description" content="Stop-the-world GC is the enemy. ArberCharts is the solution. High-performance rendering for modern JDKs." />
-    <meta property="twitter:image" content="https://www.arbergashi.com/images/og-preview.png" />
+    <title>ArberCharts 2.0 | Solutions</title>
+    <meta
+      name="description"
+      content="ArberCharts 2.0 solutions for medical, financial, and engineering systems with zero-GC rendering and production-ready integration paths."
+    />
     <link rel="icon" href="favicon.ico" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -59,77 +43,77 @@
     </header>
 
     <div class="mobile-backdrop" aria-hidden="true"></div>
+
     <main class="container">
-      <section class="hero">
-        <h1 data-i18n="solutions_title">Solutions & Integration</h1>
-        <p data-i18n="solutions_subtitle">Use-cases und Einbindung in eigene Entwicklungsprozesse.</p>
-        <p class="muted" data-i18n="solutions_predictive_note">Predictive Intelligence (lokal, deterministisch) für Vorhersagen und Anomalie-Tracking.</p>
+      <section class="hero funnel-hero">
+        <p class="rev-pill">Solutions for Production Teams</p>
+        <h1>One 2.0 platform for medical, financial, and industrial delivery</h1>
+        <p>
+          ArberCharts 2.0 is designed for systems where rendering stability,
+          deterministic behavior, and domain-specific visuals are business-critical.
+        </p>
+        <div class="hero-cta">
+          <a class="btn primary" href="products.html">Explore product line</a>
+          <a class="btn" href="contact.html">Discuss your use case</a>
+        </div>
       </section>
 
       <section class="section">
         <div class="section-title">
-          <span data-i18n="solutions_kicker">Use Cases</span>
-          <h2 data-i18n="solutions_cases_title">Branchen-Lösungen</h2>
+          <span>Domain Coverage</span>
+          <h2>Solution packages customers deploy most</h2>
         </div>
-        <div class="grid cols-3">
-          <div class="card">
+        <div class="plan-grid">
+          <article class="plan-card">
             <img class="card-media" src="images/ecg1.png" alt="Medical monitoring" />
-            <h3 data-i18n="solutions_medical_title">Medical & Life Sciences</h3>
-            <p data-i18n="solutions_medical_body">Sweep-Erase für EKG/EEG, stabile Vitaldaten-Visualisierung ohne Systemlast.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_medical_b1">Sweep-Erase EKG/EEG für Live-Monitoring.</li>
-              <li data-i18n="solutions_medical_b2">Ventilator, Ultrasound M-Mode, NIRS.</li>
-              <li data-i18n="solutions_medical_b3">HighPrecisionCrosshair für Messungen.</li>
+            <h3>Medical & Life Sciences</h3>
+            <ul class="stack-list">
+              <li>Sweep-erase ECG and waveform workflows</li>
+              <li>Ventilator and monitoring dashboards</li>
+              <li>Clinical-grade grid and measurement behavior</li>
+            </ul>
+          </article>
+          <article class="plan-card">
+            <img class="card-media" src="images/ichimoku.png" alt="Financial workflows" />
+            <h3>Financial Engineering</h3>
+            <ul class="stack-list">
+              <li>Candlestick, Renko, Kagi, and overlays</li>
+              <li>Ichimoku, MACD, RSI, volume analytics</li>
+              <li>Fast update paths for market streams</li>
+            </ul>
+          </article>
+          <article class="plan-card">
+            <img class="card-media" src="images/sankey.png" alt="Advanced analytics" />
+            <h3>Advanced Analytics</h3>
+            <ul class="stack-list">
+              <li>Hexbin, FFT, Violin, and RidgeLine views</li>
+              <li>Sankey and dependency-flow analysis</li>
+              <li>Large dataset readability at runtime</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <span>Integration</span>
+          <h2>Deployment paths from prototype to production</h2>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>Desktop & Operator Workstations</h3>
+            <ul class="stack-list">
+              <li>Swing integration with production-safe theming</li>
+              <li>HiDPI-ready visuals for retina and 4K screens</li>
+              <li>Stable behavior in long-running monitoring sessions</li>
             </ul>
           </div>
           <div class="card">
-            <img class="card-media" src="images/candlestick.png" alt="Financial charts" />
-            <h3 data-i18n="solutions_financial_title">Financial Engineering</h3>
-            <p data-i18n="solutions_financial_body">Kagi, Renko, Ichimoku Cloud, Volume Profile und präzise Overlays.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_financial_b1">Candlestick, Heikin-Ashi, Kagi, Renko.</li>
-              <li data-i18n="solutions_financial_b2">Ichimoku Cloud, Volume Profile, Pivot Points.</li>
-              <li data-i18n="solutions_financial_b3">MACD, RSI, Stochastic, ATR.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/sankey.png" alt="Analysis and statistics" />
-            <h3 data-i18n="solutions_analysis_title">Advanced Analysis & Statistics</h3>
-            <p data-i18n="solutions_analysis_body">Violin Plots, FFT, Hexbin, Sankey Pro für Datenanalyse auf Enterprise-Level.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_analysis_b1">Sankey/Alluvial, Chord, Network.</li>
-              <li data-i18n="solutions_analysis_b2">FFT, Regression, Anomaly Detection.</li>
-              <li data-i18n="solutions_analysis_b3">Violin, RidgeLine, Hexbin.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/heatmap.png" alt="Industrial analytics" />
-            <h3 data-i18n="solutions_industry_title">Industrial Analytics</h3>
-            <p data-i18n="solutions_industry_body">Operational Analytics für Produktion, Energie und Qualität.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_industry_b1">Heatmaps, Control Charts, Pareto.</li>
-              <li data-i18n="solutions_industry_b2">Delaunay/Voronoi für räumliche Daten.</li>
-              <li data-i18n="solutions_industry_b3">Dashboards für Prozessfluss und KPIs.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/parallelcoordinates.png" alt="Engineering systems" />
-            <h3 data-i18n="solutions_engineering_title">Engineering Systems</h3>
-            <p data-i18n="solutions_engineering_body">Systemdiagnostik, Simulationen und multivariate Analysen.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_engineering_b1">Parallel Coordinates, Radar, Scatter.</li>
-              <li data-i18n="solutions_engineering_b2">Vectorfield, Delaunay, Voronoi.</li>
-              <li data-i18n="solutions_engineering_b3">Automotive, Robotics, QA.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/network.png" alt="Enterprise operations" />
-            <h3 data-i18n="solutions_enterprise_title">Enterprise Operations</h3>
-            <p data-i18n="solutions_enterprise_body">Überwachung komplexer Prozesse, Abhängigkeiten und Flüsse.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_enterprise_b1">Sankey, Network, Dependency Wheel.</li>
-              <li data-i18n="solutions_enterprise_b2">Pareto, Control Charts, KPI Layers.</li>
-              <li data-i18n="solutions_enterprise_b3">Reporting und Export für Stakeholder.</li>
+            <h3>Server-backed Visualization Workflows</h3>
+            <ul class="stack-list">
+              <li>Spring Boot service integration patterns</li>
+              <li>Controlled model updates from background threads</li>
+              <li>Export and reporting workflows for stakeholders</li>
             </ul>
           </div>
         </div>
@@ -137,192 +121,35 @@
 
       <section class="section">
         <div class="section-title">
-          <span data-i18n="solutions_examples_kicker">Examples</span>
-          <h2 data-i18n="solutions_examples_title">Konkrete Anwendungsszenarien</h2>
+          <span>Gallery</span>
+          <h2>Real renderer families in customer-facing contexts</h2>
         </div>
-        <div class="grid cols-3">
-          <div class="card">
-            <img class="card-media" src="images/ecg.png" alt="ICU monitoring example" />
-            <h3 data-i18n="solutions_example1_title">Intensivstation Monitoring</h3>
-            <p data-i18n="solutions_example1_body">Mehrkanal-EKG mit Sweep-Erase und schnellen Zooms.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_example1_b1">ECG/EEG + Ventilator in einer Ansicht.</li>
-              <li data-i18n="solutions_example1_b2">Crosshair & Tooltip für präzise Messung.</li>
-              <li data-i18n="solutions_example1_b3">Export als PNG/PDF für Berichte.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/ichimoku.png" alt="Trading terminal example" />
-            <h3 data-i18n="solutions_example2_title">Trading Terminal</h3>
-            <p data-i18n="solutions_example2_body">Multi-Layer Marktansicht mit professionellen Overlays.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_example2_b1">Candlestick + Ichimoku + Volume.</li>
-              <li data-i18n="solutions_example2_b2">Indikatoren: MACD, RSI, ATR.</li>
-              <li data-i18n="solutions_example2_b3">Theme-Switch für Day/Night.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <img class="card-media" src="images/fft.png" alt="Engineering analytics example" />
-            <h3 data-i18n="solutions_example3_title">Engineering Analytics</h3>
-            <p data-i18n="solutions_example3_body">Forschung und Produktion in einer Oberfläche.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_example3_b1">FFT und Signalverlauf nebeneinander.</li>
-              <li data-i18n="solutions_example3_b2">Heatmap + Control Chart für Abweichungen.</li>
-              <li data-i18n="solutions_example3_b3">Daten in Echtzeit nachgeführt.</li>
-            </ul>
-          </div>
+        <div class="gallery-grid shot-grid">
+          <div class="gallery-item"><img src="images/ecg.png" alt="ECG" /><span>Clinical monitoring</span></div>
+          <div class="gallery-item"><img src="images/candlestick.png" alt="Candlestick" /><span>Trading analytics</span></div>
+          <div class="gallery-item"><img src="images/heatmap.png" alt="Heatmap" /><span>Industrial quality analysis</span></div>
+          <div class="gallery-item"><img src="images/network.png" alt="Network" /><span>Dependency and flow views</span></div>
+          <div class="gallery-item"><img src="images/voronoi.png" alt="Voronoi" /><span>Spatial data models</span></div>
+          <div class="gallery-item"><img src="images/parallelcoordinates.png" alt="Parallel Coordinates" /><span>Multivariate diagnostics</span></div>
         </div>
       </section>
 
       <section class="section">
-        <div class="section-title">
-          <span data-i18n="solutions_integrate_kicker">Integration</span>
-          <h2 data-i18n="solutions_integrate_title">Einbindung in eigene Software</h2>
-        </div>
-        <p data-i18n="solutions_integrate_intro">Kurze, robuste Integration von Desktop-Swing bis Spring Boot.</p>
-        <div class="grid cols-3">
-          <div class="card">
-            <h3 data-i18n="solutions_swing_title">Swing Desktop Integration</h3>
-            <p data-i18n="solutions_swing_body">ArberCharts fügt sich in jede Swing-Oberfläche ein.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_swing_b1">Panel in JFrame, Tabs oder Docking-Layouts.</li>
-              <li data-i18n="solutions_swing_b2">Themes und Grid-Layer frei kombinierbar.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3 data-i18n="solutions_stream_title">Realtime Streaming</h3>
-            <p data-i18n="solutions_stream_body">Daten inkrementell nachführen, UI bleibt stabil.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_stream_b1">Modelle aktualisieren statt neu instanziieren.</li>
-              <li data-i18n="solutions_stream_b2">Repaints gezielt steuern.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3 data-i18n="solutions_export_title">Export Pipeline</h3>
-            <p data-i18n="solutions_export_body">PNG, SVG oder PDF für Reports und Kunden.</p>
-            <div class="code-block">
-<pre>// v2.0.0 Thread-safe Export
-ChartExportService.exportPng(panel, new File("report.png"));
-// Theme switch (runtime-safe)
-panel.setTheme(ChartThemes.getDarkTheme());</pre>
-            </div>
-          </div>
-          <div class="card">
-            <h3 data-i18n="solutions_spring_title">Spring Boot</h3>
-            <p data-i18n="solutions_spring_body">ArberCharts lässt sich problemlos in Spring Boot Services integrieren und als UI-Modul ausliefern.</p>
-            <ul class="card-list">
-              <li data-i18n="solutions_spring_b1">Services liefern Daten, UI rendert live.</li>
-              <li data-i18n="solutions_spring_b2">Ideal für modulare Desktop-Stacks.</li>
-            </ul>
-          </div>
-          <div class="card">
-            <h3 data-i18n="solutions_theme_title">Themes & i18n</h3>
-            <p data-i18n="solutions_theme_body">Light/Dark, eigene Paletten, Lokalisierung.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="solutions_download_title">Download Starter</h3>
-            <p data-i18n="solutions_download_body">Starter Bundle für Entwickler und Integrationsteams.</p>
-            <a class="btn" href="/downloads/arbercharts-starter-2.0.0.jar" data-i18n="solutions_download_cta">Starter JAR herunterladen</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-title">
-          <span data-i18n="solutions_gallery_kicker">Gallery</span>
-          <h2 data-i18n="solutions_gallery_title">Renderer in Action</h2>
-          <p data-i18n="solutions_gallery_body">Visuelle Beispiele fuer spezialisierte Integrationen.</p>
-        </div>
-        <div class="gallery-grid">
-          <div class="gallery-item">
-            <img src="images/ecg.png" alt="ECG" />
-            <span data-i18n="solutions_gallery_medical">Patient monitoring (ICU)</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/candlestick.png" alt="Candlestick" />
-            <span data-i18n="solutions_gallery_financial">Market analysis & indicators</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/sankey.png" alt="Sankey" />
-            <span data-i18n="solutions_gallery_sankey">Sankey Pro</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/heatmap.png" alt="Heatmap" />
-            <span data-i18n="solutions_gallery_analysis">Statistical density distribution</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/radarchart.png" alt="Radar" />
-            <span data-i18n="solutions_gallery_radar">Radar</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/ichimoku.png" alt="Ichimoku" />
-            <span data-i18n="solutions_gallery_ichimoku">Ichimoku</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/parallelcoordinates.png" alt="Parallel Coordinates" />
-            <span data-i18n="solutions_gallery_industrial">Industrial process monitoring</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/voronoi.png" alt="Voronoi" />
-            <span data-i18n="solutions_gallery_voronoi">Voronoi</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/hexbin.png" alt="Hexbin" />
-            <span data-i18n="solutions_gallery_hexbin">Hexbin</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/macd.png" alt="MACD" />
-            <span data-i18n="solutions_gallery_macd">MACD</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/medicalsweep.png" alt="Medical Sweep" />
-            <span data-i18n="solutions_gallery_medical">Medical Sweep</span>
-          </div>
-          <div class="gallery-item">
-            <img src="images/boxplot.png" alt="Boxplot" />
-            <span data-i18n="solutions_gallery_boxplot">Boxplot</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="compat">
-        <div class="section-title">
-          <span data-i18n="compat_kicker">Kompatibilitaet</span>
-          <h2 data-i18n="compat_title">Unterstuetzte Betriebssysteme (aktuelle Versionen)</h2>
-          <p class="muted" data-i18n="compat_body">Die nativen Bridges sind fuer aktuelle OS-Versionen ausgelegt. JVM-Stacks laufen plattformuebergreifend.</p>
-        </div>
-        <div class="grid cols-3">
-          <div class="card">
-            <h3 data-i18n="compat_macos_title">macOS 15</h3>
-            <p data-i18n="compat_macos_body">Apple Silicon (arm64). Swift/Qt nativ.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="compat_windows_title">Windows 11</h3>
-            <p data-i18n="compat_windows_body">JVM-Stacks fuer Desktop/Server.</p>
-          </div>
-          <div class="card">
-            <h3 data-i18n="compat_linux_title">Ubuntu 24.04</h3>
-            <p data-i18n="compat_linux_body">JVM-Stacks auf glibc 2.39+.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="quickstart">
-        <div class="section-title">
-          <span data-i18n="quickstart_kicker">Quick Start</span>
-          <h2 data-i18n="quickstart_title">Fluent API mit ArberChartBuilder</h2>
-          <p class="muted" data-i18n="quickstart_body">Beispiel fuer einen minimalen Chart-Panel-Aufbau (JVM).</p>
-        </div>
         <div class="card">
-          <pre><code>ArberChartPanel panel = ArberChartBuilder.of()
-    .addLayer(model, new LineRenderer())
-    .withTheme(ChartThemes.getDarkTheme())
-    .buildPanel();</code></pre>
+          <h3>Ready for a production rollout?</h3>
+          <p>
+            ArberCharts 2.0 is the only actively maintained line.
+            Licensing is MIT for artifacts, with commercial support and SLA plans.
+          </p>
+          <div class="hero-cta">
+            <a class="btn primary" href="licensing.html">View licensing</a>
+            <a class="btn" href="contact.html">Request onboarding</a>
+          </div>
         </div>
       </section>
     </main>
 
-                <footer class="ac-footer">
+    <footer class="ac-footer">
       <div class="ac-container">
         <div class="ac-brand">
           <h2 class="ac-logo">ARBER<span>CHARTS</span></h2>
@@ -356,7 +183,7 @@ panel.setTheme(ChartThemes.getDarkTheme());</pre>
       <div class="ac-bottom">
         <div class="ac-container ac-bottom-flex">
           <p data-i18n="footer_rights">© 2024-2026 Arber Gashi. All rights reserved.</p>
-          <p class="ac-status" data-i18n="footer_license">MIT License for binaries. Source code proprietary.</p>
+          <p class="ac-status" data-i18n="footer_license">MIT artifacts. Closed-source end products allowed. Commercial via support/SLA.</p>
         </div>
       </div>
     </footer>
