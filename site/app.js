@@ -558,9 +558,25 @@ const dictionary = {
   },
   pricing_note_lockin_title: { de: "Kein Vendor Lock-in:", en: "No vendor lock-in:" },
   pricing_note_lockin_body: {
-    de: "Sollten Sie Ihre Lizenz nicht erneuern, bleibt die zum Zeitpunkt des Ablaufens aktuelle Version von ArberCharts in Ihren bereits ausgelieferten Produkten voll funktionsfähig. Sie zahlen lediglich für den Zugang zu neuen Funktionen und Support.",
-    en: "If you do not renew, the version current at expiry remains fully functional in your shipped products. You only pay for access to new features and support."
+    de: "ArberCharts wird kommerziell über Support-Abonnements, SLA-Ziele und Engineering-Services getragen.",
+    en: "ArberCharts is monetized through support subscriptions, SLA commitments, and engineering services."
   },
+  funding_title: { de: "Weiterentwicklung finanziell unterstützen", en: "Support development financially" },
+  funding_body: {
+    de: "Wenn Sie die ArberCharts-Weiterentwicklung direkt unterstützen möchten, können Sie freiwillig beitragen.",
+    en: "If you want to support ArberCharts development directly, you can make a voluntary contribution."
+  },
+  funding_note: {
+    de: "Empfohlen für Einzelpersonen. Für Unternehmen empfehlen wir Support-/SLA-Abos.",
+    en: "Recommended for individuals. For companies, we recommend support/SLA subscriptions."
+  },
+  funding_paypal_cta: { de: "Per PayPal unterstützen", en: "Support via PayPal" },
+  funding_business_title: { de: "Für Unternehmen und Teams", en: "For businesses and teams" },
+  funding_business_body: {
+    de: "Für Produktivbetrieb, Budgetierung und Procurement sind professionelle Support-Pläne mit klaren SLA-Zielen die bessere Wahl.",
+    en: "For production use, budgeting, and procurement, professional support plans with clear SLA targets are the better option."
+  },
+  funding_contact_cta: { de: "Support-Plan anfragen", en: "Request support plan" },
   contact_title: { de: "Kontakt", en: "Contact" },
   contact_subtitle: { de: "Fragen zu v2.0.0, Integrationen oder Lizenzmodell.", en: "Questions about v2.0.0, integrations, or licensing." },
   contact_direct_title: { de: "Direktkontakt", en: "Direct contact" },
@@ -571,7 +587,12 @@ const dictionary = {
     de: "Schicken Sie uns eine kurze Beschreibung Ihres Use-Cases fuer eine massgeschneiderte Beratung.",
     en: "Send us a short description of your use case for tailored advice."
   },
-  contact_email_cta: { de: "E-Mail senden", en: "Send email" }
+  contact_email_cta: { de: "E-Mail senden", en: "Send email" },
+  funding_contact_title: { de: "Roadmap mitfinanzieren", en: "Support the roadmap" },
+  funding_contact_body: {
+    de: "Sie können die Weiterentwicklung direkt per PayPal unterstützen oder für geschäftskritische Deployments einen professionellen Support-Plan wählen.",
+    en: "You can support ongoing development directly via PayPal, or choose a professional support plan for business-critical deployments."
+  }
   ,
   imprint_title: { de: "Impressum", en: "Imprint" },
   imprint_subtitle: { de: "Angaben gemäss schweizer Recht.", en: "Information according to Swiss law." },
