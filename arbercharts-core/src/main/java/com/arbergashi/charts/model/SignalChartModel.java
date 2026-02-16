@@ -33,8 +33,10 @@ public interface SignalChartModel extends ChartModel {
      * Returns the signal value at logical index for the given channel.
      */
     default double getValue(int index, int channel) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getChannelData(channel);
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 

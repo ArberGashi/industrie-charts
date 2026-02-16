@@ -5,7 +5,7 @@ package com.arbergashi.charts.api;
  * <p>Uses PlotContext min/max as longitude/latitude bounds in degrees.</p>
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class MercatorTransform implements CoordinateTransformer {
     private static final double MAX_LAT = 85.0;

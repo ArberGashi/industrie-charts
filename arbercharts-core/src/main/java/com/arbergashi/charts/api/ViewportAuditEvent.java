@@ -3,7 +3,7 @@ package com.arbergashi.charts.api;
 /**
  * Immutable audit event representing a viewport action.
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
   * @since 2026-01-30
  */
 public final class ViewportAuditEvent {

@@ -11,7 +11,7 @@ import java.util.Map;
  * In-memory append-only audit trail.
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class ViewportAuditTrail implements ViewportAuditLogger {
     private static final int DEFAULT_CAPACITY = 10_000;

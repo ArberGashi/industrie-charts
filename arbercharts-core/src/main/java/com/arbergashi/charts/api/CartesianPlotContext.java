@@ -9,7 +9,7 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  * run in constant time with no intermediate allocations.</p>
  * @author Arber Gashi
  * @version 1.0.0
- * @since 2025-06-01
+ * @since 2.0.0
  */
 public class CartesianPlotContext implements PlotContext {
     private final ArberRect bounds;

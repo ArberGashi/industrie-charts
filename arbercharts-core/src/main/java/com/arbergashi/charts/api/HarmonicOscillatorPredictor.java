@@ -10,7 +10,7 @@ import com.arbergashi.charts.util.ChartAssets;
  * crossings are available, it falls back to the linear predictor.</p>
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class HarmonicOscillatorPredictor implements PredictionModel {
     private final int windowSize;

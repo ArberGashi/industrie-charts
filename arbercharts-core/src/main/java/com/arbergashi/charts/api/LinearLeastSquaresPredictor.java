@@ -6,7 +6,7 @@ import com.arbergashi.charts.util.ChartAssets;
  * Lightweight linear predictor using least squares over a trailing window.
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class LinearLeastSquaresPredictor implements PredictionModel {
     private final int windowSize;

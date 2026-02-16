@@ -44,8 +44,10 @@ public interface FinancialChartModel extends ChartModel {
      * Returns the open value at the given index.
      */
     default double getOpen(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getOpenData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -53,8 +55,10 @@ public interface FinancialChartModel extends ChartModel {
      * Returns the high value at the given index.
      */
     default double getHigh(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getHighData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -62,8 +66,10 @@ public interface FinancialChartModel extends ChartModel {
      * Returns the low value at the given index.
      */
     default double getLow(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getLowData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -71,8 +77,10 @@ public interface FinancialChartModel extends ChartModel {
      * Returns the close value at the given index.
      */
     default double getClose(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getCloseData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -80,8 +88,10 @@ public interface FinancialChartModel extends ChartModel {
      * Returns the volume value at the given index.
      */
     default double getVolume(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getVolumeData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -97,15 +107,19 @@ public interface FinancialChartModel extends ChartModel {
 
     @Override
     default double getMin(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getLowData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
     @Override
     default double getMax(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getHighData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 }

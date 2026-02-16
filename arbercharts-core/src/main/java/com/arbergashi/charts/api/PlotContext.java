@@ -11,7 +11,7 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  *
  * @author Arber Gashi
  * @version 1.0.0
- * @since 2025-06-15
+ * @since 2.0.0
  */
 public interface PlotContext {
 

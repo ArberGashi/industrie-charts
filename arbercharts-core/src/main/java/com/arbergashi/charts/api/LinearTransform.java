@@ -5,9 +5,9 @@ package com.arbergashi.charts.api;
  *
  * <p>Platform-independent and headless-certified. No AWT/Swing dependencies.</p>
  *
- * @since 1.7.0
+ * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class LinearTransform implements CoordinateTransformer {
     @Override

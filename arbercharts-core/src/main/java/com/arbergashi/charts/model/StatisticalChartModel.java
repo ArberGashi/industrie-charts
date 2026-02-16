@@ -32,8 +32,10 @@ public interface StatisticalChartModel extends ChartModel {
      * Returns the median at the given index.
      */
     default double getMedian(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getMedianData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -41,8 +43,10 @@ public interface StatisticalChartModel extends ChartModel {
      * Returns the first quartile at the given index.
      */
     default double getQ1(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getQ1Data();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -50,8 +54,10 @@ public interface StatisticalChartModel extends ChartModel {
      * Returns the third quartile at the given index.
      */
     default double getQ3(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getQ3Data();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -64,15 +70,19 @@ public interface StatisticalChartModel extends ChartModel {
 
     @Override
     default double getMin(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getLowData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
     @Override
     default double getMax(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getHighData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 

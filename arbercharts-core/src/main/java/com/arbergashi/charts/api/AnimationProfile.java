@@ -8,7 +8,7 @@ import com.arbergashi.charts.util.AnimationUtils;
  * animation is allowed for data transitions vs. UI overlays.</p>
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public enum AnimationProfile {
     /**

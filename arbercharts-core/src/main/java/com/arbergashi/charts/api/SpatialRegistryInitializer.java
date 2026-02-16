@@ -8,9 +8,9 @@ import java.util.EnumSet;
 /**
  * Standard affinity initialization for spatial-aware renderers.
  *
- * @since 1.7.0
+ * @since 2.0.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class SpatialRegistryInitializer {
     private SpatialRegistryInitializer() {

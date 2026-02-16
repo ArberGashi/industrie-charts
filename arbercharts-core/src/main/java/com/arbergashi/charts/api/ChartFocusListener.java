@@ -7,7 +7,7 @@ package com.arbergashi.charts.api;
  * active data position. Implementations should be fast; handlers may run on the EDT.</p>
  * @author Arber Gashi
  * @version 1.0.0
- * @since 2025-06-01
+ * @since 2.0.0
  */
 @FunctionalInterface/**
  * @since 1.5.0

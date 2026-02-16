@@ -3,7 +3,7 @@ package com.arbergashi.charts.api;
  * Optional hook for renderers that require a non-linear coordinate transform.
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public interface CoordinateTransformProvider {
     /**

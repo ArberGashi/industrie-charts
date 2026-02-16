@@ -72,8 +72,10 @@ public interface ChartModel {
      * @return X value or 0.0 if out of range
      */
     default double getX(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getXData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -95,8 +97,10 @@ public interface ChartModel {
      * @return Y value or 0.0 if out of range
      */
     default double getY(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getYData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -145,8 +149,10 @@ public interface ChartModel {
      * @return weight value or 0.0 if out of range
      */
     default double getWeight(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0.0;
         double[] arr = getWeightData();
-        if (arr == null || index < 0 || index >= arr.length) return 0.0;
+        if (arr == null || index >= arr.length) return 0.0;
         return arr[index];
     }
 
@@ -156,8 +162,10 @@ public interface ChartModel {
      * <p>Default: {@link ProvenanceFlags#ORIGINAL}.</p>
      */
     default byte getProvenanceFlag(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return ProvenanceFlags.ORIGINAL;
         byte[] arr = getProvenanceFlagsData();
-        if (arr == null || index < 0 || index >= arr.length) return ProvenanceFlags.ORIGINAL;
+        if (arr == null || index >= arr.length) return ProvenanceFlags.ORIGINAL;
         return arr[index];
     }
 
@@ -166,8 +174,10 @@ public interface ChartModel {
      * Default: 0 (unknown).
      */
     default short getSourceId(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0;
         short[] arr = getSourceIdsData();
-        if (arr == null || index < 0 || index >= arr.length) return 0;
+        if (arr == null || index >= arr.length) return 0;
         return arr[index];
     }
 
@@ -176,8 +186,10 @@ public interface ChartModel {
      * Default: 0 (unknown).
      */
     default long getTimestampNanos(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0L;
         long[] arr = getTimestampNanosData();
-        if (arr == null || index < 0 || index >= arr.length) return 0L;
+        if (arr == null || index >= arr.length) return 0L;
         return arr[index];
     }
 

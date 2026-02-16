@@ -5,7 +5,7 @@ import java.util.Arrays;
  * Default reusable prediction buffer.
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class DefaultPredictionBuffer implements PredictionBuffer {
     private double[] xs = new double[0];

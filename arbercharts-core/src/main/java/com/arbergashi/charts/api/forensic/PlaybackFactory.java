@@ -9,7 +9,7 @@ import java.lang.reflect.Constructor;
  * Factory for forensic playback components.
   * @since 1.5.0
   * @author Arber Gashi
-  * @version 1.7.0
+  * @version 2.0.0
  */
 public final class PlaybackFactory {
     private static final String MANAGER_CLASS = "com.arbergashi.charts.engine.forensic.DeterministicPlaybackManager";
