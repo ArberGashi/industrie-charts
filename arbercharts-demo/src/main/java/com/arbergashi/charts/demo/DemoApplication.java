@@ -68,17 +68,22 @@ import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Taskbar;
 import java.awt.event.InputEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -235,6 +240,7 @@ public final class DemoApplication {
         configureMacOSMenuHandlers(mainFrame);
         setupKeyboardShortcuts();
         startMetricsTimer();
+        applyApplicationIcons(mainFrame);
 
         expandAll();
         mainFrame.setLocationRelativeTo(null);
@@ -2373,6 +2379,38 @@ public final class DemoApplication {
             // fall through to fallback
         }
         return fallback;
+    }
+
+    private static void applyApplicationIcons(JFrame frame) {
+        try {
+            java.net.URL iconUrl = DemoApplication.class.getClassLoader().getResource("icons/app-icon.svg");
+            if (iconUrl == null) {
+                return;
+            }
+            FlatSVGIcon svgIcon = new FlatSVGIcon(iconUrl);
+            int[] sizes = {16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512};
+            List<Image> images = new ArrayList<>(sizes.length);
+            for (int size : sizes) {
+                FlatSVGIcon derived = svgIcon.derive(size, size);
+                BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2 = image.createGraphics();
+                try {
+                    derived.paintIcon(null, g2, 0, 0);
+                } finally {
+                    g2.dispose();
+                }
+                images.add(image);
+            }
+            frame.setIconImages(images);
+            if (!images.isEmpty() && Taskbar.isTaskbarSupported()) {
+                Taskbar taskbar = Taskbar.getTaskbar();
+                if (taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) {
+                    taskbar.setIconImage(images.get(images.size() - 1));
+                }
+            }
+        } catch (Exception ignored) {
+            // App icon is optional.
+        }
     }
 
     private static final class DemoPlaybackController implements com.arbergashi.charts.api.forensic.PlaybackController {
