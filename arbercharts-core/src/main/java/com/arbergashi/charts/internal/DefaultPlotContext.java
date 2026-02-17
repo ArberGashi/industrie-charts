@@ -28,6 +28,8 @@ public final class DefaultPlotContext implements PlotContext {
     private NiceScale.ScaleMode scaleModeY;
     private ChartTheme theme;
     private com.arbergashi.charts.api.ChartRenderHints renderHints;
+    private int requestedTickCountX = 10;
+    private int requestedTickCountY = 8;
 
     public DefaultPlotContext(ArberRect bounds,
                               double minX,
@@ -276,6 +278,26 @@ public final class DefaultPlotContext implements PlotContext {
 
     public DefaultPlotContext setRenderHints(com.arbergashi.charts.api.ChartRenderHints renderHints) {
         this.renderHints = renderHints;
+        return this;
+    }
+
+    @Override
+    public int getRequestedTickCountX() {
+        return requestedTickCountX;
+    }
+
+    public DefaultPlotContext setRequestedTickCountX(int requestedTickCountX) {
+        this.requestedTickCountX = Math.max(2, requestedTickCountX);
+        return this;
+    }
+
+    @Override
+    public int getRequestedTickCountY() {
+        return requestedTickCountY;
+    }
+
+    public DefaultPlotContext setRequestedTickCountY(int requestedTickCountY) {
+        this.requestedTickCountY = Math.max(2, requestedTickCountY);
         return this;
     }
 }

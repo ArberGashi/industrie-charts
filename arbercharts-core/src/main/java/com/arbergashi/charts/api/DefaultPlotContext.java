@@ -33,6 +33,8 @@ public final class DefaultPlotContext implements PlotContext {
     private ChartRenderHints renderHints;
     private AxisGapModel gapModel;
     private AnimationProfile animationProfile;
+    private int requestedTickCountX = 10;
+    private int requestedTickCountY = 8;
 
     public DefaultPlotContext(ArberRect bounds,
                               double minX,
@@ -263,6 +265,26 @@ public final class DefaultPlotContext implements PlotContext {
 
     public DefaultPlotContext setAnimationProfile(AnimationProfile animationProfile) {
         this.animationProfile = animationProfile != null ? animationProfile : AnimationProfile.ACADEMIC;
+        return this;
+    }
+
+    @Override
+    public int getRequestedTickCountX() {
+        return requestedTickCountX;
+    }
+
+    public DefaultPlotContext setRequestedTickCountX(int requestedTickCountX) {
+        this.requestedTickCountX = Math.max(2, requestedTickCountX);
+        return this;
+    }
+
+    @Override
+    public int getRequestedTickCountY() {
+        return requestedTickCountY;
+    }
+
+    public DefaultPlotContext setRequestedTickCountY(int requestedTickCountY) {
+        this.requestedTickCountY = Math.max(2, requestedTickCountY);
         return this;
     }
 

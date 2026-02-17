@@ -147,6 +147,24 @@ public interface PlotContext {
     }
 
     /**
+     * Preferred X-axis tick count for grids/axes.
+     *
+     * <p>Renderers should treat this as a hint and clamp to sensible bounds.</p>
+     */
+    default int getRequestedTickCountX() {
+        return 10;
+    }
+
+    /**
+     * Preferred Y-axis tick count for grids/axes.
+     *
+     * <p>Renderers should treat this as a hint and clamp to sensible bounds.</p>
+     */
+    default int getRequestedTickCountY() {
+        return 8;
+    }
+
+    /**
      * Snap a pixel coordinate to a crisp device pixel boundary.
      *
      * <p>Policy: grids and thin strokes align to half-pixel coordinates to avoid

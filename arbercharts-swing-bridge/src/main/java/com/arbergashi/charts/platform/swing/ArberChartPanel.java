@@ -1399,9 +1399,13 @@ public class ArberChartPanel extends JPanel {
         boolean invertY = yAxisConfig != null && yAxisConfig.isInverted();
         com.arbergashi.charts.core.geometry.ArberRect arberBounds = new com.arbergashi.charts.core.geometry.ArberRect(
                 plotBounds.getX(), plotBounds.getY(), plotBounds.getWidth(), plotBounds.getHeight());
+        int tickCountX = (xAxisConfig != null) ? xAxisConfig.getRequestedTickCount() : 10;
+        int tickCountY = (yAxisConfig != null) ? yAxisConfig.getRequestedTickCount() : 8;
         contextCache = new DefaultPlotContext(arberBounds, viewMinX, viewMaxX, viewMinY, viewMaxY, false, invertX, invertY,
                 com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR, com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR,
-                theme, renderHints, gapModel, animationProfile);
+                theme, renderHints, gapModel, animationProfile)
+                .setRequestedTickCountX(tickCountX)
+                .setRequestedTickCountY(tickCountY);
 
         lastModelStamp = combinedStamp;
         cacheDirty = false;

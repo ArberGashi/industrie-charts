@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 /**
- * TradingView-style interactive legend overlay.
+ * Swing-first interactive legend overlay.
  *
  * <p>Features:
  * <ul>
@@ -200,20 +200,16 @@ public final class InteractiveLegendOverlay extends JComponent {
             g2.setFont(font);
             FontMetrics fm = g2.getFontMetrics();
 
-            String style = ChartAssets.getString("Chart.legend.style", "classic");
-            boolean modern = "modern".equalsIgnoreCase(style);
+            String style = ChartAssets.getString("Chart.legend.style", "swing");
             boolean pillStyle = "pill".equalsIgnoreCase(style);
-            boolean business = "business".equalsIgnoreCase(style);
-            boolean showValues = ChartAssets.getBoolean("Chart.legend.showValues", true);
-            boolean compact = ChartAssets.getBoolean("Chart.legend.compact", false) || modern || business;
-            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 6f : 8f)));
+            boolean showValues = ChartAssets.getBoolean("Chart.legend.showValues", false);
+            boolean compact = ChartAssets.getBoolean("Chart.legend.compact", true);
+            boolean showSettings = ChartAssets.getBoolean("Chart.legend.settings.enabled", false);
+            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 5f : 7f)));
             int rowGap = Math.round(ChartScale.scale(compact ? 2f : 3f));
-            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 8f : 9f)));
-            if (business) {
-                iconSize = 0;
-            }
-            int colGap = Math.round(ChartScale.scale(compact ? 6f : 10f));
-            int settingsW = (showValues && !modern && !business) ? Math.round(ChartScale.scale(14f)) : 0;
+            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 6f : 8f)));
+            int colGap = Math.round(ChartScale.scale(compact ? 5f : 8f));
+            int settingsW = showSettings ? Math.round(ChartScale.scale(12f)) : 0;
 
             // Build rows from renderers
             List<LegendSeriesRow> rows = buildRows(model);
@@ -237,7 +233,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             }
 
             int rowH = fm.getHeight() + rowGap;
-            int iconPad = business ? 0 : Math.round(ChartScale.scale(6f));
+            int iconPad = Math.round(ChartScale.scale(5f));
             int boxW = padding * 2 + iconSize + iconPad + nameColW
                     + (showValues ? colGap + valuesColW : 0)
                     + settingsW;
@@ -262,11 +258,11 @@ public final class InteractiveLegendOverlay extends JComponent {
 
             // Background
             float bgAlpha = ChartAssets.getFloat("Chart.legend.background.alpha",
-                    business ? 0.72f : (modern ? 0.62f : 0.78f));
+                    0.78f);
             float borderAlpha = ChartAssets.getFloat("Chart.legend.border.alpha",
-                    business ? 0.18f : (modern ? 0.12f : 0.22f));
+                    0.22f);
             float brightness = ChartAssets.getFloat("Chart.legend.background.brightness",
-                    business ? 0.98f : (modern ? 1.12f : 1.08f));
+                    1.04f);
             ArberColor baseBg = theme.getBackground();
             ArberColor adjustedBg = ColorUtils.adjustBrightness(baseBg, brightness);
             Color bg = SwingAssets.toAwtColor(ColorUtils.applyAlpha(adjustedBg, bgAlpha));
@@ -286,10 +282,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             // Rows
             rowHits.clear();
             int cy = y + padding + fm.getAscent();
-            int iconGap = Math.round(ChartScale.scale(6f));
-            if (business) {
-                iconGap = 0;
-            }
+            int iconGap = Math.round(ChartScale.scale(5f));
             int contentW = boxW - padding * 2 - iconSize - iconGap - settingsW;
             int minNameW = Math.round(ChartScale.scale(60f));
             int valuesCap = showValues ? Math.min(valuesColW, Math.max(0, contentW - minNameW - colGap)) : 0;
@@ -325,7 +318,7 @@ public final class InteractiveLegendOverlay extends JComponent {
                 String nameText = truncateToWidth(row.getName(), nameCap, fm);
                 String values = showValues ? truncateToWidth(formatValues(row.getValues()), valuesCap, fm) : "";
 
-                if (!modern && !business && row.getId() != null && row.getId().equals(hoveredId)) {
+                if (row.getId() != null && row.getId().equals(hoveredId)) {
                     Color hover = SwingAssets.toAwtColor(ColorUtils.applyAlpha(theme.getAccentColor(), 0.12f));
                     int rowY = cy - fm.getAscent();
                     g2.setColor(hover);
@@ -333,7 +326,7 @@ public final class InteractiveLegendOverlay extends JComponent {
                 }
 
                 // marker
-                if (!business && iconSize > 0) {
+                if (iconSize > 0) {
                     g2.setColor(new Color(row.getArgb(), true));
                     int markerY = cy - iconSize + Math.round(ChartScale.scale(2f));
                     g2.fillOval(markerX, markerY, iconSize, iconSize);
@@ -346,29 +339,20 @@ public final class InteractiveLegendOverlay extends JComponent {
                 g2.drawString(nameText, nameX, cy);
 
                 if (showValues) {
-                if (showValues) {
                     // values
-                    Font valuesFont = font;
-                    if (business) {
-                        Font mono = UIManager.getFont("TextField.font");
-                        if (mono != null) {
-                            valuesFont = mono.deriveFont(Font.PLAIN, font.getSize2D());
-                        }
-                    }
-                    g2.setFont(valuesFont);
-                    g2.setColor(SwingAssets.toAwtColor(ColorUtils.applyAlpha(theme.getAxisLabelColor(), business ? 0.85f : (modern ? 0.72f : 0.85f))));
+                    g2.setFont(font);
+                    g2.setColor(SwingAssets.toAwtColor(ColorUtils.applyAlpha(theme.getAxisLabelColor(), 0.82f)));
                     g2.drawString(values, valuesX, cy);
                 }
 
-                if (!modern && !business && showValues) {
+                if (showSettings) {
                     // settings glyph
-                    g2.setColor(SwingAssets.toAwtColor(ColorUtils.applyAlpha(theme.getAxisLabelColor(), 0.85f)));
+                    g2.setColor(SwingAssets.toAwtColor(ColorUtils.applyAlpha(theme.getAxisLabelColor(), 0.8f)));
                     g2.drawString("⚙", settingsX, cy);
-                }
                 }
 
                 Rectangle nameBounds = new Rectangle(nameX, cy - fm.getAscent(), Math.min(nameCap, fm.stringWidth(nameText)), fm.getHeight());
-                Rectangle settingsBounds = (showValues && settingsW > 0)
+                Rectangle settingsBounds = (showSettings && settingsW > 0)
                         ? new Rectangle(settingsX - 2, cy - fm.getAscent(), settingsW + 4, fm.getHeight())
                         : new Rectangle();
                 rowHits.add(new RowHit(row.getId(), nameBounds, settingsBounds));

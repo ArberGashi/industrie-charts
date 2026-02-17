@@ -24,6 +24,9 @@ import com.arbergashi.charts.util.NiceScale;
  */
 class AxisRenderer {
 
+    private static final String KEY_GRID_SHOW_LEGACY = "chart.axis.grid.show";
+    private static final String KEY_GRID_SHOW = "Chart.axis.grid.show";
+
     private final NiceScale niceScale = new NiceScale(0, 1);
     private final double[] mapBuf = new double[2];
     private final float[] lineX = new float[2];
@@ -36,7 +39,7 @@ class AxisRenderer {
      * @param context plot context with bounds and axis ranges
      */
     public void drawGrid(ArberCanvas canvas, PlotContext context) {
-        if (!ChartAssets.getBoolean("chart.axis.grid.show", true)) return;
+        if (!isGridEnabled()) return;
 
         ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
         ArberRect b = context.getPlotBounds();
@@ -116,9 +119,9 @@ class AxisRenderer {
             ctx.mapToPixel(vertical ? val : 0, vertical ? 0 : val, p);
 
             if (vertical) {
-                drawLine(canvas, p[0], b.y(), p[0], b.maxY());
+                drawLine(canvas, ctx.snapPixel(p[0]), b.y(), ctx.snapPixel(p[0]), b.maxY());
             } else {
-                drawLine(canvas, b.x(), p[1], b.maxX(), p[1]);
+                drawLine(canvas, b.x(), ctx.snapPixel(p[1]), b.maxX(), ctx.snapPixel(p[1]));
             }
         }
     }
@@ -128,7 +131,7 @@ class AxisRenderer {
         double max = vertical ? ctx.getMaxX() : ctx.getMaxY();
 
         setNiceScale(min, max);
-        niceScale.setMaxTicks(vertical ? 10 : 8);
+        niceScale.setMaxTicks(Math.max(2, vertical ? ctx.getRequestedTickCountX() : ctx.getRequestedTickCountY()));
 
         double[] p = mapBuf;
         double step = niceScale.getTickSpacing();
@@ -139,9 +142,9 @@ class AxisRenderer {
             ctx.mapToPixel(vertical ? val : 0, vertical ? 0 : val, p);
 
             if (vertical) {
-                drawLine(canvas, p[0], b.y(), p[0], b.maxY());
+                drawLine(canvas, ctx.snapPixel(p[0]), b.y(), ctx.snapPixel(p[0]), b.maxY());
             } else {
-                drawLine(canvas, b.x(), p[1], b.maxX(), p[1]);
+                drawLine(canvas, b.x(), ctx.snapPixel(p[1]), b.maxX(), ctx.snapPixel(p[1]));
             }
         }
     }
@@ -151,7 +154,7 @@ class AxisRenderer {
         double max = vertical ? ctx.getMaxX() : ctx.getMaxY();
 
         setNiceScale(min, max);
-        niceScale.setMaxTicks(vertical ? 10 : 8);
+        niceScale.setMaxTicks(Math.max(2, vertical ? ctx.getRequestedTickCountX() : ctx.getRequestedTickCountY()));
 
         double tickLen = ChartScale.scale(4.0);
         double[] p = mapBuf;
@@ -164,12 +167,20 @@ class AxisRenderer {
 
             if (vertical) {
                 // X-Axis Ticks (bottom)
-                drawLine(canvas, p[0], b.maxY(), p[0], b.maxY() + tickLen);
+                double x = ctx.snapPixel(p[0]);
+                drawLine(canvas, x, b.maxY(), x, b.maxY() + tickLen);
             } else {
                 // Y-Axis Ticks (left)
-                drawLine(canvas, b.x(), p[1], b.x() - tickLen, p[1]);
+                double y = ctx.snapPixel(p[1]);
+                drawLine(canvas, b.x(), y, b.x() - tickLen, y);
             }
         }
+    }
+
+    private boolean isGridEnabled() {
+        boolean modern = ChartAssets.getBoolean(KEY_GRID_SHOW, true);
+        boolean legacy = ChartAssets.getBoolean(KEY_GRID_SHOW_LEGACY, true);
+        return modern && legacy;
     }
 
     private void setNiceScale(double min, double max) {
