@@ -1239,6 +1239,8 @@ public final class DemoApplication {
         boolean analysis = "analysis".equals(entry.category());
         boolean predictive = "predictive".equals(entry.category());
         boolean forensic = "forensic".equals(entry.category());
+        boolean security = "security".equals(entry.category());
+        boolean common = "common".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
@@ -1276,6 +1278,24 @@ public final class DemoApplication {
             com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
             com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
             x.setRequestedTickCount(9).setShowGrid(true);
+            y.setRequestedTickCount(7).setShowGrid(true);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
+        if (security) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(7).setShowGrid(true).setFixedRange(-1.0, 1.0);
+            y.setRequestedTickCount(7).setShowGrid(true).setFixedRange(-1.0, 1.0);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
+        if (common) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(true);
             y.setRequestedTickCount(7).setShowGrid(true);
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
@@ -1352,8 +1372,10 @@ public final class DemoApplication {
         boolean analysis = "analysis".equals(entry.category());
         boolean predictive = "predictive".equals(entry.category());
         boolean forensic = "forensic".equals(entry.category());
+        boolean security = "security".equals(entry.category());
+        boolean common = "common".equals(entry.category());
         boolean medical = "medical".equals(entry.category());
-        if (!circular && !specialized && !analysis && !predictive && !forensic && !medical) {
+        if (!circular && !specialized && !analysis && !predictive && !forensic && !security && !common && !medical) {
             return;
         }
         if (medical) {
@@ -1377,6 +1399,7 @@ public final class DemoApplication {
 
         double[] baseX = defaultModel.getXData();
         double[] baseY = defaultModel.getYData();
+        double[] baseMax = defaultModel.getMaxData();
         double[] baseW = defaultModel.getWeightData();
         String[] labels = new String[count];
         for (int i = 0; i < count; i++) {
@@ -1479,6 +1502,15 @@ public final class DemoApplication {
                     x = x0;
                     y = y0 * (0.96 + 0.08 * amp * Math.sin(phase * 0.55 + i * 0.13));
                     weight = Math.max(0.05, w0);
+                } else if (security) {
+                    x = x0;
+                    y = y0;
+                    double z = w0 * (0.92 + 0.16 * amp * Math.sin(phase * 0.6 + i * 0.17));
+                    weight = clamp(z, -0.95, 0.95);
+                } else if (common) {
+                    x = x0;
+                    y = y0 * (0.95 + 0.09 * amp * Math.sin(phase * 0.65 + i * 0.2));
+                    weight = Math.max(0.05, w0 * (0.95 + 0.08 * amp * Math.cos(phase * 0.6 + i * 0.16)));
                 } else if (specialized) {
                     if (className.endsWith("SankeyRenderer")
                             || className.endsWith("SankeyProRenderer")
@@ -1520,6 +1552,11 @@ public final class DemoApplication {
                 if (className.endsWith("SmithChartRenderer") || className.endsWith("VSWRCircleRenderer")) {
                     min = y - 0.04;
                     max = y + 0.04;
+                } else if (security) {
+                    double intensity0 = i < baseMax.length ? baseMax[i] : 0.5;
+                    double intensity = clamp(intensity0 * (0.9 + 0.18 * amp * Math.sin(phase * 0.5 + i * 0.12)), 0.0, 1.0);
+                    min = y - 0.05;
+                    max = intensity;
                 } else if (analysis) {
                     double band = Math.max(0.5, Math.abs(y) * 0.09);
                     min = y - band;
@@ -1616,6 +1653,9 @@ public final class DemoApplication {
         if (className.contains("Envelope")) return 0.72;
         if (className.contains("Predictive") || className.contains("AnomalyGap")) return 0.88;
         if (className.contains("Playback")) return 0.55;
+        if (className.contains("VoxelCloud")) return 0.7;
+        if (className.contains("PerformanceAudit")) return 0.72;
+        if (className.contains("PhysicalScale")) return 0.0;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 1.0;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 1.2;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.95;
@@ -1634,6 +1674,9 @@ public final class DemoApplication {
         if (className.contains("Envelope")) return 0.55;
         if (className.contains("Predictive") || className.contains("AnomalyGap")) return 0.65;
         if (className.contains("Playback")) return 0.35;
+        if (className.contains("VoxelCloud")) return 0.6;
+        if (className.contains("PerformanceAudit")) return 0.45;
+        if (className.contains("PhysicalScale")) return 0.0;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 0.7;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 0.9;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.75;
@@ -1730,6 +1773,14 @@ public final class DemoApplication {
             }
             case "forensic" -> {
                 xCfg.setRequestedTickCount(9);
+                yCfg.setRequestedTickCount(7);
+            }
+            case "security" -> {
+                xCfg.setRequestedTickCount(7).setFixedRange(-1.0, 1.0);
+                yCfg.setRequestedTickCount(7).setFixedRange(-1.0, 1.0);
+            }
+            case "common" -> {
+                xCfg.setRequestedTickCount(10);
                 yCfg.setRequestedTickCount(7);
             }
             default -> {

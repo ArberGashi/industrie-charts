@@ -191,6 +191,13 @@ public final class RendererDemoDataFactory {
     private static final Set<String> FORENSIC_RENDERERS = Set.of(
             "PlaybackStatusRenderer"
     );
+    private static final Set<String> SECURITY_RENDERERS = Set.of(
+            "VoxelCloudRenderer"
+    );
+    private static final Set<String> COMMON_RENDERERS = Set.of(
+            "PerformanceAuditRenderer",
+            "PhysicalScaleRenderer"
+    );
 
     private RendererDemoDataFactory() {
     }
@@ -312,6 +319,12 @@ public final class RendererDemoDataFactory {
         if (FORENSIC_RENDERERS.contains(simple)) {
             return forensicModel();
         }
+        if (SECURITY_RENDERERS.contains(simple)) {
+            return securityVoxelModel();
+        }
+        if (COMMON_RENDERERS.contains(simple)) {
+            return commonUtilityModel();
+        }
         return switch (category) {
             case "financial" -> financialModel();
             case "statistical" -> statisticalModel();
@@ -320,6 +333,8 @@ public final class RendererDemoDataFactory {
             case "predictive" -> predictiveModel();
             case "forensic" -> forensicModel();
             case "analysis" -> trendAnalysisModel();
+            case "security" -> securityVoxelModel();
+            case "common" -> commonUtilityModel();
             default -> standardModel();
         };
     }
@@ -894,6 +909,42 @@ public final class RendererDemoDataFactory {
                 y += 12.0;
             }
             double band = 1.6 + Math.abs(Math.cos(i * 0.1)) * 1.2;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.35 + 4.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel securityVoxelModel() {
+        DefaultChartModel model = new DefaultChartModel("Security Voxel Cloud");
+        int seed = RENDERER_SEED.get();
+        int grid = 12;
+        int idx = 0;
+        for (int ix = 0; ix < grid; ix++) {
+            double x = -0.9 + (1.8 * ix / (grid - 1.0));
+            for (int iy = 0; iy < grid; iy++) {
+                double y = -0.9 + (1.8 * iy / (grid - 1.0));
+                double z = Math.sin((ix + seededRange(seed, -0.5, 0.5, 980)) * 0.52)
+                        * Math.cos((iy + seededRange(seed, -0.5, 0.5, 981)) * 0.48) * 0.55;
+                double centerBoost = Math.exp(-(x * x + y * y) * 1.8);
+                double ridge = Math.exp(-((x - 0.45) * (x - 0.45) + (y + 0.25) * (y + 0.25)) * 5.5);
+                double intensity = Math.max(0.0, Math.min(1.0, 0.25 + centerBoost * 0.45 + ridge * 0.55));
+                // max value is used by VoxelCloudRenderer as anomaly intensity in [0..1]
+                model.setPoint(x, y, z - 0.04, intensity, z, "V" + idx++);
+            }
+        }
+        return model;
+    }
+
+    private static DefaultChartModel commonUtilityModel() {
+        DefaultChartModel model = new DefaultChartModel("Utility Overlay");
+        int seed = RENDERER_SEED.get();
+        int points = 220;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = Math.sin(i * (0.058 + seededRange(seed, 0.0, 0.01, 990))) * 14.0
+                    + Math.cos(i * (0.021 + seededRange(seed, 0.0, 0.01, 991))) * 5.0
+                    + (i * 0.03);
+            double band = 1.8 + Math.abs(Math.sin(i * 0.09)) * 1.2;
             model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.35 + 4.0, null);
         }
         return model;
