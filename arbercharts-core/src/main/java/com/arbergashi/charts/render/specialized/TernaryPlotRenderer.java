@@ -106,7 +106,7 @@ public final class TernaryPlotRenderer extends BaseRenderer implements SpatialCh
                 if (sum == 0) {
                     coords[out++] = ax;
                     coords[out++] = ay;
-                    coords[out++] = 0.0;
+                    coords[out++] = 1.0;
                     continue;
                 }
                 double normA = p.getA() / sum;
@@ -116,7 +116,9 @@ public final class TernaryPlotRenderer extends BaseRenderer implements SpatialCh
                 double y = ay * normA + by * normB + cy * normC;
                 coords[out++] = x;
                 coords[out++] = y;
-                coords[out++] = 0.0;
+                // Spatial batch builder clips with z > zMin (default zMin=0).
+                // Use positive z so ternary points are not discarded.
+                coords[out++] = 1.0;
             }
             consumer.accept(spatialBuffer, chunk);
             index += chunk;
