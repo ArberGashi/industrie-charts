@@ -194,7 +194,7 @@ public final class InteractiveLegendOverlay extends JComponent {
 
             float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.86f);
             float baseSize = ChartScale.font((base != null) ? base.getSize2D() : 11f);
-            Font font = base.deriveFont(Font.PLAIN, Math.max(7f, baseSize * fontScale));
+            Font font = base.deriveFont(Font.PLAIN, Math.max(8f, baseSize * fontScale));
             Font bold = font.deriveFont(Font.PLAIN);
 
             g2.setFont(font);
@@ -206,7 +206,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             boolean compact = ChartAssets.getBoolean("Chart.legend.compact", true);
             boolean showSettings = ChartAssets.getBoolean("Chart.legend.settings.enabled", false);
             int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 4f : 6f)));
-            int rowGap = Math.round(ChartScale.scale(compact ? 1f : 2f));
+            int rowGap = Math.round(ChartScale.scale(compact ? 2f : 3f));
             int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 5f : 7f)));
             int colGap = Math.round(ChartScale.scale(compact ? 5f : 8f));
             int settingsW = showSettings ? Math.round(ChartScale.scale(12f)) : 0;
@@ -233,7 +233,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             }
 
             int rowH = fm.getHeight() + rowGap;
-            int iconPad = Math.round(ChartScale.scale(4f));
+            int iconPad = Math.round(ChartScale.scale(5f));
             int boxW = padding * 2 + iconSize + iconPad + nameColW
                     + (showValues ? colGap + valuesColW : 0)
                     + settingsW;
@@ -282,7 +282,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             // Rows
             rowHits.clear();
             int cy = y + padding + fm.getAscent();
-            int iconGap = Math.round(ChartScale.scale(4f));
+            int iconGap = Math.round(ChartScale.scale(5f));
             int contentW = boxW - padding * 2 - iconSize - iconGap - settingsW;
             int minNameW = Math.round(ChartScale.scale(60f));
             int valuesCap = showValues ? Math.min(valuesColW, Math.max(0, contentW - minNameW - colGap)) : 0;
@@ -381,16 +381,16 @@ public final class InteractiveLegendOverlay extends JComponent {
 
     private void renderPillLegend(Graphics2D g2, List<LegendSeriesRow> rows, Font font, FontMetrics fm) {
         float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.82f);
-        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(7f, font.getSize2D() * fontScale));
+        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(8f, font.getSize2D() * fontScale));
         g2.setFont(baseFont);
         FontMetrics metrics = g2.getFontMetrics();
 
-        int padding = Math.round(ChartScale.scale(3f));
-        int pillPadX = Math.round(ChartScale.scale(6f));
-        int pillPadY = Math.round(ChartScale.scale(3f));
-        int rowGap = Math.round(ChartScale.scale(4f));
-        int iconSize = Math.round(ChartScale.scale(5f));
-        int iconGap = Math.round(ChartScale.scale(4f));
+        int padding = Math.round(ChartScale.scale(4f));
+        int pillPadX = Math.round(ChartScale.scale(7f));
+        int pillPadY = Math.round(ChartScale.scale(4f));
+        int rowGap = Math.round(ChartScale.scale(5f));
+        int iconSize = Math.round(ChartScale.scale(6f));
+        int iconGap = Math.round(ChartScale.scale(5f));
         int arc = 0;
 
         int maxWidth = 0;
