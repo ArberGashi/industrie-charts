@@ -117,6 +117,31 @@ public final class RendererDemoDataFactory {
     private static final Set<String> CORRELATION_RENDERERS = Set.of(
             "MovingCorrelationRenderer"
     );
+    private static final Set<String> SPECTRAL_ANALYSIS_RENDERERS = Set.of(
+            "AutocorrelationRenderer",
+            "FourierOverlayRenderer",
+            "LiveFFTRenderer"
+    );
+    private static final Set<String> TREND_ANALYSIS_RENDERERS = Set.of(
+            "LoessRenderer",
+            "MovingAverageRenderer",
+            "PolynomialRegressionRenderer",
+            "RegressionLineRenderer",
+            "TrendDecompositionRenderer"
+    );
+    private static final Set<String> OVERLAY_ANALYSIS_RENDERERS = Set.of(
+            "EnvelopeRenderer",
+            "MinMaxMarkerRenderer",
+            "PeakDetectionRenderer",
+            "ReferenceLineRenderer",
+            "ThresholdRenderer"
+    );
+    private static final Set<String> FUNCTION_ANALYSIS_RENDERERS = Set.of(
+            "AdaptiveFunctionRenderer"
+    );
+    private static final Set<String> FIELD_ANALYSIS_RENDERERS = Set.of(
+            "VectorFieldRenderer"
+    );
     private static final Set<String> POLAR_ADV_RENDERERS = Set.of(
             "PolarAdvancedRenderer"
     );
@@ -222,6 +247,21 @@ public final class RendererDemoDataFactory {
         if (CORRELATION_RENDERERS.contains(simple)) {
             return correlationModel();
         }
+        if (SPECTRAL_ANALYSIS_RENDERERS.contains(simple)) {
+            return spectralAnalysisModel();
+        }
+        if (TREND_ANALYSIS_RENDERERS.contains(simple)) {
+            return trendAnalysisModel();
+        }
+        if (OVERLAY_ANALYSIS_RENDERERS.contains(simple)) {
+            return overlayAnalysisModel();
+        }
+        if (FUNCTION_ANALYSIS_RENDERERS.contains(simple)) {
+            return functionDomainModel();
+        }
+        if (FIELD_ANALYSIS_RENDERERS.contains(simple)) {
+            return vectorFieldDomainModel();
+        }
         if (POLAR_ADV_RENDERERS.contains(simple)) {
             return polarAdvancedModel();
         }
@@ -264,6 +304,7 @@ public final class RendererDemoDataFactory {
             case "medical" -> medicalModel();
             case "circular" -> circularModel();
             case "predictive" -> anomalyModel();
+            case "analysis" -> trendAnalysisModel();
             default -> standardModel();
         };
     }
@@ -510,6 +551,94 @@ public final class RendererDemoDataFactory {
             double min = y - 6;
             double max = y + 6;
             model.setPoint(x, y, min, max, weight, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel spectralAnalysisModel() {
+        DefaultChartModel model = new DefaultChartModel("Spectral Analysis");
+        int seed = RENDERER_SEED.get();
+        int points = 320;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = Math.sin(i * (0.07 + seededRange(seed, 0.0, 0.02, 900))) * 22.0
+                    + Math.sin(i * (0.17 + seededRange(seed, 0.0, 0.03, 901))) * 11.0
+                    + Math.cos(i * (0.31 + seededRange(seed, 0.0, 0.03, 902))) * 6.5;
+            if (i > 210 && i < 245) {
+                y += 10.0;
+            }
+            if (i > 90 && i < 120) {
+                y -= 8.0;
+            }
+            double band = 3.0 + Math.abs(Math.sin(i * 0.09)) * 2.0;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.35 + 4.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel trendAnalysisModel() {
+        DefaultChartModel model = new DefaultChartModel("Trend Analysis");
+        int seed = RENDERER_SEED.get();
+        int points = 300;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double regime = i < 110 ? (i * 0.08) : (i < 210 ? 8.8 - (i - 110) * 0.05 : 3.8 + (i - 210) * 0.06);
+            double y = regime
+                    + Math.sin(i * (0.06 + seededRange(seed, 0.0, 0.02, 910))) * 9.0
+                    + Math.cos(i * (0.19 + seededRange(seed, 0.0, 0.02, 911))) * 3.5;
+            if (i == 72 || i == 188 || i == 252) {
+                y += 11.0;
+            }
+            if (i == 138) {
+                y -= 9.5;
+            }
+            double band = 2.4 + Math.abs(Math.cos(i * 0.11)) * 1.6;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.4 + 5.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel overlayAnalysisModel() {
+        DefaultChartModel model = new DefaultChartModel("Overlay Analysis");
+        int seed = RENDERER_SEED.get();
+        int points = 240;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = Math.sin(i * (0.075 + seededRange(seed, 0.0, 0.01, 920))) * 18.0
+                    + Math.cos(i * (0.022 + seededRange(seed, 0.0, 0.01, 921))) * 8.5;
+            if (i == 54 || i == 151 || i == 203) {
+                y += 20.0;
+            }
+            if (i == 108) {
+                y -= 16.0;
+            }
+            double band = 2.0 + Math.abs(Math.sin(i * 0.08)) * 1.4;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.35 + 4.5, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel functionDomainModel() {
+        DefaultChartModel model = new DefaultChartModel("Function Domain");
+        int points = 220;
+        double minX = -36.0;
+        double maxX = 36.0;
+        double span = maxX - minX;
+        for (int i = 0; i < points; i++) {
+            double x = minX + (i / (double) (points - 1)) * span;
+            double y = Math.sin(x * 0.55) * 26.0 + Math.cos(x * 0.23) * 12.0;
+            model.setPoint(x, y, y - 2.0, y + 2.0, Math.abs(y) * 0.3 + 3.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel vectorFieldDomainModel() {
+        DefaultChartModel model = new DefaultChartModel("Vector Domain");
+        int n = 21;
+        for (int i = 0; i < n; i++) {
+            double x = -10.0 + i;
+            double y = -10.0 + i;
+            model.setPoint(x, y, y - 0.5, y + 0.5, 1.0, null);
         }
         return model;
     }
