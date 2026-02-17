@@ -1,14 +1,17 @@
 package com.arbergashi.charts.render.standard;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.Matrix4x4;
 import com.arbergashi.charts.engine.spatial.PerspectiveProjector;
 import com.arbergashi.charts.engine.spatial.SpatialDataMapper;
 import com.arbergashi.charts.engine.spatial.SpatialDepthPolicies;
+import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.AbstractSpatialLayer;
+import com.arbergashi.charts.util.ChartAssets;
 
 /**
  * Spatial line renderer that treats Z as a first-class dimension.
@@ -60,6 +63,12 @@ public final class LineSpatialRenderer extends AbstractSpatialLayer {
                 .setScale(scale)
                 .setZBias(4.0);
         getSpatialPathBatchBuilder().setZMin(-2.0);
+        ChartTheme theme = getResolvedTheme(context);
+        int argb = (theme != null && theme.getAccentColor() != null)
+                ? theme.getAccentColor().argb()
+                : 0xFF6AA9FF;
+        float stroke = ChartAssets.getFloat("Chart.lineSpatial.strokeWidth", 1.6f);
+        getSpatialPathBatchBuilder().setStyleKey(SpatialStyleDescriptor.pack(argb, stroke, 0, 0));
         super.renderSpatial(model, context, consumer);
     }
 

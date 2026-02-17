@@ -192,9 +192,9 @@ public final class InteractiveLegendOverlay extends JComponent {
             if (base == null) base = UIManager.getFont("Label.font");
             if (base == null) base = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
 
-            float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 1.0f);
+            float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.86f);
             float baseSize = ChartScale.font((base != null) ? base.getSize2D() : 11f);
-            Font font = base.deriveFont(Font.PLAIN, Math.max(9f, baseSize * fontScale));
+            Font font = base.deriveFont(Font.PLAIN, Math.max(8f, baseSize * fontScale));
             Font bold = font.deriveFont(Font.PLAIN);
 
             g2.setFont(font);
@@ -205,9 +205,9 @@ public final class InteractiveLegendOverlay extends JComponent {
             boolean showValues = ChartAssets.getBoolean("Chart.legend.showValues", false);
             boolean compact = ChartAssets.getBoolean("Chart.legend.compact", true);
             boolean showSettings = ChartAssets.getBoolean("Chart.legend.settings.enabled", false);
-            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 5f : 7f)));
+            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 4f : 6f)));
             int rowGap = Math.round(ChartScale.scale(compact ? 2f : 3f));
-            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 6f : 8f)));
+            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 5f : 7f)));
             int colGap = Math.round(ChartScale.scale(compact ? 5f : 8f));
             int settingsW = showSettings ? Math.round(ChartScale.scale(12f)) : 0;
 
@@ -380,17 +380,17 @@ public final class InteractiveLegendOverlay extends JComponent {
     }
 
     private void renderPillLegend(Graphics2D g2, List<LegendSeriesRow> rows, Font font, FontMetrics fm) {
-        float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.85f);
-        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(9f, font.getSize2D() * fontScale));
+        float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.82f);
+        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(8f, font.getSize2D() * fontScale));
         g2.setFont(baseFont);
         FontMetrics metrics = g2.getFontMetrics();
 
-        int padding = Math.round(ChartScale.scale(6f));
-        int pillPadX = Math.round(ChartScale.scale(10f));
-        int pillPadY = Math.round(ChartScale.scale(6f));
+        int padding = Math.round(ChartScale.scale(4f));
+        int pillPadX = Math.round(ChartScale.scale(8f));
+        int pillPadY = Math.round(ChartScale.scale(5f));
         int rowGap = Math.round(ChartScale.scale(6f));
-        int iconSize = Math.round(ChartScale.scale(7f));
-        int iconGap = Math.round(ChartScale.scale(6f));
+        int iconSize = Math.round(ChartScale.scale(6f));
+        int iconGap = Math.round(ChartScale.scale(5f));
         int arc = 0;
 
         int maxWidth = 0;

@@ -130,8 +130,8 @@ public final class DockedLegendPanel extends JPanel {
     public Dimension getMinimumSize() {
         // Defaults are density-aware; properties override.
         LegendDensity density = getDensity();
-        int defMinW = (density == LegendDensity.DENSE) ? 220 : 180;
-        int defMinH = (density == LegendDensity.DENSE) ? 140 : 120;
+        int defMinW = (density == LegendDensity.DENSE) ? 200 : 160;
+        int defMinH = (density == LegendDensity.DENSE) ? 120 : 96;
 
         int minW = Math.round(ChartScale.scale(ChartAssets.getInt(KEY_DOCK_MIN_W, defMinW)));
         int minH = Math.round(ChartScale.scale(ChartAssets.getInt(KEY_DOCK_MIN_H, defMinH)));
@@ -143,14 +143,14 @@ public final class DockedLegendPanel extends JPanel {
         LegendDensity density = getDensity();
 
         // Global density-aware defaults.
-        int defPrefW = (density == LegendDensity.DENSE) ? 300 : 240;
-        int defPrefH = (density == LegendDensity.DENSE) ? 200 : 160;
+        int defPrefW = (density == LegendDensity.DENSE) ? 260 : 210;
+        int defPrefH = (density == LegendDensity.DENSE) ? 160 : 126;
 
         // Side-specific defaults: right/left want width, top/bottom want height.
-        int defRightW = (density == LegendDensity.DENSE) ? 320 : 260;
-        int defLeftW  = (density == LegendDensity.DENSE) ? 300 : 250;
-        int defTopH   = (density == LegendDensity.DENSE) ? 160 : 120;
-        int defBottomH= (density == LegendDensity.DENSE) ? 160 : 120;
+        int defRightW = (density == LegendDensity.DENSE) ? 280 : 220;
+        int defLeftW  = (density == LegendDensity.DENSE) ? 270 : 210;
+        int defTopH   = (density == LegendDensity.DENSE) ? 136 : 104;
+        int defBottomH= (density == LegendDensity.DENSE) ? 136 : 104;
 
         int prefW = ChartAssets.getInt(KEY_DOCK_PREF_W, defPrefW);
         int prefH = ChartAssets.getInt(KEY_DOCK_PREF_H, defPrefH);
