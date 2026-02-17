@@ -94,6 +94,9 @@ public final class RendererDemoDataFactory {
     private static final Set<String> CORRELATION_RENDERERS = Set.of(
             "MovingCorrelationRenderer"
     );
+    private static final Set<String> POLAR_ADV_RENDERERS = Set.of(
+            "PolarAdvancedRenderer"
+    );
 
     private RendererDemoDataFactory() {
     }
@@ -136,6 +139,9 @@ public final class RendererDemoDataFactory {
         }
         if (CORRELATION_RENDERERS.contains(simple)) {
             return correlationModel();
+        }
+        if (POLAR_ADV_RENDERERS.contains(simple)) {
+            return polarAdvancedModel();
         }
         return switch (category) {
             case "financial" -> financialModel();
@@ -321,6 +327,21 @@ public final class RendererDemoDataFactory {
             double min = y - 6;
             double max = y + 6;
             model.setPoint(x, y, min, max, weight, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel polarAdvancedModel() {
+        DefaultChartModel model = new DefaultChartModel("Polar Advanced");
+        int seed = RENDERER_SEED.get();
+        int n = 12;
+        for (int i = 0; i < n; i++) {
+            double phase = (i / (double) n) * Math.PI * 2.0;
+            double base = 14.0 + Math.sin(phase * 1.7 + seededRange(seed, 0.0, 0.5, 201)) * 4.0;
+            double value = 9.0 + Math.cos(phase * 1.3 + seededRange(seed, 0.0, 0.4, 202)) * 3.0;
+            base = Math.max(4.0, base);
+            value = Math.max(3.0, value);
+            model.setPoint(base, value, 0.0, base + value, value, "Sector " + (i + 1));
         }
         return model;
     }

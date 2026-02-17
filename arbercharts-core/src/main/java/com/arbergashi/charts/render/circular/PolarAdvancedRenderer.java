@@ -8,6 +8,8 @@ import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ChartScale;
+import com.arbergashi.charts.util.ColorRegistry;
 import java.util.Optional;
 /**
  * <h1>Modern Stacked Polar Renderer</h1>
@@ -42,12 +44,6 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
  * @since 1.5.0
  */
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
-        // This renderer expects to be used in a multi-layer setup.
-        // It draws one layer (one series) at a time.
-        // The `ArberChartPanel` is responsible for calling this for each series.
-        
-        // This renderer doesn't draw its own grid; it assumes a grid is drawn by the panel or another layer.
-        
         int n = model.getPointCount();
         if (n <= 0) return;
 
@@ -58,25 +54,71 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
         double angleStep = 360.0 / n;
 
         double[] yData = model.getYData();
-        double[] xData = model.getXData(); // Assumed to be category indices
+        double[] xData = model.getXData();
+        if (yData == null || xData == null) {
+            return;
+        }
+
+        drawPolarGrid(canvas, context, cx, cy, maxRadius);
+        double stackMax = resolveStackMax(xData, yData, n);
+        if (!Double.isFinite(stackMax) || stackMax <= 0.0) {
+            return;
+        }
+
+        ArberColor strokeColor = ColorRegistry.applyAlpha(getResolvedTheme(context).getBackground(), 0.72f);
+        canvas.setStroke(ChartScale.scale(1.0f));
 
         for (int i = 0; i < n; i++) {
-            double value = yData[i];
-            // The 'x' value is used to get the previous layer's value for stacking
-            double previousValue = xData[i]; 
-            
-            double startRadius = maxRadius * (previousValue / context.getMaxY());
-            double endRadius = maxRadius * ((previousValue + value) / context.getMaxY());
-            
+            double value = Math.max(0.0, yData[i]);
+            double previousValue = Math.max(0.0, xData[i]);
+            double startRadius = maxRadius * (previousValue / stackMax);
+            double endRadius = maxRadius * ((previousValue + value) / stackMax);
+            if (!Double.isFinite(startRadius) || !Double.isFinite(endRadius) || endRadius <= startRadius) {
+                continue;
+            }
             double startAngle = i * angleStep - 90;
-            
-            ArberColor color = getSeriesColor(model);
+
+            ArberColor color = getResolvedTheme(context).getSeriesColor(i);
             if (i == hoverCategory) {
-                 // no brighten in core
+                color = ColorRegistry.adjustBrightness(color, 1.12);
             }
 
             drawSegment(canvas, cx, cy, startRadius, endRadius, startAngle, angleStep, color);
+            drawSegmentOutline(canvas, cx, cy, startRadius, endRadius, startAngle, angleStep, strokeColor);
         }
+    }
+
+    private void drawPolarGrid(ArberCanvas canvas, PlotContext context, double cx, double cy, double maxRadius) {
+        ArberColor grid = ColorRegistry.applyAlpha(getResolvedTheme(context).getGridColor(), 0.6f);
+        canvas.setColor(grid);
+        canvas.setStroke(ChartScale.scale(1.0f));
+
+        int rings = 5;
+        for (int i = 1; i <= rings; i++) {
+            drawCirclePolyline(canvas, cx, cy, maxRadius * (i / (double) rings));
+        }
+
+        int spokes = 12;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarAdv.grid.line.x", 2);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarAdv.grid.line.y", 2);
+        for (int i = 0; i < spokes; i++) {
+            double a = Math.toRadians(i * (360.0 / spokes) - 90.0);
+            xs[0] = (float) cx;
+            ys[0] = (float) cy;
+            xs[1] = (float) (cx + Math.cos(a) * maxRadius);
+            ys[1] = (float) (cy + Math.sin(a) * maxRadius);
+            canvas.drawPolyline(xs, ys, 2);
+        }
+    }
+
+    private double resolveStackMax(double[] xData, double[] yData, int n) {
+        double m = 0.0;
+        for (int i = 0; i < n; i++) {
+            double base = (i < xData.length && Double.isFinite(xData[i])) ? Math.max(0.0, xData[i]) : 0.0;
+            double val = (i < yData.length && Double.isFinite(yData[i])) ? Math.max(0.0, yData[i]) : 0.0;
+            m = Math.max(m, base + val);
+        }
+        return m;
     }
 
     private void drawSegment(ArberCanvas canvas, double cx, double cy, double r1, double r2, double startAngle, double extent, ArberColor color) {
@@ -101,7 +143,40 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
         }
         canvas.setColor(color);
         canvas.fillPolygon(xs, ys, idx);
-        canvas.drawPolyline(xs, ys, idx);
+    }
+
+    private void drawSegmentOutline(ArberCanvas canvas, double cx, double cy, double r1, double r2, double startAngle, double extent, ArberColor color) {
+        int segs = 24;
+        int count = segs + 1;
+        float[] outerX = RendererAllocationCache.getFloatArray(this, "polarAdv.outline.outer.x", count);
+        float[] outerY = RendererAllocationCache.getFloatArray(this, "polarAdv.outline.outer.y", count);
+        float[] innerX = RendererAllocationCache.getFloatArray(this, "polarAdv.outline.inner.x", count);
+        float[] innerY = RendererAllocationCache.getFloatArray(this, "polarAdv.outline.inner.y", count);
+
+        double start = Math.toRadians(startAngle);
+        double end = Math.toRadians(startAngle + extent);
+        for (int i = 0; i <= segs; i++) {
+            double t = start + (end - start) * (i / (double) segs);
+            outerX[i] = (float) (cx + Math.cos(t) * r2);
+            outerY[i] = (float) (cy + Math.sin(t) * r2);
+            innerX[i] = (float) (cx + Math.cos(t) * r1);
+            innerY[i] = (float) (cy + Math.sin(t) * r1);
+        }
+        canvas.setColor(color);
+        canvas.drawPolyline(outerX, outerY, count);
+        canvas.drawPolyline(innerX, innerY, count);
+    }
+
+    private void drawCirclePolyline(ArberCanvas canvas, double cx, double cy, double r) {
+        int segments = 48;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "polarAdv.circle.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "polarAdv.circle.y", segments + 1);
+        for (int i = 0; i <= segments; i++) {
+            double a = (i * 2.0 * Math.PI) / segments;
+            xs[i] = (float) (cx + Math.cos(a) * r);
+            ys[i] = (float) (cy + Math.sin(a) * r);
+        }
+        canvas.drawPolyline(xs, ys, segments + 1);
     }
 
     @Override
