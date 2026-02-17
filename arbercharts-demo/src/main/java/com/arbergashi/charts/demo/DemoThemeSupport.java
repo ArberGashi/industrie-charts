@@ -18,17 +18,27 @@ import java.awt.Font;
 import java.util.Locale;
 
 final class DemoThemeSupport {
+    private static volatile boolean resourcesBootstrapped;
 
     private DemoThemeSupport() {
     }
 
     static void bootstrapThemeResources() {
-        verifyThemeResources();
-        FlatLaf.registerCustomDefaultsSource("themes");
-        ChartAssets.clearCache();
-        // Fail fast if chart palette keys are missing in resources/themes/charts.properties.
-        requireColor("Demo.chart.dark.background");
-        requireColor("Demo.chart.light.background");
+        if (resourcesBootstrapped) {
+            return;
+        }
+        synchronized (DemoThemeSupport.class) {
+            if (resourcesBootstrapped) {
+                return;
+            }
+            verifyThemeResources();
+            FlatLaf.registerCustomDefaultsSource("themes");
+            ChartAssets.clearCache();
+            // Fail fast if chart palette keys are missing in resources/themes/charts.properties.
+            requireColor("Demo.chart.dark.background");
+            requireColor("Demo.chart.light.background");
+            resourcesBootstrapped = true;
+        }
     }
 
     static String setupLookAndFeel() {
@@ -60,6 +70,7 @@ final class DemoThemeSupport {
     }
 
     static void verifyThemeResources() {
+        requireResource("themes/FlatLaf.properties");
         requireResource("themes/FlatDarkLaf.properties");
         requireResource("themes/FlatLightLaf.properties");
         requireResource("themes/charts.properties");
