@@ -68,8 +68,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -127,8 +125,6 @@ public final class DemoApplication {
 
     /** Copyright notice. */
     private static final String COPYRIGHT = "© 2026 Arber Gashi";
-    private static final String TABLER_OUTLINE_DIR = System.getProperty("user.home")
-            + "/Documents/workspace/tabler-icons-main/icons/outline";
     private static final Map<String, Icon> ICON_CACHE = new ConcurrentHashMap<>();
 
     /**
@@ -1660,9 +1656,9 @@ public final class DemoApplication {
             if (cached != null) {
                 return cached;
             }
-            Path iconPath = Path.of(TABLER_OUTLINE_DIR, fileName);
-            if (Files.isRegularFile(iconPath)) {
-                FlatSVGIcon icon = new FlatSVGIcon(iconPath.toFile());
+            java.net.URL iconUrl = DemoApplication.class.getClassLoader().getResource("icons/" + fileName);
+            if (iconUrl != null) {
+                FlatSVGIcon icon = new FlatSVGIcon(iconUrl);
                 FlatSVGIcon derived = icon.derive(size, size);
                 if (tint != null) {
                     FlatSVGIcon.ColorFilter filter = new FlatSVGIcon.ColorFilter((component, color) ->
