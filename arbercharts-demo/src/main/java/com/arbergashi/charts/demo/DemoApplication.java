@@ -1478,20 +1478,21 @@ public final class DemoApplication {
     }
 
     private ChartTheme buildChartThemeFromUi() {
-        Color bg = uiColor("Panel.background", "control", new Color(30, 30, 30));
-        Color fg = uiColor("Label.foreground", "textText", new Color(204, 204, 204));
-        Color grid = uiColor("Separator.foreground", "Component.borderColor", new Color(60, 60, 60));
-        Color axis = uiColor("Component.grayForeground", "Label.disabledForeground", new Color(150, 156, 164));
-        Color accent = uiColor("Component.focusColor", "Component.linkColor", new Color(77, 163, 255));
+        boolean light = "light".equals(currentThemeName);
+        String p = light ? "Demo.chart.light." : "Demo.chart.dark.";
 
-        Color s1 = accent;
-        Color s2 = blend(accent, fg, 0.35f);
-        Color s3 = blend(accent, bg, 0.35f);
-        Color s4 = blend(fg, bg, 0.45f);
-        Color s5 = blend(accent, s4, 0.45f);
+        ArberColor bg = ChartAssets.getColor(p + "background", ColorRegistry.of(30, 30, 30, 255));
+        ArberColor fg = ChartAssets.getColor(p + "foreground", ColorRegistry.of(204, 204, 204, 255));
+        ArberColor grid = ChartAssets.getColor(p + "grid", ColorRegistry.of(60, 60, 60, 255));
+        ArberColor axis = ChartAssets.getColor(p + "axis", ColorRegistry.of(156, 163, 175, 255));
+        ArberColor accent = ChartAssets.getColor(p + "accent", ColorRegistry.of(77, 163, 255, 255));
 
         ArberColor[] series = new ArberColor[]{
-                toArber(s1), toArber(s2), toArber(s3), toArber(s4), toArber(s5)
+                ChartAssets.getColor(p + "series1", accent),
+                ChartAssets.getColor(p + "series2", accent),
+                ChartAssets.getColor(p + "series3", accent),
+                ChartAssets.getColor(p + "series4", accent),
+                ChartAssets.getColor(p + "series5", accent)
         };
 
         Font base = UIManager.getFont("defaultFont");
@@ -1500,11 +1501,11 @@ public final class DemoApplication {
         }
 
         return BasicChartTheme.builder()
-                .setBackground(toArber(bg))
-                .setForeground(toArber(fg))
-                .setGridColor(toArber(grid))
-                .setAxisLabelColor(toArber(axis))
-                .setAccentColor(toArber(accent))
+                .setBackground(bg)
+                .setForeground(fg)
+                .setGridColor(grid)
+                .setAxisLabelColor(axis)
+                .setAccentColor(accent)
                 .setSeriesColors(series)
                 .setBaseFont(new ArberFont(base.getName(), base.getStyle(), base.getSize2D()))
                 .build();
@@ -1524,19 +1525,6 @@ public final class DemoApplication {
     private static Color withAlpha(Color color, int alpha) {
         if (color == null) return null;
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
-    }
-
-    private static Color blend(Color a, Color b, float t) {
-        float clamped = Math.max(0f, Math.min(1f, t));
-        int r = Math.round(a.getRed() * (1f - clamped) + b.getRed() * clamped);
-        int g = Math.round(a.getGreen() * (1f - clamped) + b.getGreen() * clamped);
-        int bl = Math.round(a.getBlue() * (1f - clamped) + b.getBlue() * clamped);
-        int alpha = Math.round(a.getAlpha() * (1f - clamped) + b.getAlpha() * clamped);
-        return new Color(r, g, bl, alpha);
-    }
-
-    private static ArberColor toArber(Color c) {
-        return ColorRegistry.of(c.getRed(), c.getGreen(), c.getBlue(), c.getAlpha());
     }
 
     private record DemoPalette(
