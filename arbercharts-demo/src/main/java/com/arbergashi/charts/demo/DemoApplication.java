@@ -502,10 +502,6 @@ public final class DemoApplication {
         preferencesMenuItem.addActionListener(evt -> updateStatus("Preferences not available."));
         helpMenu.add(preferencesMenuItem);
 
-        JMenuItem shortcutsItem = new JMenuItem("Keyboard Shortcuts...");
-        shortcutsItem.addActionListener(evt -> showShortcutsDialog(frame));
-        helpMenu.add(shortcutsItem);
-
         menuBar.add(helpMenu);
 
         return menuBar;
@@ -596,30 +592,6 @@ public final class DemoApplication {
         dialog.pack();
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
-    }
-
-    /**
-     * Shows keyboard shortcuts dialog.
-     */
-    private void showShortcutsDialog(JFrame frame) {
-        String modifier = SystemInfo.isMacOS ? "⌘" : "Ctrl+";
-        String shortcuts = String.format("""
-            <html>
-            <h3>Keyboard Shortcuts</h3>
-            <table cellpadding="4">
-            <tr><td><b>%sE</b></td><td>Export chart as PNG</td></tr>
-            <tr><td><b>%sR</b></td><td>Reload current renderer</td></tr>
-            <tr><td><b>%sT</b></td><td>Toggle dark/light theme</td></tr>
-            <tr><td><b>%sF</b></td><td>Focus search field</td></tr>
-            <tr><td><b>%sB</b></td><td>Run benchmark</td></tr>
-            <tr><td><b>%sQ</b></td><td>Quit application</td></tr>
-            <tr><td><b>Escape</b></td><td>Clear speed search</td></tr>
-            <tr><td><b>Type</b></td><td>Speed search in tree</td></tr>
-            </table>
-            </html>
-            """, modifier, modifier, modifier, modifier, modifier, modifier);
-
-        JOptionPane.showMessageDialog(frame, shortcuts, "Keyboard Shortcuts", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**
