@@ -1472,7 +1472,7 @@ public final class DemoApplication {
             carry[0] -= samples;
             for (int i = 0; i < samples; i++) {
                 t[0] += dt;
-                fillMedicalChannels(className, profile, t[0], channels);
+                fillMedicalChannels(profile, t[0], channels);
                 model.add(t[0], channels);
             }
             panel.repaint();
@@ -1512,9 +1512,9 @@ public final class DemoApplication {
         return value;
     }
 
-    private static void fillMedicalChannels(String className, MedicalAnimProfile profile, double t, double[] out) {
-        String cn = className == null ? "" : className;
-        if (cn.contains("ECG") || cn.contains("EKG") || cn.contains("Rhythm")) {
+    private static void fillMedicalChannels(MedicalAnimProfile profile, double t, double[] out) {
+        switch (profile.kind()) {
+            case ECG -> {
             double hr = profile.baseRate + Math.sin(t * 0.25) * (5.0 * profile.modulation);
             double l1 = ecgWave(t, hr, 1.00 * profile.gain);
             double l2 = ecgWave(t + 0.012, hr, 1.12 * profile.gain);
@@ -1523,8 +1523,8 @@ public final class DemoApplication {
             out[1] = l2 + wander * 0.8;
             out[2] = (l2 - l1) * 0.9 + wander * 0.5;
             return;
-        }
-        if (cn.contains("EEG") || cn.contains("NIRS") || cn.contains("EOG")) {
+            }
+            case EEG -> {
             double alpha = Math.sin(t * 2.0 * Math.PI * 10.0);
             double theta = Math.sin(t * 2.0 * Math.PI * 5.5 + 0.4);
             double beta = Math.sin(t * 2.0 * Math.PI * 18.0 + 1.1);
@@ -1532,8 +1532,8 @@ public final class DemoApplication {
             out[1] = (alpha * 0.18 + theta * 0.16 + Math.sin(t * 2.0 * Math.PI * 13.0) * 0.06) * profile.gain;
             out[2] = (theta * 0.2 + Math.sin(t * 2.0 * Math.PI * 2.2) * 0.1) * profile.gain;
             return;
-        }
-        if (cn.contains("EMG")) {
+            }
+            case EMG -> {
             double burst = Math.max(0.15, 0.35 + 0.65 * Math.sin(t * 2.0 * Math.PI * (0.7 * profile.modulation)));
             double hf1 = Math.sin(t * 2.0 * Math.PI * 45.0 + 0.2);
             double hf2 = Math.sin(t * 2.0 * Math.PI * 68.0 + 0.9);
@@ -1542,8 +1542,8 @@ public final class DemoApplication {
             out[1] = burst * (hf2 * 0.22 + hf3 * 0.16) * profile.gain;
             out[2] = burst * (hf1 * 0.2 + hf3 * 0.2) * profile.gain;
             return;
-        }
-        if (cn.contains("Ventilator") || cn.contains("Spirometry")) {
+            }
+            case VENTILATION -> {
             double f = 0.24 * profile.modulation;
             double flow = Math.sin(t * 2.0 * Math.PI * f) + Math.sin(t * 2.0 * Math.PI * f * 2.0) * 0.2;
             double pressure = 0.65 + Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f)) * 0.8;
@@ -1552,8 +1552,8 @@ public final class DemoApplication {
             out[1] = pressure * profile.gain;
             out[2] = volume * profile.gain;
             return;
-        }
-        if (cn.contains("Capnography")) {
+            }
+            case CAPNOGRAPHY -> {
             double f = 0.22 * profile.modulation;
             double phase = (t * f) - Math.floor(t * f);
             double capno;
@@ -1570,8 +1570,8 @@ public final class DemoApplication {
             out[1] = Math.max(0.0, (capno * 0.92 + 0.03) * profile.gain);
             out[2] = Math.max(0.0, (capno * 0.82 + 0.05) * profile.gain);
             return;
-        }
-        if (cn.contains("PPG") || cn.contains("IBP")) {
+            }
+            case PERFUSION -> {
             double f = 1.18 * profile.modulation;
             double pulse = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f));
             pulse = pulse * pulse * (1.0 + 0.25 * Math.sin(t * 2.0 * Math.PI * 0.2));
@@ -1579,13 +1579,31 @@ public final class DemoApplication {
             out[1] = 0.18 + pulse * (0.88 * profile.gain);
             out[2] = 0.22 + pulse * (0.78 * profile.gain);
             return;
+            }
+            case ULTRASOUND -> {
+                double gate = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * (0.9 * profile.modulation)));
+                double carrierA = Math.sin(t * 2.0 * Math.PI * 26.0);
+                double carrierB = Math.sin(t * 2.0 * Math.PI * 34.0 + 0.6);
+                out[0] = (carrierA * 0.45 + carrierB * 0.22) * gate * profile.gain;
+                out[1] = (carrierB * 0.4 + Math.sin(t * 2.0 * Math.PI * 41.0 + 0.3) * 0.18) * gate * profile.gain;
+                out[2] = Math.sin(t * 2.0 * Math.PI * 0.3) * 0.2 * profile.gain;
+                return;
+            }
+            case CALIBRATION -> {
+                double tick = Math.sin(t * 2.0 * Math.PI * 1.0) > 0.85 ? 1.0 : 0.0;
+                out[0] = 0.05 + tick * 0.9;
+                out[1] = 0.03 + tick * 0.85;
+                out[2] = 0.01 + tick * 0.8;
+                return;
+            }
+            case GENERIC -> {
+                double base = Math.sin(t * 2.0 * Math.PI * 1.1);
+                double mod = Math.sin(t * 2.0 * Math.PI * 0.23);
+                out[0] = (base * 0.5 + mod * 0.08) * profile.gain;
+                out[1] = (Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06) * profile.gain;
+                out[2] = (Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05) * profile.gain;
+            }
         }
-
-        double base = Math.sin(t * 2.0 * Math.PI * 1.1);
-        double mod = Math.sin(t * 2.0 * Math.PI * 0.23);
-        out[0] = (base * 0.5 + mod * 0.08) * profile.gain;
-        out[1] = (Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06) * profile.gain;
-        out[2] = (Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05) * profile.gain;
     }
 
     private static double ecgWave(double t, double heartRate, double gain) {
@@ -1610,29 +1628,50 @@ public final class DemoApplication {
     }
 
     private static MedicalAnimProfile medicalAnimProfile(String className) {
-        String cn = className == null ? "" : className;
-        if (cn.contains("EEG") || cn.contains("NIRS") || cn.contains("EOG")) {
-            return new MedicalAnimProfile(68.0, 0.72, 0.88);
-        }
-        if (cn.contains("EMG")) {
-            return new MedicalAnimProfile(80.0, 1.35, 1.28);
-        }
-        if (cn.contains("Capnography")) {
-            return new MedicalAnimProfile(16.0, 0.95, 1.16);
-        }
-        if (cn.contains("Ventilator") || cn.contains("Spirometry")) {
-            return new MedicalAnimProfile(15.0, 0.9, 1.12);
-        }
-        if (cn.contains("PPG") || cn.contains("IBP")) {
-            return new MedicalAnimProfile(74.0, 1.08, 1.08);
-        }
-        if (cn.contains("ECG") || cn.contains("EKG") || cn.contains("Rhythm")) {
-            return new MedicalAnimProfile(74.0, 1.0, 1.05);
-        }
-        return new MedicalAnimProfile(72.0, 1.0, 1.0);
+        String simple = rendererSimpleName(className);
+        return switch (simple) {
+            case "ECGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 74.0, 1.0, 1.06);
+            case "ECGRhythmRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 72.0, 0.92, 1.02);
+            case "SweepEraseEKGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 76.0, 1.05, 1.1);
+            case "VCGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 70.0, 0.95, 1.15);
+            case "EEGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 68.0, 0.72, 0.86);
+            case "NIRSRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 66.0, 0.66, 0.74);
+            case "EOGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 64.0, 0.55, 0.62);
+            case "SpectrogramMedicalRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 70.0, 0.84, 0.96);
+            case "EMGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EMG, 82.0, 1.4, 1.32);
+            case "CapnographyRenderer" -> new MedicalAnimProfile(MedicalSignalKind.CAPNOGRAPHY, 16.0, 0.98, 1.2);
+            case "VentilatorWaveformRenderer" -> new MedicalAnimProfile(MedicalSignalKind.VENTILATION, 14.0, 0.88, 1.16);
+            case "SpirometryRenderer" -> new MedicalAnimProfile(MedicalSignalKind.VENTILATION, 15.0, 0.95, 1.1);
+            case "PPGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.PERFUSION, 74.0, 1.08, 1.1);
+            case "IBPRenderer" -> new MedicalAnimProfile(MedicalSignalKind.PERFUSION, 76.0, 1.03, 1.04);
+            case "UltrasoundMModeRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ULTRASOUND, 62.0, 1.1, 1.0);
+            case "CalibrationRenderer" -> new MedicalAnimProfile(MedicalSignalKind.CALIBRATION, 60.0, 1.0, 1.0);
+            case "MedicalSweepRenderer" -> new MedicalAnimProfile(MedicalSignalKind.GENERIC, 72.0, 1.0, 1.0);
+            default -> new MedicalAnimProfile(MedicalSignalKind.GENERIC, 72.0, 1.0, 1.0);
+        };
     }
 
-    private record MedicalAnimProfile(double baseRate, double modulation, double gain) {
+    private static String rendererSimpleName(String className) {
+        if (className == null || className.isBlank()) {
+            return "";
+        }
+        int idx = className.lastIndexOf('.');
+        return idx >= 0 ? className.substring(idx + 1) : className;
+    }
+
+    private enum MedicalSignalKind {
+        ECG,
+        EEG,
+        EMG,
+        VENTILATION,
+        CAPNOGRAPHY,
+        PERFUSION,
+        ULTRASOUND,
+        CALIBRATION,
+        GENERIC
+    }
+
+    private record MedicalAnimProfile(MedicalSignalKind kind, double baseRate, double modulation, double gain) {
     }
 
     /**
