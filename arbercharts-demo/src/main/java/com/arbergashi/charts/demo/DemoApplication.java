@@ -1,9 +1,6 @@
 package com.arbergashi.charts.demo;
 
-import com.arbergashi.charts.api.BasicChartTheme;
 import com.arbergashi.charts.api.ChartTheme;
-import com.arbergashi.charts.api.types.ArberColor;
-import com.arbergashi.charts.api.types.ArberFont;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
@@ -16,13 +13,8 @@ import com.arbergashi.charts.render.grid.MedicalGridLayer;
 import com.arbergashi.charts.render.grid.SmithChartGridLayer;
 import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
-import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.LatencyTracker;
-import com.arbergashi.charts.util.ColorRegistry;
 import com.arbergashi.charts.platform.export.ChartExportService;
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLaf;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import javax.swing.BorderFactory;
@@ -132,7 +124,7 @@ public final class DemoApplication {
     public static void main(String[] args) {
         configureMacOSDefaults();
         SwingUtilities.invokeLater(() -> {
-            String theme = setupLookAndFeel();
+            String theme = DemoThemeSupport.setupLookAndFeel();
             DemoApplication app = new DemoApplication(theme);
             app.show();
         });
@@ -562,12 +554,12 @@ public final class DemoApplication {
                 "• Analysis: FFT, Wavelet, Correlation, Peak Detection, ...<br/>" +
                 "• Specialized: Smith Chart, Ternary, Sankey, ...</html>");
         features.setAlignmentX(Component.LEFT_ALIGNMENT);
-        features.setForeground(uiColor("Component.grayForeground", "Label.disabledForeground"));
+        features.setForeground(DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground"));
 
         JLabel java = new JLabel("<html><br/>Java: " + System.getProperty("java.version") +
                 " (" + System.getProperty("java.vendor") + ")</html>");
         java.setAlignmentX(Component.LEFT_ALIGNMENT);
-        java.setForeground(uiColor("Component.grayForeground", "Label.disabledForeground"));
+        java.setForeground(DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground"));
 
         JLabel copyright = new JLabel(COPYRIGHT);
         copyright.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -598,35 +590,7 @@ public final class DemoApplication {
      * Shows system information dialog.
      */
     private void showSystemInfo(JFrame frame) {
-        Runtime runtime = Runtime.getRuntime();
-        long maxMem = runtime.maxMemory() / (1024 * 1024);
-        long totalMem = runtime.totalMemory() / (1024 * 1024);
-        long freeMem = runtime.freeMemory() / (1024 * 1024);
-        long usedMem = totalMem - freeMem;
-
-        String info = String.format("""
-            Java Version: %s
-            Java Vendor: %s
-            OS: %s %s
-            Architecture: %s
-            Processors: %d
-            Memory Used: %d MB / %d MB
-            Memory Max: %d MB
-            Vector API: %s
-            Renderers: %d
-            """,
-            System.getProperty("java.version"),
-            System.getProperty("java.vendor"),
-            System.getProperty("os.name"),
-            System.getProperty("os.version"),
-            System.getProperty("os.arch"),
-            runtime.availableProcessors(),
-            usedMem, totalMem,
-            maxMem,
-            vectorAvailable ? "Available ✓" : "Not available ✗",
-            catalog.entries().size()
-        );
-
+        String info = DemoSystemInfoFormatter.format(vectorAvailable, catalog.entries().size());
         JOptionPane.showMessageDialog(frame, info, "System Information", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -730,48 +694,7 @@ public final class DemoApplication {
 
         RendererCatalogEntry entry = catalog.getRequired(currentRendererKey);
         updateStatus("Running benchmark for " + entry.simpleName() + "...");
-
-        // Run benchmark in background
-        new Thread(() -> {
-            try {
-                int iterations = 100;
-                long totalNs = 0;
-                long minNs = Long.MAX_VALUE;
-                long maxNs = 0;
-
-                // Warm up
-                for (int i = 0; i < 10; i++) {
-                    currentChartPanel.repaint();
-                    currentChartPanel.paintImmediately(0, 0,
-                            currentChartPanel.getWidth(), currentChartPanel.getHeight());
-                }
-
-                // Measure
-                for (int i = 0; i < iterations; i++) {
-                    long start = System.nanoTime();
-                    currentChartPanel.paintImmediately(0, 0,
-                            currentChartPanel.getWidth(), currentChartPanel.getHeight());
-                    long elapsed = System.nanoTime() - start;
-                    totalNs += elapsed;
-                    minNs = Math.min(minNs, elapsed);
-                    maxNs = Math.max(maxNs, elapsed);
-                }
-
-                double avgMs = (totalNs / iterations) / 1_000_000.0;
-                double minMs = minNs / 1_000_000.0;
-                double maxMs = maxNs / 1_000_000.0;
-
-                String result = String.format(
-                        "Benchmark: %s | %d iterations | Avg: %.2fms | Min: %.2fms | Max: %.2fms",
-                        entry.simpleName(), iterations, avgMs, minMs, maxMs
-                );
-
-                SwingUtilities.invokeLater(() -> updateStatus(result));
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() ->
-                        updateStatus("Benchmark failed: " + ex.getMessage()));
-            }
-        }).start();
+        DemoBenchmarkRunner.run(entry, currentChartPanel, this::updateStatus);
     }
 
     /**
@@ -801,24 +724,16 @@ public final class DemoApplication {
      * @param themeName the theme name
      */
     private void setThemeByName(String themeName) {
-        themeName = normalizeDemoTheme(themeName);
+        themeName = DemoThemeSupport.normalizeTheme(themeName);
         if (themeName.equals(currentThemeName)) {
             return;
         }
         currentThemeName = themeName;
 
-        // Update Look and Feel for dark/light base
-        if ("light".equals(themeName)) {
-            FlatLightLaf.setup();
-        } else {
-            FlatDarkLaf.setup();
-        }
-
-        FlatLaf.updateUI();
+        DemoThemeSupport.applyLookAndFeel(themeName);
         applyDemoPalette();
 
-        // Update chart themes
-        ChartAssets.clearCache();
+        DemoThemeSupport.clearAssetCache();
         ChartTheme theme = getActiveTheme();
         applyThemeToCharts(detailHost, theme);
         rebuildRendererPanelsForTheme();
@@ -1167,7 +1082,7 @@ public final class DemoApplication {
     }
 
     private ChartTheme getActiveTheme() {
-        return buildChartThemeFromUi();
+        return DemoThemeSupport.buildChartTheme(currentThemeName);
     }
 
 
@@ -1305,35 +1220,6 @@ public final class DemoApplication {
         return tracker;
     }
 
-    private static String setupLookAndFeel() {
-        // Install Inter font from FlatLaf fonts package BEFORE L&F setup
-        try {
-            Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
-            java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");
-            installMethod.invoke(null);
-        } catch (Exception e) {
-            // Inter font not available - will use system fonts
-        }
-
-        // Register custom theme properties BEFORE setup
-        FlatLaf.registerCustomDefaultsSource("themes");
-
-        String theme = normalizeDemoTheme(System.getProperty("demo.theme", "dark").toLowerCase(Locale.US));
-        if ("light".equals(theme)) {
-            FlatLightLaf.setup();
-        } else {
-            FlatDarkLaf.setup();
-        }
-
-        // Set Inter as the default font for chart elements
-        java.awt.Font interFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getBaseFont();
-        UIManager.put("Chart.font", interFont.deriveFont(java.awt.Font.PLAIN, 11f));
-        UIManager.put("defaultFont", interFont);
-
-        configureAssets();
-        return theme;
-    }
-
     private static void configureMacOSDefaults() {
         if (!SystemInfo.isMacOS) {
             return;
@@ -1359,11 +1245,6 @@ public final class DemoApplication {
         if (!SystemInfo.isJava_11_orLater) {
             frame.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
         }
-    }
-
-    private static void configureAssets() {
-        // Strictly use defaults from resources/themes/charts.properties.
-        ChartAssets.clearCache();
     }
 
     private void rebuildRendererPanelsForTheme() {
@@ -1405,96 +1286,8 @@ public final class DemoApplication {
     }
 
     private DemoPalette currentPalette() {
-        Color window = uiColor("Panel.background", "control");
-        Color content = uiColor("Panel.background", "control");
-        Color surface = uiColor("TextField.background", "Panel.background");
-        Color sidebar = uiColor("Tree.background", "Panel.background");
-        Color border = uiColor("Component.borderColor", "Separator.foreground");
-        Color foreground = uiColor("Label.foreground", "textText");
-        Color muted = uiColor("Component.grayForeground", "Label.disabledForeground");
-        Color softMuted = withAlpha(muted, 210);
-        return new DemoPalette(
-                window,
-                content,
-                surface,
-                sidebar,
-                border,
-                foreground,
-                muted,
-                softMuted
-        );
+        return DemoThemeSupport.currentPalette();
     }
-
-    private ChartTheme buildChartThemeFromUi() {
-        boolean light = "light".equals(currentThemeName);
-        String p = light ? "Demo.chart.light." : "Demo.chart.dark.";
-
-        ArberColor bg = ChartAssets.getColor(p + "background", toArberColor(uiColor("Panel.background", "control")));
-        ArberColor fg = ChartAssets.getColor(p + "foreground", toArberColor(uiColor("Label.foreground", "textText")));
-        ArberColor grid = ChartAssets.getColor(p + "grid", toArberColor(uiColor("Separator.foreground", "Component.borderColor")));
-        ArberColor axis = ChartAssets.getColor(p + "axis", toArberColor(uiColor("Component.grayForeground", "Label.disabledForeground")));
-        ArberColor accent = ChartAssets.getColor(p + "accent", toArberColor(uiColor("Component.focusColor", "Component.linkColor")));
-
-        ArberColor[] series = new ArberColor[]{
-                ChartAssets.getColor(p + "series1", accent),
-                ChartAssets.getColor(p + "series2", accent),
-                ChartAssets.getColor(p + "series3", accent),
-                ChartAssets.getColor(p + "series4", accent),
-                ChartAssets.getColor(p + "series5", accent)
-        };
-
-        Font base = UIManager.getFont("defaultFont");
-        if (base == null) {
-            base = new Font("SansSerif", Font.PLAIN, 11);
-        }
-
-        return BasicChartTheme.builder()
-                .setBackground(bg)
-                .setForeground(fg)
-                .setGridColor(grid)
-                .setAxisLabelColor(axis)
-                .setAccentColor(accent)
-                .setSeriesColors(series)
-                .setBaseFont(new ArberFont(base.getName(), base.getStyle(), base.getSize2D()))
-                .build();
-    }
-
-    private static String normalizeDemoTheme(String themeName) {
-        return "light".equalsIgnoreCase(themeName) ? "light" : "dark";
-    }
-
-    private static Color uiColor(String key, String fallbackKey) {
-        Color c = UIManager.getColor(key);
-        if (c != null) return c;
-        c = UIManager.getColor(fallbackKey);
-        if (c != null) return c;
-        c = UIManager.getColor("Panel.foreground");
-        if (c != null) return c;
-        c = UIManager.getColor("Label.foreground");
-        if (c != null) return c;
-        return new JPanel().getForeground();
-    }
-
-    private static Color withAlpha(Color color, int alpha) {
-        if (color == null) return null;
-        return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
-    }
-
-    private static ArberColor toArberColor(Color color) {
-        Color safe = (color != null) ? color : new JPanel().getForeground();
-        return ColorRegistry.of(safe.getRed(), safe.getGreen(), safe.getBlue(), safe.getAlpha());
-    }
-
-    private record DemoPalette(
-            Color windowBackground,
-            Color contentBackground,
-            Color surfaceBackground,
-            Color sidebarBackground,
-            Color border,
-            Color foreground,
-            Color muted,
-            Color softMuted
-    ) {}
 
     private void expandAll() {
         for (int i = 0; i < tree.getRowCount(); i++) {
