@@ -35,7 +35,7 @@ public final class HighPrecisionCrosshair extends JComponent {
     private static final String STYLE_CLASS_PROPERTY = "FlatLaf.styleClass";
 
     // Professional crosshair proportions - readable baseline for production demos.
-    private static final float LINE_WIDTH = 0.5f;
+    private static final float LINE_WIDTH = 0.6f;
     private static final float DASH_LENGTH = 2.0f;
     private static final float DASH_SPACE = 2.0f;
     private static final int LABEL_PADDING_H = 6;
@@ -293,7 +293,7 @@ public final class HighPrecisionCrosshair extends JComponent {
         if (grid == null) {
             grid = new Color(100, 100, 100);
         }
-        lineColor = withAlpha(grid, 0.6f);
+        lineColor = withAlpha(grid, 0.7f);
 
         Color bg = SwingAssets.toAwtColor(theme != null ? theme.getBackground() : null);
         if (bg == null || bg.getAlpha() == 0) {
