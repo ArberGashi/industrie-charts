@@ -3,6 +3,7 @@ package com.arbergashi.charts.demo;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.AnimationProfile;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
@@ -1316,7 +1317,14 @@ public final class DemoApplication {
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
-        if (!circular && !specialized) {
+        boolean medical = "medical".equals(entry.category());
+        if (!circular && !specialized && !medical) {
+            return;
+        }
+        if (medical) {
+            if (model instanceof CircularFastMedicalModel medicalModel) {
+                installMedicalShowcaseAnimation(entry, medicalModel, panel);
+            }
             return;
         }
         if (!(model instanceof DefaultChartModel defaultModel)) {
@@ -1445,6 +1453,38 @@ public final class DemoApplication {
         });
     }
 
+    private void installMedicalShowcaseAnimation(RendererCatalogEntry entry, CircularFastMedicalModel model, ArberChartPanel panel) {
+        String className = entry.className();
+        final double sampleRate = 250.0;
+        final double dt = 1.0 / sampleRate;
+        final double[] t = {model.getPointCount() > 0 ? model.getX(model.getPointCount() - 1) : 0.0};
+        final double[] carry = {0.0};
+        final double[] channels = new double[3];
+
+        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
+            if (!panel.isDisplayable()) {
+                ((Timer) evt.getSource()).stop();
+                return;
+            }
+            carry[0] += sampleRate * (SHOWCASE_ANIMATION_DELAY_MS / 1000.0);
+            int samples = Math.max(1, (int) carry[0]);
+            carry[0] -= samples;
+            for (int i = 0; i < samples; i++) {
+                t[0] += dt;
+                fillMedicalChannels(className, t[0], channels);
+                model.add(t[0], channels);
+            }
+            panel.repaint();
+        });
+        animation.start();
+
+        panel.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
+                animation.stop();
+            }
+        });
+    }
+
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
         if (className.contains("Smith") || className.contains("VSWR")) return 1.0;
@@ -1469,6 +1509,103 @@ public final class DemoApplication {
         if (value < min) return min;
         if (value > max) return max;
         return value;
+    }
+
+    private static void fillMedicalChannels(String className, double t, double[] out) {
+        String cn = className == null ? "" : className;
+        if (cn.contains("ECG") || cn.contains("EKG") || cn.contains("Rhythm")) {
+            double hr = 74.0 + Math.sin(t * 0.25) * 5.0;
+            double l1 = ecgWave(t, hr, 1.00);
+            double l2 = ecgWave(t + 0.012, hr, 1.12);
+            double wander = Math.sin(t * 2.0 * Math.PI * 0.18) * 0.025;
+            out[0] = l1 + wander;
+            out[1] = l2 + wander * 0.8;
+            out[2] = (l2 - l1) * 0.9 + wander * 0.5;
+            return;
+        }
+        if (cn.contains("EEG") || cn.contains("NIRS") || cn.contains("EOG")) {
+            double alpha = Math.sin(t * 2.0 * Math.PI * 10.0);
+            double theta = Math.sin(t * 2.0 * Math.PI * 5.5 + 0.4);
+            double beta = Math.sin(t * 2.0 * Math.PI * 18.0 + 1.1);
+            out[0] = alpha * 0.22 + theta * 0.14 + beta * 0.08;
+            out[1] = alpha * 0.18 + theta * 0.16 + Math.sin(t * 2.0 * Math.PI * 13.0) * 0.06;
+            out[2] = theta * 0.2 + Math.sin(t * 2.0 * Math.PI * 2.2) * 0.1;
+            return;
+        }
+        if (cn.contains("EMG")) {
+            double burst = Math.max(0.15, 0.35 + 0.65 * Math.sin(t * 2.0 * Math.PI * 0.7));
+            double hf1 = Math.sin(t * 2.0 * Math.PI * 45.0 + 0.2);
+            double hf2 = Math.sin(t * 2.0 * Math.PI * 68.0 + 0.9);
+            double hf3 = Math.sin(t * 2.0 * Math.PI * 92.0 + 1.4);
+            out[0] = burst * (hf1 * 0.25 + hf2 * 0.18);
+            out[1] = burst * (hf2 * 0.22 + hf3 * 0.16);
+            out[2] = burst * (hf1 * 0.2 + hf3 * 0.2);
+            return;
+        }
+        if (cn.contains("Ventilator") || cn.contains("Spirometry")) {
+            double f = 0.24;
+            double flow = Math.sin(t * 2.0 * Math.PI * f) + Math.sin(t * 2.0 * Math.PI * f * 2.0) * 0.2;
+            double pressure = 0.65 + Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f)) * 0.8;
+            double volume = 0.75 + Math.sin(t * 2.0 * Math.PI * f - Math.PI / 2.0) * 0.55;
+            out[0] = flow * 0.85;
+            out[1] = pressure;
+            out[2] = volume;
+            return;
+        }
+        if (cn.contains("Capnography")) {
+            double f = 0.22;
+            double phase = (t * f) - Math.floor(t * f);
+            double capno;
+            if (phase < 0.12) {
+                capno = phase / 0.12 * 0.92;
+            } else if (phase < 0.65) {
+                capno = 0.92 + Math.sin((phase - 0.12) * 9.0) * 0.03;
+            } else if (phase < 0.82) {
+                capno = 0.92 * (1.0 - ((phase - 0.65) / 0.17));
+            } else {
+                capno = 0.05 + Math.sin(phase * 24.0) * 0.01;
+            }
+            out[0] = capno;
+            out[1] = Math.max(0.0, capno * 0.92 + 0.03);
+            out[2] = Math.max(0.0, capno * 0.82 + 0.05);
+            return;
+        }
+        if (cn.contains("PPG") || cn.contains("IBP")) {
+            double f = 1.18;
+            double pulse = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f));
+            pulse = pulse * pulse * (1.0 + 0.25 * Math.sin(t * 2.0 * Math.PI * 0.2));
+            out[0] = 0.15 + pulse * 0.95;
+            out[1] = 0.18 + pulse * 0.88;
+            out[2] = 0.22 + pulse * 0.78;
+            return;
+        }
+
+        double base = Math.sin(t * 2.0 * Math.PI * 1.1);
+        double mod = Math.sin(t * 2.0 * Math.PI * 0.23);
+        out[0] = base * 0.5 + mod * 0.08;
+        out[1] = Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06;
+        out[2] = Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05;
+    }
+
+    private static double ecgWave(double t, double heartRate, double gain) {
+        double rr = 60.0 / Math.max(45.0, heartRate);
+        double phase = (t / rr) - Math.floor(t / rr);
+        double y = 0.0;
+        if (phase > 0.03 && phase < 0.12) {
+            double p = (phase - 0.075) / 0.03;
+            y += 0.14 * Math.exp(-p * p * 3.5);
+        }
+        if (phase > 0.14 && phase < 0.2) {
+            double qrs = (phase - 0.17) / 0.015;
+            y -= 0.12 * Math.exp(-(qrs + 0.9) * (qrs + 0.9) * 4.5);
+            y += 1.12 * Math.exp(-qrs * qrs * 5.5);
+            y -= 0.22 * Math.exp(-(qrs - 0.7) * (qrs - 0.7) * 5.0);
+        }
+        if (phase > 0.24 && phase < 0.45) {
+            double tw = (phase - 0.34) / 0.08;
+            y += 0.32 * Math.exp(-tw * tw * 2.0);
+        }
+        return y * gain;
     }
 
     /**
