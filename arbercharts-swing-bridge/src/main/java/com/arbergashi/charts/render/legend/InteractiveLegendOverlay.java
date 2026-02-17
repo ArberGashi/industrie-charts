@@ -194,7 +194,7 @@ public final class InteractiveLegendOverlay extends JComponent {
 
             float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.86f);
             float baseSize = ChartScale.font((base != null) ? base.getSize2D() : 11f);
-            Font font = base.deriveFont(Font.PLAIN, Math.max(8f, baseSize * fontScale));
+            Font font = base.deriveFont(Font.PLAIN, Math.max(10f, baseSize * fontScale));
             Font bold = font.deriveFont(Font.PLAIN);
 
             g2.setFont(font);
@@ -381,7 +381,7 @@ public final class InteractiveLegendOverlay extends JComponent {
 
     private void renderPillLegend(Graphics2D g2, List<LegendSeriesRow> rows, Font font, FontMetrics fm) {
         float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.82f);
-        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(8f, font.getSize2D() * fontScale));
+        Font baseFont = font.deriveFont(Font.PLAIN, Math.max(10f, font.getSize2D() * fontScale));
         g2.setFont(baseFont);
         FontMetrics metrics = g2.getFontMetrics();
 

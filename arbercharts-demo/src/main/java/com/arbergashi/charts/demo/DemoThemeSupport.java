@@ -63,7 +63,7 @@ final class DemoThemeSupport {
         }
 
         Font interFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getBaseFont();
-        UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, 11f));
+        UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, 12.5f));
         UIManager.put("defaultFont", interFont);
 
         return theme;

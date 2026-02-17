@@ -1015,11 +1015,15 @@ public class ArberChartPanel extends JPanel {
         // Use Inter font from ChartFonts for professional axis labels (ZERO-GC cached)
         com.arbergashi.charts.platform.swing.util.ChartFonts.initialize();
 
-        // Professional axis font sizing - compact for HiDPI/Retina
-        float baseAxisSize = 6.0f;
+        // Professional axis font sizing with readable baseline for production dashboards.
+        float baseAxisSize = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.baseSize", 10.5f);
+        if (baseAxisSize < 8.0f || baseAxisSize > 22.0f) {
+            baseAxisSize = 10.5f;
+        }
         float axisScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.fontScale", 1.0f);
         if (axisScale < 0.3f || axisScale > 3.0f) axisScale = 1.0f;
         float axisSize = ChartScale.font(baseAxisSize * axisScale);
+        axisSize = Math.max(10.0f, axisSize);
 
         Font axisFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getAxisFont(axisSize);
         g2.setFont(axisFont);
