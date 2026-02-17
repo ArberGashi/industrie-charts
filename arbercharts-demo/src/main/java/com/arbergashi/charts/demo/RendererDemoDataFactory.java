@@ -45,6 +45,7 @@ import java.util.Set;
  * @since 2026-01-01
  */
 public final class RendererDemoDataFactory {
+    private static final ThreadLocal<Integer> RENDERER_SEED = ThreadLocal.withInitial(() -> 0);
     private static final Set<String> FLOW_RENDERERS = Set.of(
             "AlluvialRenderer",
             "NetworkRenderer",
@@ -97,6 +98,7 @@ public final class RendererDemoDataFactory {
     }
 
     static ChartModel build(String category, String className) {
+        RENDERER_SEED.set(stableSeed(className));
         String simple = simpleName(className);
         if (FLOW_RENDERERS.contains(simple)) {
             return flowModel();
@@ -158,22 +160,29 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel standardModel(String name, int index, int total) {
         DefaultChartModel model = new DefaultChartModel(name);
+        int seed = RENDERER_SEED.get();
         int points = 280;
         double offset = (index - (total - 1) * 0.5) * 15.0;
-        double phase = index * Math.PI / 3;
-        double amplitude = 34 - index * 6;
+        double phase = index * Math.PI / 3 + seededRange(seed, 0.0, Math.PI / 8, 1);
+        double amplitude = 30 + seededRange(seed, 0.0, 10.0, 2) - index * 5.5;
 
         for (int i = 0; i < points; i++) {
             double x = i;
-            double trend = i < 110 ? i * 0.09 : (i < 210 ? 9.9 - (i - 110) * 0.06 : 3.9 + (i - 210) * 0.08);
+            double trendStrength = 0.08 + seededRange(seed, 0.0, 0.03, 3);
+            double trend = i < 110 ? i * trendStrength
+                    : (i < 210 ? 110 * trendStrength - (i - 110) * (0.05 + seededRange(seed, 0.0, 0.02, 4))
+                    : 110 * trendStrength - 100 * (0.05 + seededRange(seed, 0.0, 0.02, 4)) + (i - 210) * (0.06 + seededRange(seed, 0.0, 0.03, 5)));
             double y = Math.sin(i * 0.05 + phase) * amplitude
                     + Math.sin(i * 0.018 + phase) * (amplitude * 0.42)
                     + trend
                     + offset;
-            if (i == 84 || i == 192) {
+            int eventA = 72 + seededInt(seed, 0, 24, 6);
+            int eventB = 176 + seededInt(seed, 0, 28, 7);
+            int eventC = 136 + seededInt(seed, 0, 22, 8);
+            if (i == eventA || i == eventB) {
                 y += 14.0;
             }
-            if (i == 148) {
+            if (i == eventC) {
                 y -= 11.0;
             }
 
@@ -182,7 +191,7 @@ public final class RendererDemoDataFactory {
             double max = y + bandWidth;
             double weight = Math.abs(y - offset) * 0.6 + 8.0;
 
-            String label = (i == 84) ? "Event A" : (i == 148) ? "Correction" : (i == 192) ? "Event B" : null;
+            String label = (i == eventA) ? "Event A" : (i == eventC) ? "Correction" : (i == eventB) ? "Event B" : null;
             model.setPoint(x, y, min, max, weight, label);
         }
         return model;
@@ -190,8 +199,16 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel circularModel() {
         DefaultChartModel model = new DefaultChartModel("Asset Allocation");
+        int seed = RENDERER_SEED.get();
         String[] labels = {"US Equities", "Int'l Equities", "Fixed Income", "Real Estate", "Commodities", "Cash"};
-        double[] weights = {35, 20, 25, 10, 6, 4};
+        double[] weights = {
+                30 + seededRange(seed, 0, 8, 11),
+                17 + seededRange(seed, 0, 6, 12),
+                20 + seededRange(seed, 0, 8, 13),
+                8 + seededRange(seed, 0, 5, 14),
+                4 + seededRange(seed, 0, 4, 15),
+                3 + seededRange(seed, 0, 3, 16)
+        };
         for (int i = 0; i < labels.length; i++) {
             double w = weights[i];
             model.setPoint(i, w, 0.0, w, w, labels[i]);
@@ -201,10 +218,11 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel linkLabelModel() {
         DefaultChartModel model = new DefaultChartModel("Dependency Links");
+        int seed = RENDERER_SEED.get();
         String[] pairs = {"Ingest:Validate", "Validate:Risk", "Risk:Route", "Route:Execute", "Execute:Settle", "Settle:Archive"};
         double[] weights = {24, 21, 17, 16, 13, 9};
         for (int i = 0; i < pairs.length; i++) {
-            double w = weights[i % weights.length];
+            double w = weights[i % weights.length] + seededRange(seed, -3.0, 3.0, 20 + i);
             model.setPoint(i, w, 0.0, w, w, pairs[i]);
         }
         return model;
@@ -255,10 +273,11 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel distributionModel() {
         DefaultChartModel model = new DefaultChartModel("Distribution");
+        int seed = RENDERER_SEED.get();
         int points = 220;
         for (int i = 0; i < points; i++) {
-            double clusterA = Math.sin(i * 0.11) * 8.0 + 16.0;
-            double clusterB = Math.cos(i * 0.13) * 7.0 - 12.0;
+            double clusterA = Math.sin(i * (0.10 + seededRange(seed, 0.0, 0.03, 30))) * 8.0 + 16.0;
+            double clusterB = Math.cos(i * (0.12 + seededRange(seed, 0.0, 0.03, 31))) * 7.0 - 12.0;
             double mixing = (i % 5 < 3) ? clusterA : clusterB;
             double sample = mixing + Math.sin(i * 0.37) * 2.4 + Math.cos(i * 0.09) * 1.8;
             double x = sample;
@@ -273,10 +292,11 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel smithModel() {
         DefaultChartModel model = new DefaultChartModel("Smith");
+        int seed = RENDERER_SEED.get();
         int points = 96;
         for (int i = 0; i < points; i++) {
             double t = i * (Math.PI * 2.0 / points);
-            double radius = 0.65 + 0.25 * Math.sin(i * 0.17);
+            double radius = 0.65 + 0.25 * Math.sin(i * (0.15 + seededRange(seed, 0.0, 0.04, 40)));
             double x = Math.cos(t) * radius;
             double y = Math.sin(t) * radius;
             model.setPoint(x, y, y - 0.02, y + 0.02, radius, null);
@@ -286,11 +306,15 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel correlationModel() {
         DefaultChartModel model = new DefaultChartModel("Moving Correlation");
+        int seed = RENDERER_SEED.get();
         int points = 240;
         for (int i = 0; i < points; i++) {
             double x = i;
-            double windowShift = (i < 110) ? 14.0 : (i < 175 ? -8.0 : 9.0);
-            double y = Math.sin(i * 0.05) * 21 + Math.cos(i * 0.018) * 11 + windowShift;
+            int cutA = 96 + seededInt(seed, 0, 28, 50);
+            int cutB = 160 + seededInt(seed, 0, 28, 51);
+            double windowShift = (i < cutA) ? 14.0 : (i < cutB ? -8.0 : 9.0);
+            double y = Math.sin(i * (0.045 + seededRange(seed, 0.0, 0.015, 52))) * 21
+                    + Math.cos(i * (0.016 + seededRange(seed, 0.0, 0.01, 53))) * 11 + windowShift;
             double weight = y * 0.48 + Math.cos(i * 0.11) * 5;
             double min = y - 6;
             double max = y + 6;
@@ -301,13 +325,20 @@ public final class RendererDemoDataFactory {
 
     private static DefaultFinancialChartModel financialModel() {
         DefaultFinancialChartModel model = new DefaultFinancialChartModel("AAPL - Daily");
+        int seed = RENDERER_SEED.get();
         double price = 185.50;
         int points = 160;
 
         for (int i = 0; i < points; i++) {
-            double regime = i < 52 ? 0.08 : (i < 104 ? -0.05 : 0.11);
-            double cyclical = Math.sin(i * 0.16) * 1.45 + Math.cos(i * 0.07) * 0.95;
-            double event = (i == 33) ? 5.8 : (i == 87 ? -7.2 : (i == 129 ? 6.3 : 0.0));
+            int cutA = 44 + seededInt(seed, 0, 16, 60);
+            int cutB = 94 + seededInt(seed, 0, 18, 61);
+            int evtA = 24 + seededInt(seed, 0, 18, 62);
+            int evtB = 72 + seededInt(seed, 0, 22, 63);
+            int evtC = 118 + seededInt(seed, 0, 24, 64);
+            double regime = i < cutA ? 0.08 : (i < cutB ? -0.05 : 0.11);
+            double cyclical = Math.sin(i * (0.14 + seededRange(seed, 0.0, 0.03, 65))) * 1.45
+                    + Math.cos(i * (0.06 + seededRange(seed, 0.0, 0.02, 66))) * 0.95;
+            double event = (i == evtA) ? 5.8 : (i == evtB ? -7.2 : (i == evtC ? 6.3 : 0.0));
             double change = regime + cyclical + event;
 
             double open = price;
@@ -324,7 +355,7 @@ public final class RendererDemoDataFactory {
             double eventVolume = Math.abs(event) * 2_100_000;
             double volume = baseVolume * volumeMultiplier * cycleVolume + eventVolume;
 
-            String label = (i == 33) ? "Earnings +" : (i == 87) ? "Guidance -" : (i == 129) ? "Upgrade" : null;
+            String label = (i == evtA) ? "Earnings +" : (i == evtB) ? "Guidance -" : (i == evtC) ? "Upgrade" : null;
             model.setOHLC(i, open, high, low, close, volume, label);
             price = close;
         }
@@ -333,6 +364,7 @@ public final class RendererDemoDataFactory {
 
     private static DefaultStatisticalChartModel statisticalModel() {
         DefaultStatisticalChartModel model = new DefaultStatisticalChartModel("Quarterly Returns (%)");
+        int seed = RENDERER_SEED.get();
         String[] quarters = {"Q1'24", "Q2'24", "Q3'24", "Q4'24", "Q1'25", "Q2'25", "Q3'25", "Q4'25"};
 
         // Realistic quarterly return distributions
@@ -349,13 +381,14 @@ public final class RendererDemoDataFactory {
 
         for (int i = 0; i < quarters.length; i++) {
             double[] d = data[i];
-            // median, q1, q3, min, max
-            model.setBoxPlot(i, d[0], d[1], d[2], d[3], d[4], quarters[i]);
+            double shift = seededRange(seed, -0.8, 0.8, 80 + i);
+            model.setBoxPlot(i, d[0] + shift, d[1] + shift, d[2] + shift, d[3] + shift, d[4] + shift, quarters[i]);
         }
         return model;
     }
 
     private static CircularFastMedicalModel medicalModel() {
+        int seed = RENDERER_SEED.get();
         int sampleRate = 250; // 250 Hz - standard ECG
         double duration = 6.0; // 6 seconds
         int points = (int) (sampleRate * duration);
@@ -368,10 +401,10 @@ public final class RendererDemoDataFactory {
             double t = i / (double) sampleRate;
 
             // Lead I - realistic ECG morphology
-            double lead1 = generateECGBeat(t, rrInterval, 1.0);
+            double lead1 = generateECGBeat(t, rrInterval, 0.95 + seededRange(seed, 0.0, 0.15, 90));
 
             // Lead II - similar but slightly different amplitude
-            double lead2 = generateECGBeat(t + 0.02, rrInterval, 1.2);
+            double lead2 = generateECGBeat(t + (0.015 + seededRange(seed, 0.0, 0.01, 91)), rrInterval, 1.1 + seededRange(seed, 0.0, 0.2, 92));
 
             // Lead III - computed as Lead II - Lead I (Einthoven)
             double lead3 = lead2 - lead1;
@@ -420,6 +453,7 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultFlowChartModel flowModel() {
+        int seed = RENDERER_SEED.get();
         List<DefaultFlowChartModel.DefaultNode> nodes = List.of(
                 new DefaultFlowChartModel.DefaultNode("orders", "Orders"),
                 new DefaultFlowChartModel.DefaultNode("validation", "Validation"),
@@ -430,36 +464,38 @@ public final class RendererDemoDataFactory {
                 new DefaultFlowChartModel.DefaultNode("rejected", "Rejected")
         );
         List<DefaultFlowChartModel.DefaultLink> links = List.of(
-                new DefaultFlowChartModel.DefaultLink("orders", "validation", 100),
-                new DefaultFlowChartModel.DefaultLink("validation", "risk", 95),
-                new DefaultFlowChartModel.DefaultLink("validation", "rejected", 5),
-                new DefaultFlowChartModel.DefaultLink("risk", "routing", 88),
-                new DefaultFlowChartModel.DefaultLink("risk", "rejected", 7),
-                new DefaultFlowChartModel.DefaultLink("routing", "exchange", 88),
-                new DefaultFlowChartModel.DefaultLink("exchange", "filled", 82),
-                new DefaultFlowChartModel.DefaultLink("exchange", "rejected", 6)
+                new DefaultFlowChartModel.DefaultLink("orders", "validation", 94 + seededInt(seed, 0, 12, 100)),
+                new DefaultFlowChartModel.DefaultLink("validation", "risk", 88 + seededInt(seed, 0, 10, 101)),
+                new DefaultFlowChartModel.DefaultLink("validation", "rejected", 3 + seededInt(seed, 0, 4, 102)),
+                new DefaultFlowChartModel.DefaultLink("risk", "routing", 80 + seededInt(seed, 0, 14, 103)),
+                new DefaultFlowChartModel.DefaultLink("risk", "rejected", 4 + seededInt(seed, 0, 5, 104)),
+                new DefaultFlowChartModel.DefaultLink("routing", "exchange", 79 + seededInt(seed, 0, 14, 105)),
+                new DefaultFlowChartModel.DefaultLink("exchange", "filled", 74 + seededInt(seed, 0, 12, 106)),
+                new DefaultFlowChartModel.DefaultLink("exchange", "rejected", 4 + seededInt(seed, 0, 5, 107))
         );
         return new DefaultFlowChartModel(nodes, links).setName("Order Flow");
     }
 
     private static DefaultMatrixChartModel matrixModel() {
+        int seed = RENDERER_SEED.get();
         // Correlation matrix between asset classes
         double[][] matrix = {
-                {1.00, 0.85, 0.72, 0.45, 0.30},  // US Equities
-                {0.85, 1.00, 0.68, 0.52, 0.35},  // Int'l Equities
-                {0.72, 0.68, 1.00, 0.40, 0.25},  // Emerging Markets
-                {0.45, 0.52, 0.40, 1.00, 0.60},  // Commodities
-                {0.30, 0.35, 0.25, 0.60, 1.00}   // Fixed Income
+                {1.00, 0.78 + seededRange(seed, -0.06, 0.06, 110), 0.66 + seededRange(seed, -0.06, 0.06, 111), 0.42 + seededRange(seed, -0.06, 0.06, 112), 0.28 + seededRange(seed, -0.06, 0.06, 113)},
+                {0.78 + seededRange(seed, -0.06, 0.06, 114), 1.00, 0.62 + seededRange(seed, -0.06, 0.06, 115), 0.46 + seededRange(seed, -0.06, 0.06, 116), 0.31 + seededRange(seed, -0.06, 0.06, 117)},
+                {0.66 + seededRange(seed, -0.06, 0.06, 118), 0.62 + seededRange(seed, -0.06, 0.06, 119), 1.00, 0.36 + seededRange(seed, -0.06, 0.06, 120), 0.21 + seededRange(seed, -0.06, 0.06, 121)},
+                {0.42 + seededRange(seed, -0.06, 0.06, 122), 0.46 + seededRange(seed, -0.06, 0.06, 123), 0.36 + seededRange(seed, -0.06, 0.06, 124), 1.00, 0.55 + seededRange(seed, -0.06, 0.06, 125)},
+                {0.28 + seededRange(seed, -0.06, 0.06, 126), 0.31 + seededRange(seed, -0.06, 0.06, 127), 0.21 + seededRange(seed, -0.06, 0.06, 128), 0.55 + seededRange(seed, -0.06, 0.06, 129), 1.00}
         };
         List<String> labels = List.of("US Eq", "Int'l Eq", "EM", "Cmdty", "Bonds");
         return new DefaultMatrixChartModel(matrix, labels).setName("Correlation Matrix");
     }
 
     private static DefaultTernaryChartModel ternaryModel() {
+        int seed = RENDERER_SEED.get();
         List<TernaryChartModel.TernaryPoint> points = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
-            double a = 20 + (i % 6) * 3;
-            double b = 50 + Math.sin(i * 0.4) * 10;
+            double a = 18 + (i % 6) * (2.6 + seededRange(seed, 0.0, 0.6, 140));
+            double b = 50 + Math.sin(i * (0.36 + seededRange(seed, 0.0, 0.08, 141))) * 10;
             double c = 100 - a - b;
             if (c < 5) c = 5;
             double scale = 100.0 / (a + b + c);
@@ -469,9 +505,10 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultMultiDimensionalChartModel multiDimensionalModel() {
+        int seed = RENDERER_SEED.get();
         List<double[]> data = new ArrayList<>();
         for (int i = 0; i < 40; i++) {
-            double base = 50 + Math.sin(i * 0.2) * 10;
+            double base = 48 + Math.sin(i * (0.17 + seededRange(seed, 0.0, 0.05, 150))) * 10;
             data.add(new double[]{
                     base + Math.cos(i * 0.1) * 12,
                     base + Math.sin(i * 0.12) * 9,
@@ -484,32 +521,33 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultHierarchicalChartModel hierarchicalModel() {
+        int seed = RENDERER_SEED.get();
         DefaultHierarchicalChartModel.DefaultNode root = new DefaultHierarchicalChartModel.DefaultNode("Global Portfolio", 0);
 
         // Equities
         DefaultHierarchicalChartModel.DefaultNode equities = new DefaultHierarchicalChartModel.DefaultNode("Equities", 0);
         DefaultHierarchicalChartModel.DefaultNode usEq = new DefaultHierarchicalChartModel.DefaultNode("US", 0);
-        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Large Cap", 25));
-        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Mid Cap", 8));
-        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Small Cap", 5));
+        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Large Cap", 22 + seededInt(seed, 0, 6, 160)));
+        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Mid Cap", 6 + seededInt(seed, 0, 4, 161)));
+        usEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Small Cap", 4 + seededInt(seed, 0, 3, 162)));
         equities.setChild(usEq);
         DefaultHierarchicalChartModel.DefaultNode intlEq = new DefaultHierarchicalChartModel.DefaultNode("International", 0);
-        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Europe", 10));
-        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Asia Pacific", 8));
-        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Emerging", 6));
+        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Europe", 8 + seededInt(seed, 0, 4, 163)));
+        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Asia Pacific", 7 + seededInt(seed, 0, 4, 164)));
+        intlEq.setChild(new DefaultHierarchicalChartModel.DefaultNode("Emerging", 5 + seededInt(seed, 0, 4, 165)));
         equities.setChild(intlEq);
 
         // Fixed Income
         DefaultHierarchicalChartModel.DefaultNode bonds = new DefaultHierarchicalChartModel.DefaultNode("Fixed Income", 0);
-        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("Government", 12));
-        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("Corporate", 10));
-        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("High Yield", 4));
+        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("Government", 10 + seededInt(seed, 0, 4, 166)));
+        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("Corporate", 9 + seededInt(seed, 0, 4, 167)));
+        bonds.setChild(new DefaultHierarchicalChartModel.DefaultNode("High Yield", 3 + seededInt(seed, 0, 3, 168)));
 
         // Alternatives
         DefaultHierarchicalChartModel.DefaultNode alts = new DefaultHierarchicalChartModel.DefaultNode("Alternatives", 0);
-        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Real Estate", 6));
-        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Commodities", 4));
-        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Cash", 2));
+        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Real Estate", 4 + seededInt(seed, 0, 3, 169)));
+        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Commodities", 3 + seededInt(seed, 0, 2, 170)));
+        alts.setChild(new DefaultHierarchicalChartModel.DefaultNode("Cash", 1 + seededInt(seed, 0, 2, 171)));
 
         root.setChild(equities);
         root.setChild(bonds);
@@ -521,5 +559,23 @@ public final class RendererDemoDataFactory {
     private static String simpleName(String className) {
         int idx = className.lastIndexOf('.');
         return idx >= 0 ? className.substring(idx + 1) : className;
+    }
+
+    private static int stableSeed(String className) {
+        if (className == null || className.isBlank()) {
+            return 1;
+        }
+        return Math.abs(className.hashCode()) + 1;
+    }
+
+    private static int seededInt(int seed, int min, int max, int salt) {
+        int span = Math.max(1, (max - min) + 1);
+        int value = Math.abs((seed * 31) ^ (salt * 131)) % span;
+        return min + value;
+    }
+
+    private static double seededRange(int seed, double min, double max, int salt) {
+        double n = (Math.abs((seed * 31) ^ (salt * 131)) % 10000) / 10000.0;
+        return min + (max - min) * n;
     }
 }
