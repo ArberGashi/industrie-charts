@@ -524,10 +524,38 @@ public final class DemoApplication {
         Color muted = palette.muted();
 
         JDialog dialog = new JDialog(frame, "About " + APP_NAME, true);
+        dialog.setUndecorated(true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setLayout(new BorderLayout());
         dialog.setResizable(false);
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border(), 1));
+
+        JPanel titlebar = new JPanel(new BorderLayout());
+        titlebar.setBackground(palette.windowBackground());
+        titlebar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
+        titlebar.setPreferredSize(new Dimension(640, 42));
+
+        JPanel titleLeft = new JPanel();
+        titleLeft.setOpaque(false);
+        titleLeft.setLayout(new BoxLayout(titleLeft, BoxLayout.X_AXIS));
+        titleLeft.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 8));
+        JLabel title = new JLabel("About " + APP_NAME);
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
+        titleLeft.add(title);
+
+        JPanel titleRight = new JPanel();
+        titleRight.setOpaque(false);
+        titleRight.setLayout(new BoxLayout(titleRight, BoxLayout.X_AXIS));
+        titleRight.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 8));
+        JButton closeButton = createTitlebarIconButton(
+                loadTablerOutlineIcon("x.svg", 16, UIManager.getIcon("InternalFrame.closeIcon"), palette.muted()));
+        closeButton.setToolTipText("Close");
+        closeButton.addActionListener(evt -> dialog.dispose());
+        titleRight.add(closeButton);
+
+        titlebar.add(titleLeft, BorderLayout.WEST);
+        titlebar.add(titleRight, BorderLayout.EAST);
+        installDialogWindowGestures(dialog, titlebar);
 
         JPanel root = new JPanel();
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
@@ -550,9 +578,9 @@ public final class DemoApplication {
         heroText.setOpaque(false);
         heroText.setLayout(new BoxLayout(heroText, BoxLayout.Y_AXIS));
 
-        JLabel title = new JLabel(APP_NAME);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel appTitle = new JLabel(APP_NAME);
+        appTitle.setFont(appTitle.getFont().deriveFont(Font.BOLD, 18f));
+        appTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel subtitle = new JLabel("Enterprise charting demo for production-grade Swing applications");
         subtitle.setForeground(muted);
@@ -562,7 +590,7 @@ public final class DemoApplication {
         version.setForeground(muted);
         version.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        heroText.add(title);
+        heroText.add(appTitle);
         heroText.add(Box.createVerticalStrut(4));
         heroText.add(subtitle);
         heroText.add(Box.createVerticalStrut(6));
@@ -601,10 +629,41 @@ public final class DemoApplication {
         root.add(details);
         root.add(footer);
 
+        dialog.add(titlebar, BorderLayout.NORTH);
         dialog.add(root, BorderLayout.CENTER);
         dialog.setSize(640, 340);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
+    }
+
+    private static void installDialogWindowGestures(JDialog dialog, JPanel header) {
+        MouseAdapter handler = new MouseAdapter() {
+            private Point dragOffset;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) {
+                    return;
+                }
+                dragOffset = e.getPoint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                dragOffset = null;
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragOffset == null || !SwingUtilities.isLeftMouseButton(e)) {
+                    return;
+                }
+                Point screen = e.getLocationOnScreen();
+                dialog.setLocation(screen.x - dragOffset.x, screen.y - dragOffset.y);
+            }
+        };
+        header.addMouseListener(handler);
+        header.addMouseMotionListener(handler);
     }
 
     private static JPanel createAboutRow(String key, String value, Color muted) {
