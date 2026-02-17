@@ -25,6 +25,7 @@ public final class AnomalyGapRenderer extends BaseRenderer {
     private static final String KEY_CRIT_ALPHA = "Chart.predictive.anomaly.criticalAlpha";
     private static final String KEY_SIGMA = "Chart.predictive.anomaly.sigmaFactor";
     private static final String KEY_TOLERANCE = "Chart.predictive.delta.tolerance";
+    private static final String KEY_FALLBACK_WINDOW = "Chart.predictive.anomaly.fallbackWindowPoints";
 
     private static final ArberColor DEFAULT_WARN = ColorRegistry.of(251, 191, 36, 255);
     private static final ArberColor DEFAULT_CRIT = ColorRegistry.of(248, 113, 113, 255);
@@ -61,10 +62,11 @@ public final class AnomalyGapRenderer extends BaseRenderer {
         if (end < 2) return;
         int window = Math.max(16, ChartAssets.getInt(KEY_WINDOW, 96));
         int start = Math.max(1, end - window);
+        int fallbackWindow = Math.max(8, ChartAssets.getInt(KEY_FALLBACK_WINDOW, 24));
 
         double sigma = shadow.residualStd();
         double sigmaFactor = Math.max(0.5, ChartAssets.getFloat(KEY_SIGMA, 2.0f));
-        double sigmaLimit = (sigma > 0.0 && Double.isFinite(sigma)) ? sigma * sigmaFactor : Double.POSITIVE_INFINITY;
+        double sigmaLimit = (sigma > 0.0 && Double.isFinite(sigma)) ? sigma * sigmaFactor : Double.NaN;
 
         double tolFactor = Math.max(0.05, ChartAssets.getFloat(KEY_TOLERANCE, 0.35f));
 
@@ -87,12 +89,18 @@ public final class AnomalyGapRenderer extends BaseRenderer {
 
             double p0 = shadow.predictedForX(x0);
             double p1 = shadow.predictedForX(x1);
+            if (!Double.isFinite(p0)) {
+                p0 = fallbackPredictAt(model, i - 1, fallbackWindow);
+            }
+            if (!Double.isFinite(p1)) {
+                p1 = fallbackPredictAt(model, i, fallbackWindow);
+            }
             if (!Double.isFinite(p0) || !Double.isFinite(p1)) continue;
 
             double dx = Math.abs(x1 - x0);
             if (!Double.isFinite(dx) || dx < 1e-9) dx = 1.0;
             double warnLimit = dx * tolFactor;
-            double critLimit = Math.max(warnLimit, sigmaLimit);
+            double critLimit = Double.isFinite(sigmaLimit) ? Math.max(warnLimit, sigmaLimit) : (warnLimit * 2.2);
 
             double delta = Math.abs(y1 - p1);
             AnomalyLevel level = (delta >= critLimit) ? AnomalyLevel.CRITICAL
@@ -142,6 +150,53 @@ public final class AnomalyGapRenderer extends BaseRenderer {
             if (Double.isFinite(model.getX(i)) && Double.isFinite(model.getY(i))) return i;
         }
         return -1;
+    }
+
+    private double fallbackPredictAt(ChartModel model, int index, int lookback) {
+        if (model == null || index <= 1 || index >= model.getPointCount()) {
+            return Double.NaN;
+        }
+        double xTarget = model.getX(index);
+        if (!Double.isFinite(xTarget)) {
+            return Double.NaN;
+        }
+
+        int end = index - 1;
+        int start = Math.max(0, end - lookback + 1);
+        double sumX = 0.0;
+        double sumY = 0.0;
+        double sumXX = 0.0;
+        double sumXY = 0.0;
+        int n = 0;
+
+        for (int j = start; j <= end; j++) {
+            double x = model.getX(j);
+            double y = model.getY(j);
+            if (!Double.isFinite(x) || !Double.isFinite(y)) {
+                continue;
+            }
+            sumX += x;
+            sumY += y;
+            sumXX += x * x;
+            sumXY += x * y;
+            n++;
+        }
+
+        if (n < 2) {
+            double yPrev = model.getY(end);
+            return Double.isFinite(yPrev) ? yPrev : Double.NaN;
+        }
+
+        double denom = (n * sumXX) - (sumX * sumX);
+        if (!Double.isFinite(denom) || Math.abs(denom) < 1e-12) {
+            double yMean = sumY / n;
+            return Double.isFinite(yMean) ? yMean : Double.NaN;
+        }
+
+        double slope = ((n * sumXY) - (sumX * sumY)) / denom;
+        double intercept = (sumY - (slope * sumX)) / n;
+        double predicted = (slope * xTarget) + intercept;
+        return Double.isFinite(predicted) ? predicted : Double.NaN;
     }
 
     private ArberColor getResolvedColor(String key, ArberColor fallback, float alpha) {
