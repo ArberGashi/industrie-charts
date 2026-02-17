@@ -6,7 +6,6 @@ import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
 import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
 import com.arbergashi.charts.render.analysis.VectorFieldRenderer;
-import com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer;
 import com.arbergashi.charts.render.financial.PredictiveCandleRenderer;
 import com.arbergashi.charts.render.forensic.PlaybackStatusRenderer;
 import com.arbergashi.charts.render.grid.MedicalGridLayer;
@@ -1404,7 +1403,7 @@ public final class DemoApplication {
                         return true;
                     });
             case "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer" ->
-                    new CircularLatencyOverlayRenderer(sampleLatencyTracker());
+                    new CircularLatencyOverlayRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer" ->
                     new PlaybackStatusRenderer(new DemoPlaybackController());
             case "com.arbergashi.charts.render.common.PerformanceAuditRenderer" ->
