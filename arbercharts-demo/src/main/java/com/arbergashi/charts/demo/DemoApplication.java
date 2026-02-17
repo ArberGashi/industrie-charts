@@ -1,7 +1,9 @@
 package com.arbergashi.charts.demo;
 
+import com.arbergashi.charts.api.BasicChartTheme;
 import com.arbergashi.charts.api.ChartTheme;
-import com.arbergashi.charts.api.ChartThemes;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberFont;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
@@ -16,6 +18,7 @@ import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.LatencyTracker;
+import com.arbergashi.charts.util.ColorRegistry;
 import com.arbergashi.charts.platform.export.ChartExportService;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
@@ -1216,10 +1219,7 @@ public final class DemoApplication {
     }
 
     private ChartTheme getActiveTheme() {
-        if ("light".equals(currentThemeName)) {
-            return ChartThemes.getLightTheme();
-        }
-        return ChartThemes.getDarkTheme();
+        return buildChartThemeFromUi();
     }
 
 
@@ -1414,62 +1414,8 @@ public final class DemoApplication {
     }
 
     private static void configureAssets() {
-        // Performance & audit
-        ChartAssets.setProperty("Chart.performance.audit.enabled", "true");
-        ChartAssets.setProperty("Chart.circular.performance.enabled", "true");
-        ChartAssets.setProperty("Chart.playback.status.enabled", "true");
-        ChartAssets.setProperty("Chart.calibration.enabled", "true");
-        ChartAssets.setProperty("Chart.calibration.pixelsPerMm", "3.78");
-        ChartAssets.setProperty("Chart.scale.physical.enabled", "true");
-        ChartAssets.setProperty("Chart.scale.pixelsPerMm", "3.78");
-        ChartAssets.setProperty("Chart.audit.enabled", "true");
-
-        // Predictive features
-        ChartAssets.setProperty("Chart.predictive.enabled", "true");
-        ChartAssets.setProperty("Chart.predictive.anomaly.enabled", "true");
-        ChartAssets.setProperty("Chart.predictive.global.lookahead", "28");
-        ChartAssets.setProperty("Chart.predictive.lineAlpha", "0.32");
-
-        // Analysis
-        ChartAssets.setProperty("Chart.analysis.correlation.enabled", "true");
-        ChartAssets.setProperty("Chart.analysis.correlation.window", "128");
-
-        // Crosshair - compact sizing
-        ChartAssets.setProperty("Chart.crosshair.label.fontScale", "0.1");
-        ChartAssets.setProperty("Chart.crosshair.snap", "true");
-        ChartAssets.setProperty("Chart.crosshair.snapDistance", "24");
-
-        // Smith chart
-        ChartAssets.setProperty("Chart.smith.vswr.enabled", "true");
-        ChartAssets.setProperty("Chart.smith.vswr.levels", "1.5,2.0,3.0,5.0");
-
-        // Reference lines
-        ChartAssets.setProperty("chart.render.refline.y", "0");
-        ChartAssets.setProperty("chart.render.refline.x", "120");
-
-        // Axis labels - professional sizing (11pt base * 1.0 scale)
-        ChartAssets.setProperty("Chart.axis.label.bold", "false");
-        ChartAssets.setProperty("Chart.axis.label.fontScale", "1.0");
-
-        // Medical grid - professional settings
-        ChartAssets.setProperty("Chart.medicalGrid.stepXMinor", "0.04");
-        ChartAssets.setProperty("Chart.medicalGrid.stepXMajor", "0.20");
-        ChartAssets.setProperty("Chart.medicalGrid.stepYMinor", "0.10");
-        ChartAssets.setProperty("Chart.medicalGrid.stepYMajor", "0.50");
-        ChartAssets.setProperty("Chart.medicalGrid.minorAlpha", "0.18");
-        ChartAssets.setProperty("Chart.medicalGrid.majorAlpha", "0.50");
-        ChartAssets.setProperty("Chart.medicalGrid.minorStrokeWidth", "0.5");
-        ChartAssets.setProperty("Chart.medicalGrid.majorStrokeWidth", "1.0");
-        ChartAssets.setProperty("Chart.medicalGrid.centerLineAlpha", "0.45");
-        ChartAssets.setProperty("Chart.medicalGrid.centerLineStrokeWidth", "1.2");
-
-        // Legend - improved position
-        ChartAssets.setProperty("Chart.legend.position", "TOP_RIGHT");
-        ChartAssets.setProperty("Chart.legend.fontScale", "1.0");
-
-        // Grid styling
-        ChartAssets.setProperty("Chart.grid.minorAlpha", "0.15");
-        ChartAssets.setProperty("Chart.grid.majorAlpha", "0.35");
+        // Strictly use defaults from resources/themes/charts.properties.
+        ChartAssets.clearCache();
     }
 
     private void rebuildRendererPanelsForTheme() {
@@ -1531,6 +1477,39 @@ public final class DemoApplication {
         );
     }
 
+    private ChartTheme buildChartThemeFromUi() {
+        Color bg = uiColor("Panel.background", "control", new Color(30, 30, 30));
+        Color fg = uiColor("Label.foreground", "textText", new Color(204, 204, 204));
+        Color grid = uiColor("Separator.foreground", "Component.borderColor", new Color(60, 60, 60));
+        Color axis = uiColor("Component.grayForeground", "Label.disabledForeground", new Color(150, 156, 164));
+        Color accent = uiColor("Component.focusColor", "Component.linkColor", new Color(77, 163, 255));
+
+        Color s1 = accent;
+        Color s2 = blend(accent, fg, 0.35f);
+        Color s3 = blend(accent, bg, 0.35f);
+        Color s4 = blend(fg, bg, 0.45f);
+        Color s5 = blend(accent, s4, 0.45f);
+
+        ArberColor[] series = new ArberColor[]{
+                toArber(s1), toArber(s2), toArber(s3), toArber(s4), toArber(s5)
+        };
+
+        Font base = UIManager.getFont("defaultFont");
+        if (base == null) {
+            base = new Font("SansSerif", Font.PLAIN, 11);
+        }
+
+        return BasicChartTheme.builder()
+                .setBackground(toArber(bg))
+                .setForeground(toArber(fg))
+                .setGridColor(toArber(grid))
+                .setAxisLabelColor(toArber(axis))
+                .setAccentColor(toArber(accent))
+                .setSeriesColors(series)
+                .setBaseFont(new ArberFont(base.getName(), base.getStyle(), base.getSize2D()))
+                .build();
+    }
+
     private static String normalizeDemoTheme(String themeName) {
         return "light".equalsIgnoreCase(themeName) ? "light" : "dark";
     }
@@ -1545,6 +1524,19 @@ public final class DemoApplication {
     private static Color withAlpha(Color color, int alpha) {
         if (color == null) return null;
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
+    }
+
+    private static Color blend(Color a, Color b, float t) {
+        float clamped = Math.max(0f, Math.min(1f, t));
+        int r = Math.round(a.getRed() * (1f - clamped) + b.getRed() * clamped);
+        int g = Math.round(a.getGreen() * (1f - clamped) + b.getGreen() * clamped);
+        int bl = Math.round(a.getBlue() * (1f - clamped) + b.getBlue() * clamped);
+        int alpha = Math.round(a.getAlpha() * (1f - clamped) + b.getAlpha() * clamped);
+        return new Color(r, g, bl, alpha);
+    }
+
+    private static ArberColor toArber(Color c) {
+        return ColorRegistry.of(c.getRed(), c.getGreen(), c.getBlue(), c.getAlpha());
     }
 
     private record DemoPalette(
