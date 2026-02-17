@@ -818,6 +818,7 @@ public final class DemoApplication {
         applyDemoPalette();
 
         // Update chart themes
+        ChartAssets.clearCache();
         ChartTheme theme = getActiveTheme();
         applyThemeToCharts(detailHost, theme);
         rebuildRendererPanelsForTheme();
