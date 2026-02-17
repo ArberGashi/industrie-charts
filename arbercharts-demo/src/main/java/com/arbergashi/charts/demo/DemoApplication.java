@@ -2043,10 +2043,13 @@ public final class DemoApplication {
                     new AdaptiveFunctionRenderer(x -> Math.sin(x * 0.12) * 32 + Math.cos(x * 0.05) * 18);
             case "com.arbergashi.charts.render.analysis.VectorFieldRenderer" ->
                     new VectorFieldRenderer((x, y, out) -> {
-                        out[0] = Math.cos(x * 0.08) * 0.8;
-                        out[1] = Math.sin(y * 0.08) * 0.8;
+                        double t = System.nanoTime() * 1.0e-9;
+                        double pulse = 0.75 + 0.25 * Math.sin(t * 0.9);
+                        // Time-varying swirl field for a clearly animated demo presentation.
+                        out[0] = (Math.cos(y * 0.24 + t * 1.1) + Math.sin(x * 0.13 - t * 0.7)) * pulse;
+                        out[1] = (Math.sin(x * 0.24 - t * 0.95) - Math.cos(y * 0.13 + t * 0.8)) * pulse;
                         return true;
-                    });
+                    }).setGridResolution(16);
             case "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer" ->
                     new CircularLatencyOverlayRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer" ->
