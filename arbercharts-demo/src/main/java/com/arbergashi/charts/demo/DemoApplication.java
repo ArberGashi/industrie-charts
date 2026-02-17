@@ -15,6 +15,7 @@ import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.LatencyTracker;
 import com.arbergashi.charts.platform.export.ChartExportService;
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import javax.swing.BorderFactory;
@@ -49,7 +50,6 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.BorderLayout;
-import java.awt.BasicStroke;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -57,13 +57,12 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -119,6 +118,8 @@ public final class DemoApplication {
 
     /** Copyright notice. */
     private static final String COPYRIGHT = "© 2026 Arber Gashi";
+    private static final String TABLER_OUTLINE_DIR = System.getProperty("user.home")
+            + "/Documents/workspace/tabler-icons-main/icons/outline";
 
     /**
      * Main entry point for the demo application.
@@ -313,12 +314,14 @@ public final class DemoApplication {
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
         right.setBackground(palette.windowBackground());
-        JButton searchEverywhereButton = new JButton("Search Everywhere", new SearchEverywhereIcon(palette.muted()));
+        JButton searchEverywhereButton = new JButton("Search Everywhere",
+                loadTablerOutlineIcon("search.svg", 16, UIManager.getIcon("FileView.fileIcon")));
         searchEverywhereButton.setFont(searchEverywhereButton.getFont().deriveFont(12f));
         searchEverywhereButton.setToolTipText("Search renderer by name (⌘F)");
         searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
 
-        JButton themeSwitchButton = new JButton("Theme Switch", new ThemeSwitchIcon(palette.muted()));
+        JButton themeSwitchButton = new JButton("Theme Switch",
+                loadTablerOutlineIcon("sun-moon.svg", 16, UIManager.getIcon("Tree.expandedIcon")));
         themeSwitchButton.setFont(themeSwitchButton.getFont().deriveFont(12f));
         themeSwitchButton.setToolTipText("Toggle dark/light theme (⌘T)");
         themeSwitchButton.addActionListener(evt -> toggleTheme());
@@ -1357,6 +1360,16 @@ public final class DemoApplication {
     }
 
     private static final class RendererTreeCell extends DefaultTreeCellRenderer {
+        private final Icon folderIcon = loadTablerOutlineIcon("folder.svg", 16, UIManager.getIcon("Tree.closedIcon"));
+        private final Icon folderOpenIcon = loadTablerOutlineIcon("folder-open.svg", 16, UIManager.getIcon("Tree.openIcon"));
+        private final Icon rendererIcon = loadTablerOutlineIcon("chart-line.svg", 16, UIManager.getIcon("Tree.leafIcon"));
+
+        private RendererTreeCell() {
+            setClosedIcon(folderIcon);
+            setOpenIcon(folderOpenIcon);
+            setLeafIcon(rendererIcon);
+        }
+
         @Override
         public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
                                                       boolean leaf, int row, boolean hasFocus) {
@@ -1394,68 +1407,17 @@ public final class DemoApplication {
         }
     }
 
-    private static final class SearchEverywhereIcon implements Icon {
-        private final Color color;
-
-        private SearchEverywhereIcon(Color color) {
-            this.color = color;
-        }
-
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(color);
-                g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawOval(x + 1, y + 1, 9, 9);
-                g2.drawLine(x + 9, y + 9, x + 13, y + 13);
-            } finally {
-                g2.dispose();
+    private static Icon loadTablerOutlineIcon(String fileName, int size, Icon fallback) {
+        try {
+            Path iconPath = Path.of(TABLER_OUTLINE_DIR, fileName);
+            if (Files.isRegularFile(iconPath)) {
+                FlatSVGIcon icon = new FlatSVGIcon(iconPath.toFile());
+                return icon.derive(size, size);
             }
+        } catch (Exception ignored) {
+            // fall through to fallback
         }
-
-        @Override
-        public int getIconWidth() {
-            return 14;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return 14;
-        }
-    }
-
-    private static final class ThemeSwitchIcon implements Icon {
-        private final Color color;
-
-        private ThemeSwitchIcon(Color color) {
-            this.color = color;
-        }
-
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(color);
-                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.drawOval(x + 1, y + 1, 12, 12);
-                g2.fillArc(x + 2, y + 2, 10, 10, 90, 180);
-            } finally {
-                g2.dispose();
-            }
-        }
-
-        @Override
-        public int getIconWidth() {
-            return 14;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return 14;
-        }
+        return fallback;
     }
 
     private static final class DemoPlaybackController implements com.arbergashi.charts.api.forensic.PlaybackController {
