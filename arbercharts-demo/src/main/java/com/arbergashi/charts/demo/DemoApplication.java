@@ -118,6 +118,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 2.0.0
  */
 public final class DemoApplication {
+    private static final int SHOWCASE_ANIMATION_DELAY_MS = 33;
 
     /** Application version. */
     private static final String VERSION = "2.0.0";
@@ -1233,11 +1234,16 @@ public final class DemoApplication {
         }
         String className = entry.className();
         boolean circular = "circular".equals(entry.category());
+        boolean specialized = "specialized".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
 
         if (circular) {
+            panel.setLegend(true);
+            panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+        }
+        if (specialized) {
             panel.setLegend(true);
             panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
         }
@@ -1274,6 +1280,37 @@ public final class DemoApplication {
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
         }
+
+        if ("com.arbergashi.charts.render.specialized.HeatmapRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.HeatmapContourRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.SpectrogramRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.HorizonRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.HorizonChartRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.SparklineRenderer".equals(className)) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(false);
+            y.setRequestedTickCount(8).setShowGrid(false);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+            return;
+        }
+
+        if ("com.arbergashi.charts.render.specialized.SankeyRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.SankeyProRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.AlluvialRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.DependencyWheelRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.ChordFlowRenderer".equals(className)) {
+            panel.setLegend(true);
+            panel.setDockedLegend(com.arbergashi.charts.domain.legend.LegendDockSide.RIGHT);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(4).setShowGrid(false);
+            y.setRequestedTickCount(4).setShowGrid(false);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
     }
 
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
@@ -1303,12 +1340,14 @@ public final class DemoApplication {
             labels[i] = defaultModel.getLabel(i);
         }
 
-        Timer animation = new Timer(42, evt -> {
+        double speed = showcaseAnimationSpeed(className);
+        double amp = showcaseAnimationAmplitude(className);
+        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
             if (!panel.isDisplayable()) {
                 ((Timer) evt.getSource()).stop();
                 return;
             }
-            double phase = (System.nanoTime() * 1.0e-9) * 1.4;
+            double phase = (System.nanoTime() * 1.0e-9) * speed;
             defaultModel.clear();
             for (int i = 0; i < count; i++) {
                 double x0 = i < baseX.length ? baseX[i] : i;
@@ -1324,21 +1363,21 @@ public final class DemoApplication {
                         || className.endsWith("GaugeBandsRenderer")
                         || className.endsWith("SemiDonutRenderer")) {
                     x = x0;
-                    y = (i == 0) ? clamp(y0 + Math.sin(phase * 0.9) * 18.0, 8.0, 96.0) : y0;
+                    y = (i == 0) ? clamp(y0 + Math.sin(phase * 0.9) * (18.0 * amp), 8.0, 96.0) : y0;
                     weight = Math.max(1.0, y);
                 } else if (className.endsWith("PolarRenderer") || className.endsWith("PolarLineRenderer")) {
                     x = x0;
-                    y = Math.max(1.0, y0 * (0.82 + 0.24 * Math.sin(phase + i * 0.55)));
-                    weight = Math.max(1.0, w0 * (0.78 + 0.22 * Math.cos(phase * 0.8 + i * 0.45)));
+                    y = Math.max(1.0, y0 * (0.82 + (0.24 * amp) * Math.sin(phase + i * 0.55)));
+                    weight = Math.max(1.0, w0 * (0.78 + (0.22 * amp) * Math.cos(phase * 0.8 + i * 0.45)));
                 } else if (className.endsWith("PolarAdvancedRenderer") || className.endsWith("RadialStackedRenderer")) {
-                    x = Math.max(0.0, x0 * (0.9 + 0.12 * Math.sin(phase * 0.7 + i * 0.4)));
-                    y = Math.max(1.0, y0 * (0.8 + 0.25 * Math.cos(phase * 0.95 + i * 0.6)));
+                    x = Math.max(0.0, x0 * (0.9 + (0.12 * amp) * Math.sin(phase * 0.7 + i * 0.4)));
+                    y = Math.max(1.0, y0 * (0.8 + (0.25 * amp) * Math.cos(phase * 0.95 + i * 0.6)));
                     weight = Math.max(1.0, w0);
                 } else if (className.endsWith("NightingaleRoseRenderer")
                         || className.endsWith("RadarRenderer")
                         || className.endsWith("RadialBarRenderer")) {
                     x = x0;
-                    y = Math.max(1.0, y0 * (0.78 + 0.28 * Math.sin(phase * 0.9 + i * 0.58)));
+                    y = Math.max(1.0, y0 * (0.78 + (0.28 * amp) * Math.sin(phase * 0.9 + i * 0.58)));
                     weight = Math.max(1.0, y);
                 } else if (specialized) {
                     if (className.endsWith("SankeyRenderer")
@@ -1348,32 +1387,32 @@ public final class DemoApplication {
                             || className.endsWith("ChordFlowRenderer")
                             || className.endsWith("MarimekkoRenderer")) {
                         x = x0;
-                        y = Math.max(1.0, y0 * (0.86 + 0.2 * Math.sin(phase * 0.7 + i * 0.36)));
-                        weight = Math.max(1.0, w0 * (0.84 + 0.2 * Math.cos(phase * 0.65 + i * 0.31)));
+                        y = Math.max(1.0, y0 * (0.86 + (0.2 * amp) * Math.sin(phase * 0.7 + i * 0.36)));
+                        weight = Math.max(1.0, w0 * (0.84 + (0.2 * amp) * Math.cos(phase * 0.65 + i * 0.31)));
                     } else if (className.endsWith("HeatmapRenderer")
                             || className.endsWith("HeatmapContourRenderer")
                             || className.endsWith("SpectrogramRenderer")
                             || className.endsWith("HorizonRenderer")
                             || className.endsWith("HorizonChartRenderer")) {
                         x = x0;
-                        y = Math.max(1.0, y0 + Math.sin(phase * 1.1 + i * 0.22) * (Math.max(2.0, y0 * 0.08)));
+                        y = Math.max(1.0, y0 + Math.sin(phase * 1.1 + i * 0.22) * (Math.max(2.0, y0 * 0.08) * amp));
                         weight = Math.max(1.0, w0);
                     } else if (className.endsWith("SunburstRenderer")
                             || className.endsWith("TreemapRenderer")
                             || className.endsWith("NetworkRenderer")
                             || className.endsWith("DendrogramRenderer")) {
                         x = x0;
-                        y = Math.max(1.0, y0 * (0.9 + 0.16 * Math.sin(phase * 0.55 + i * 0.41)));
-                        weight = Math.max(1.0, w0 * (0.9 + 0.14 * Math.cos(phase * 0.6 + i * 0.29)));
+                        y = Math.max(1.0, y0 * (0.9 + (0.16 * amp) * Math.sin(phase * 0.55 + i * 0.41)));
+                        weight = Math.max(1.0, w0 * (0.9 + (0.14 * amp) * Math.cos(phase * 0.6 + i * 0.29)));
                     } else {
                         x = x0;
-                        y = Math.max(1.0, y0 * (0.83 + 0.22 * Math.sin(phase * 0.9 + i * 0.46)));
-                        weight = Math.max(1.0, w0 * (0.82 + 0.2 * Math.cos(phase * 0.8 + i * 0.38)));
+                        y = Math.max(1.0, y0 * (0.83 + (0.22 * amp) * Math.sin(phase * 0.9 + i * 0.46)));
+                        weight = Math.max(1.0, w0 * (0.82 + (0.2 * amp) * Math.cos(phase * 0.8 + i * 0.38)));
                     }
                 } else {
                     x = x0;
-                    y = Math.max(1.0, y0 * (0.8 + 0.22 * Math.sin(phase * 0.85 + i * 0.52)));
-                    weight = Math.max(1.0, w0 * (0.8 + 0.2 * Math.cos(phase * 0.7 + i * 0.47)));
+                    y = Math.max(1.0, y0 * (0.8 + (0.22 * amp) * Math.sin(phase * 0.85 + i * 0.52)));
+                    weight = Math.max(1.0, w0 * (0.8 + (0.2 * amp) * Math.cos(phase * 0.7 + i * 0.47)));
                 }
 
                 double min = y - Math.max(1.0, y * 0.08);
@@ -1388,6 +1427,24 @@ public final class DemoApplication {
                 animation.stop();
             }
         });
+    }
+
+    private static double showcaseAnimationSpeed(String className) {
+        if (className == null) return 1.4;
+        if (className.contains("Gauge") || className.contains("SemiDonut")) return 1.1;
+        if (className.contains("Heatmap") || className.contains("Spectrogram")) return 0.95;
+        if (className.contains("Sankey") || className.contains("Alluvial") || className.contains("Chord")) return 0.85;
+        if (className.contains("Radar") || className.contains("Polar")) return 1.35;
+        return 1.2;
+    }
+
+    private static double showcaseAnimationAmplitude(String className) {
+        if (className == null) return 1.0;
+        if (className.contains("Gauge") || className.contains("SemiDonut")) return 0.9;
+        if (className.contains("Sankey") || className.contains("Alluvial") || className.contains("Chord")) return 0.7;
+        if (className.contains("Heatmap") || className.contains("Spectrogram")) return 0.65;
+        if (className.contains("Radar") || className.contains("Polar")) return 1.05;
+        return 0.95;
     }
 
     private static double clamp(double value, double min, double max) {
