@@ -61,7 +61,6 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -1048,19 +1047,10 @@ public final class DemoApplication {
         chartHost.setBackground(palette.contentBackground());
         chartHost.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
 
-        // Metadata tiles
-        JPanel meta = new JPanel(new GridLayout(1, 4, 16, 0));
-        meta.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
-        meta.add(infoTile("Category", capitalize(entry.category())));
-        meta.add(infoTile("Theme", capitalize(currentThemeName)));
-        meta.add(infoTile("Vector API", vectorAvailable ? "Enabled" : "Disabled"));
-        meta.add(infoTile("Source", "Catalog"));
-
         chartHost.add(buildChart(entry), BorderLayout.CENTER);
 
         panel.add(header, BorderLayout.NORTH);
         panel.add(chartHost, BorderLayout.CENTER);
-        panel.add(meta, BorderLayout.SOUTH);
         return panel;
     }
 
@@ -1205,25 +1195,6 @@ public final class DemoApplication {
         } catch (Exception ex) {
             return Double.NaN;
         }
-    }
-
-    private JPanel infoTile(String label, String value) {
-        DemoPalette palette = currentPalette();
-        JPanel panel = new JPanel(new BorderLayout(0, 4));
-        panel.setBackground(palette.surfaceBackground());
-        JLabel top = new JLabel(label);
-        top.setForeground(palette.muted());
-        top.setFont(top.getFont().deriveFont(11f));
-        JLabel bottom = new JLabel(value);
-        bottom.setForeground(palette.foreground());
-        bottom.setFont(bottom.getFont().deriveFont(Font.BOLD, 13f));
-        panel.add(top, BorderLayout.NORTH);
-        panel.add(bottom, BorderLayout.CENTER);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(palette.border(), 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12))
-        );
-        return panel;
     }
 
     private void refreshCurrent() {
