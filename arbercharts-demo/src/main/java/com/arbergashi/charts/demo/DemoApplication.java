@@ -529,10 +529,11 @@ public final class DemoApplication {
         dialog.setResizable(false);
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border(), 1));
         configurePlatformDialog(dialog);
+        int topInset = (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) ? 44 : 22;
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(18, 22, 14, 22));
+        content.setBorder(BorderFactory.createEmptyBorder(topInset, 22, 14, 22));
         content.setBackground(palette.surfaceBackground());
 
         JLabel appTitle = new JLabel(APP_NAME);
@@ -587,7 +588,7 @@ public final class DemoApplication {
         content.add(close);
 
         dialog.add(content, BorderLayout.CENTER);
-        dialog.setSize(620, 320);
+        dialog.setSize(620, 338);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
     }
