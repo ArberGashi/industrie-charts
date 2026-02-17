@@ -1400,6 +1400,8 @@ public final class DemoApplication {
                     new PerformanceAuditRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.common.PhysicalScaleRenderer" ->
                     new PhysicalScaleRendererAdapter();
+            case "com.arbergashi.charts.render.specialized.SunburstRenderer" ->
+                    new com.arbergashi.charts.render.circular.SunburstRenderer();
             default -> null;
         };
     }
