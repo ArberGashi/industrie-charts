@@ -51,6 +51,29 @@ public final class RendererDemoDataFactory {
             "NetworkRenderer",
             "SankeyRenderer"
     );
+    private static final Set<String> GAUGE_RENDERERS = Set.of(
+            "GaugeRenderer",
+            "GaugeBandsRenderer"
+    );
+    private static final Set<String> SEMI_DONUT_RENDERERS = Set.of(
+            "SemiDonutRenderer"
+    );
+    private static final Set<String> PIE_DONUT_RENDERERS = Set.of(
+            "PieRenderer",
+            "DonutRenderer"
+    );
+    private static final Set<String> NIGHTINGALE_RENDERERS = Set.of(
+            "NightingaleRoseRenderer"
+    );
+    private static final Set<String> RADIAL_BAR_RENDERERS = Set.of(
+            "RadialBarRenderer"
+    );
+    private static final Set<String> RADIAL_STACKED_RENDERERS = Set.of(
+            "RadialStackedRenderer"
+    );
+    private static final Set<String> CHORD_RENDERERS = Set.of(
+            "ChordDiagramRenderer"
+    );
     private static final Set<String> MATRIX_RENDERERS = Set.of(
             "ChordDiagramRenderer"
     );
@@ -115,6 +138,27 @@ public final class RendererDemoDataFactory {
         String simple = simpleName(className);
         if (FLOW_RENDERERS.contains(simple)) {
             return flowModel();
+        }
+        if (GAUGE_RENDERERS.contains(simple)) {
+            return gaugeModel();
+        }
+        if (SEMI_DONUT_RENDERERS.contains(simple)) {
+            return semiDonutModel();
+        }
+        if (PIE_DONUT_RENDERERS.contains(simple)) {
+            return pieDonutModel();
+        }
+        if (NIGHTINGALE_RENDERERS.contains(simple)) {
+            return nightingaleModel();
+        }
+        if (RADIAL_BAR_RENDERERS.contains(simple)) {
+            return radialBarModel();
+        }
+        if (RADIAL_STACKED_RENDERERS.contains(simple)) {
+            return radialStackedModel();
+        }
+        if (CHORD_RENDERERS.contains(simple)) {
+            return chordFlowMatrixModel();
         }
         if (MATRIX_RENDERERS.contains(simple)) {
             return matrixModel();
@@ -238,6 +282,71 @@ public final class RendererDemoDataFactory {
         for (int i = 0; i < labels.length; i++) {
             double w = weights[i];
             model.setPoint(i, w, 0.0, w, w, labels[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel gaugeModel() {
+        DefaultChartModel model = new DefaultChartModel("Latency SLA");
+        model.setPoint(0, 73.0, 70.0, 76.0, 73.0, "SLA Health");
+        return model;
+    }
+
+    private static DefaultChartModel semiDonutModel() {
+        DefaultChartModel model = new DefaultChartModel("Adoption Progress");
+        model.setPoint(0, 81.0, 78.0, 84.0, 81.0, "Completion");
+        return model;
+    }
+
+    private static DefaultChartModel pieDonutModel() {
+        DefaultChartModel model = new DefaultChartModel("Revenue Mix");
+        int seed = RENDERER_SEED.get();
+        String[] labels = {"Enterprise", "SMB", "Cloud", "On-Prem", "Support", "Training", "Partners"};
+        double[] weights = {34, 19, 16, 12, 8, 6, 5};
+        for (int i = 0; i < labels.length; i++) {
+            double w = weights[i] + seededRange(seed, -2.0, 2.0, 260 + i);
+            w = Math.max(1.0, w);
+            model.setPoint(i, w, 0.0, w, w, labels[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel nightingaleModel() {
+        DefaultChartModel model = new DefaultChartModel("Monthly Incident Load");
+        int seed = RENDERER_SEED.get();
+        String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        for (int i = 0; i < months.length; i++) {
+            double seasonal = 42 + Math.sin(i * 0.63 + seededRange(seed, 0.0, 0.35, 270)) * 14;
+            double burst = (i == 2 || i == 8) ? 11 : 0;
+            double value = Math.max(8.0, seasonal + burst);
+            model.setPoint(i, value, value - 4.0, value + 4.0, value, months[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel radialBarModel() {
+        DefaultChartModel model = new DefaultChartModel("Capability Ranking");
+        int seed = RENDERER_SEED.get();
+        String[] dimensions = {"Latency", "Scale", "Stability", "Security", "UX", "DX", "Coverage", "Efficiency"};
+        double[] base = {88, 81, 92, 85, 77, 80, 84, 79};
+        for (int i = 0; i < dimensions.length; i++) {
+            double y = base[i] + seededRange(seed, -4.0, 4.0, 280 + i);
+            y = Math.max(20.0, Math.min(100.0, y));
+            model.setPoint(i, y, y - 3.0, y + 3.0, y, dimensions[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel radialStackedModel() {
+        DefaultChartModel model = new DefaultChartModel("Workload Composition");
+        int seed = RENDERER_SEED.get();
+        String[] segments = {"API", "Batch", "Stream", "ETL", "ML", "Search", "Auth", "Cache", "Queue", "Edge"};
+        for (int i = 0; i < segments.length; i++) {
+            double baseline = 26 + seededRange(seed, -6.0, 8.0, 290 + i);
+            double layer = 18 + seededRange(seed, -5.0, 9.0, 310 + i);
+            baseline = Math.max(8.0, baseline);
+            layer = Math.max(6.0, layer);
+            model.setPoint(baseline, layer, baseline, baseline + layer, layer, segments[i]);
         }
         return model;
     }
@@ -576,6 +685,26 @@ public final class RendererDemoDataFactory {
         return new DefaultMatrixChartModel(matrix, labels).setName("Correlation Matrix");
     }
 
+    private static DefaultMatrixChartModel chordFlowMatrixModel() {
+        int seed = RENDERER_SEED.get();
+        List<String> labels = List.of("Ingest", "Validate", "Score", "Route", "Execute", "Archive");
+        int n = labels.size();
+        double[][] matrix = new double[n][n];
+
+        matrix[0][1] = 84 + seededRange(seed, -6.0, 6.0, 330);
+        matrix[1][2] = 78 + seededRange(seed, -6.0, 6.0, 331);
+        matrix[2][3] = 69 + seededRange(seed, -6.0, 6.0, 332);
+        matrix[3][4] = 74 + seededRange(seed, -6.0, 6.0, 333);
+        matrix[4][5] = 66 + seededRange(seed, -6.0, 6.0, 334);
+        matrix[2][5] = 14 + seededRange(seed, -3.0, 3.0, 335);
+        matrix[1][5] = 10 + seededRange(seed, -3.0, 3.0, 336);
+        matrix[3][1] = 9 + seededRange(seed, -2.0, 2.0, 337);
+        matrix[4][2] = 7 + seededRange(seed, -2.0, 2.0, 338);
+        matrix[5][0] = 6 + seededRange(seed, -2.0, 2.0, 339);
+
+        return new DefaultMatrixChartModel(matrix, labels).setName("Transaction Flow Chords");
+    }
+
     private static DefaultTernaryChartModel ternaryModel() {
         int seed = RENDERER_SEED.get();
         List<TernaryChartModel.TernaryPoint> points = new ArrayList<>();
@@ -645,14 +774,20 @@ public final class RendererDemoDataFactory {
     private static DefaultChartModel sunburstPathModel() {
         DefaultChartModel model = new DefaultChartModel("Sunburst Paths");
         int seed = RENDERER_SEED.get();
-        model.setPoint(0, 26 + seededInt(seed, 0, 8, 172), 0, 0, 1, "Portfolio/Equities/US/Large Cap");
-        model.setPoint(1, 12 + seededInt(seed, 0, 6, 173), 0, 0, 1, "Portfolio/Equities/US/Mid Cap");
-        model.setPoint(2, 8 + seededInt(seed, 0, 5, 174), 0, 0, 1, "Portfolio/Equities/Europe/Core");
-        model.setPoint(3, 9 + seededInt(seed, 0, 5, 175), 0, 0, 1, "Portfolio/Equities/Asia/Japan");
-        model.setPoint(4, 11 + seededInt(seed, 0, 6, 176), 0, 0, 1, "Portfolio/FixedIncome/Government/US Treasuries");
-        model.setPoint(5, 7 + seededInt(seed, 0, 4, 177), 0, 0, 1, "Portfolio/FixedIncome/Corporate/Investment Grade");
-        model.setPoint(6, 5 + seededInt(seed, 0, 4, 178), 0, 0, 1, "Portfolio/Alternatives/RealEstate/REITs");
-        model.setPoint(7, 4 + seededInt(seed, 0, 3, 179), 0, 0, 1, "Portfolio/Alternatives/Commodities/Metals");
+        model.setPoint(0, 30 + seededInt(seed, 0, 8, 172), 0, 0, 1, "Platform/Data/Ingest/Kafka");
+        model.setPoint(1, 18 + seededInt(seed, 0, 6, 173), 0, 0, 1, "Platform/Data/Ingest/API");
+        model.setPoint(2, 14 + seededInt(seed, 0, 5, 174), 0, 0, 1, "Platform/Data/Transform/Normalization");
+        model.setPoint(3, 12 + seededInt(seed, 0, 5, 175), 0, 0, 1, "Platform/Data/Transform/Enrichment");
+        model.setPoint(4, 16 + seededInt(seed, 0, 6, 176), 0, 0, 1, "Platform/Compute/Realtime/Stream");
+        model.setPoint(5, 11 + seededInt(seed, 0, 4, 177), 0, 0, 1, "Platform/Compute/Realtime/Rules");
+        model.setPoint(6, 9 + seededInt(seed, 0, 4, 178), 0, 0, 1, "Platform/Compute/Batch/ETL");
+        model.setPoint(7, 8 + seededInt(seed, 0, 3, 179), 0, 0, 1, "Platform/Compute/Batch/Backfill");
+        model.setPoint(8, 10 + seededInt(seed, 0, 3, 180), 0, 0, 1, "Platform/Storage/Hot/Redis");
+        model.setPoint(9, 7 + seededInt(seed, 0, 3, 181), 0, 0, 1, "Platform/Storage/Hot/Elastic");
+        model.setPoint(10, 12 + seededInt(seed, 0, 3, 182), 0, 0, 1, "Platform/Storage/Cold/ObjectStore");
+        model.setPoint(11, 6 + seededInt(seed, 0, 2, 183), 0, 0, 1, "Platform/Storage/Cold/Archive");
+        model.setPoint(12, 9 + seededInt(seed, 0, 3, 184), 0, 0, 1, "Platform/UX/Portal/Analytics");
+        model.setPoint(13, 7 + seededInt(seed, 0, 2, 185), 0, 0, 1, "Platform/UX/Portal/Operations");
         return model;
     }
 
