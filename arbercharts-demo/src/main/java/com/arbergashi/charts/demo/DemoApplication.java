@@ -1,6 +1,7 @@
 package com.arbergashi.charts.demo;
 
 import com.arbergashi.charts.api.ChartTheme;
+import com.arbergashi.charts.api.AnimationProfile;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
@@ -1179,6 +1180,7 @@ public final class DemoApplication {
                 chartPanel.setPreferredSize(new Dimension(1100, 680));
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
+                applyShowcasePreset(entry, chartPanel, renderer);
                 installCircularRendererAnimation(entry, model, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
@@ -1223,6 +1225,55 @@ public final class DemoApplication {
 
         // Enable crosshair and animations for optimal user experience
         panel.setAnimationsEnabled(true);
+    }
+
+    private void applyShowcasePreset(RendererCatalogEntry entry, ArberChartPanel panel, ChartRenderer renderer) {
+        if (entry == null || panel == null) {
+            return;
+        }
+        String className = entry.className();
+        boolean circular = "circular".equals(entry.category());
+
+        panel.setTooltips(true);
+        panel.setAnimationsEnabled(true);
+
+        if (circular) {
+            panel.setLegend(true);
+            panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+        }
+
+        if (renderer instanceof com.arbergashi.charts.render.circular.GaugeRenderer gaugeRenderer) {
+            gaugeRenderer.setAnimationProfile(AnimationProfile.ENTERPRISE);
+        }
+
+        if ("com.arbergashi.charts.render.circular.GaugeRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.GaugeBandsRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.SemiDonutRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer".equals(className)) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(3).setShowGrid(false);
+            y.setRequestedTickCount(5).setShowGrid(false).setFixedRange(0.0, 100.0);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+            return;
+        }
+
+        if ("com.arbergashi.charts.render.circular.RadarRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.PolarRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.PolarLineRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.PolarAdvancedRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.RadialBarRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.RadialStackedRenderer".equals(className)
+                || "com.arbergashi.charts.render.circular.NightingaleRoseRenderer".equals(className)) {
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(6).setShowGrid(false);
+            y.setRequestedTickCount(6).setShowGrid(true).setFixedRange(0.0, 100.0);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
     }
 
     private void installCircularRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
