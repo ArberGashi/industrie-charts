@@ -1367,6 +1367,9 @@ public final class DemoApplication {
     }
 
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
+        boolean standard = "standard".equals(entry.category());
+        boolean financial = "financial".equals(entry.category());
+        boolean statistical = "statistical".equals(entry.category());
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
         boolean analysis = "analysis".equals(entry.category());
@@ -1375,7 +1378,8 @@ public final class DemoApplication {
         boolean security = "security".equals(entry.category());
         boolean common = "common".equals(entry.category());
         boolean medical = "medical".equals(entry.category());
-        if (!circular && !specialized && !analysis && !predictive && !forensic && !security && !common && !medical) {
+        if (!standard && !financial && !statistical && !circular && !specialized && !analysis
+                && !predictive && !forensic && !security && !common && !medical) {
             return;
         }
         if (medical) {
@@ -1434,6 +1438,21 @@ public final class DemoApplication {
                     x = x0;
                     y = (i == 0) ? clamp(y0 + Math.sin(phase * 0.9) * (18.0 * amp), 8.0, 96.0) : y0;
                     weight = Math.max(1.0, y);
+                } else if (financial) {
+                    x = x0;
+                    y = y0 * (0.96 + 0.08 * amp * Math.sin(phase * 0.6 + i * 0.18));
+                    if (i % 54 == 0) {
+                        y += Math.sin(phase * 0.42 + i * 0.05) * (1.8 * amp);
+                    }
+                    weight = Math.max(0.05, w0 * (0.94 + 0.12 * amp * Math.cos(phase * 0.55 + i * 0.14)));
+                } else if (statistical) {
+                    x = x0;
+                    y = y0 * (0.95 + 0.1 * amp * Math.sin(phase * 0.72 + i * 0.23));
+                    weight = Math.max(0.05, w0 * (0.95 + 0.08 * amp * Math.cos(phase * 0.66 + i * 0.2)));
+                } else if (standard) {
+                    x = x0;
+                    y = y0 * (0.94 + 0.11 * amp * Math.sin(phase * 0.78 + i * 0.27));
+                    weight = Math.max(0.05, w0 * (0.94 + 0.1 * amp * Math.cos(phase * 0.64 + i * 0.21)));
                 } else if (className.endsWith("SmithChartRenderer") || className.endsWith("VSWRCircleRenderer")) {
                     double theta = Math.atan2(y0, x0);
                     double radius = Math.hypot(x0, y0);
@@ -1648,6 +1667,12 @@ public final class DemoApplication {
 
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
+        if (className.contains("Candlestick") || className.contains("MACD") || className.contains("RSI")
+                || className.contains("ADX") || className.contains("Ichimoku")) return 0.62;
+        if (className.contains("BoxPlot") || className.contains("Violin") || className.contains("Histogram")
+                || className.contains("KDE") || className.contains("QQPlot")) return 0.7;
+        if (className.contains("LineRenderer") || className.contains("Spline") || className.contains("AreaRenderer")
+                || className.contains("ScatterRenderer") || className.contains("BarRenderer")) return 0.78;
         if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
         if (className.contains("Slope")) return 0.8;
         if (className.contains("Envelope")) return 0.72;
@@ -1669,6 +1694,12 @@ public final class DemoApplication {
 
     private static double showcaseAnimationAmplitude(String className) {
         if (className == null) return 1.0;
+        if (className.contains("Candlestick") || className.contains("MACD") || className.contains("RSI")
+                || className.contains("ADX") || className.contains("Ichimoku")) return 0.42;
+        if (className.contains("BoxPlot") || className.contains("Violin") || className.contains("Histogram")
+                || className.contains("KDE") || className.contains("QQPlot")) return 0.48;
+        if (className.contains("LineRenderer") || className.contains("Spline") || className.contains("AreaRenderer")
+                || className.contains("ScatterRenderer") || className.contains("BarRenderer")) return 0.52;
         if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
         if (className.contains("Slope")) return 0.45;
         if (className.contains("Envelope")) return 0.55;
