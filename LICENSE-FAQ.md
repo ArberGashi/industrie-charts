@@ -50,8 +50,9 @@
 **A:** Yes, as long as you include the license information.
 
 ### Q: Can I fork ArberCharts?
-**A:** If source is provided under MIT in a specific distribution, MIT terms apply for that distribution.
-For standard binary delivery, use extensions and wrappers around the public APIs.
+**A:** Standard delivery is binary artifacts via Maven Central.
+Use extensions and wrappers around public APIs.
+If source is separately provided under MIT in a specific distribution, MIT terms apply to that distribution.
 
 ## Enterprise
 

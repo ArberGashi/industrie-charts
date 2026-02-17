@@ -84,19 +84,15 @@ arbercharts-demo                  // Interactive demo application
 
 ---
 
-## 🔧 Breaking Changes from v1.7.0
+## 🔧 Platform Scope in v2.0.0
 
-### Removed Modules
-- `arbercharts-compose-bridge` - Removed
-- `arbercharts-qt-bridge` - Removed
-- `arbercharts-swift-bridge` - Removed
+v2.0.0 focuses on the actively maintained platform modules:
 
-### Migration Path
-If you were using removed bridges, you have two options:
-1. Stay on v1.7.0-LTS (still supported for existing customers)
-2. Migrate to Swing (Desktop) or Spring Boot (Server)
-
-See [V2_MIGRATION_GUIDE.md](docs/V2_MIGRATION_GUIDE.md) for detailed migration instructions.
+- `arbercharts-core`
+- `arbercharts-swing-bridge`
+- `arbercharts-server-bridge`
+- `arbercharts-spring-boot-starter`
+- `arbercharts-demo`
 
 ---
 
