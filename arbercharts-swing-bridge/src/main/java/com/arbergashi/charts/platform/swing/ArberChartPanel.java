@@ -1016,20 +1016,20 @@ public class ArberChartPanel extends JPanel {
         com.arbergashi.charts.platform.swing.util.ChartFonts.initialize();
 
         // Professional axis font sizing with readable baseline for production dashboards.
-        float baseAxisSize = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.baseSize", 10.5f);
+        float baseAxisSize = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.baseSize", 11.5f);
         if (baseAxisSize < 8.0f || baseAxisSize > 22.0f) {
-            baseAxisSize = 10.5f;
+            baseAxisSize = 11.5f;
         }
-        float axisScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.fontScale", 1.0f);
+        float axisScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.axis.label.fontScale", 1.08f);
         if (axisScale < 0.3f || axisScale > 3.0f) axisScale = 1.0f;
         float axisSize = ChartScale.font(baseAxisSize * axisScale);
         axisSize = Math.max(10.0f, axisSize);
 
         // Keep axis labels at least as large as HighPrecisionCrosshair labels.
-        float crosshairScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.fontScale", 1.0f);
+        float crosshairScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.fontScale", 1.08f);
         if (crosshairScale < 0.3f || crosshairScale > 3.0f) crosshairScale = 1.0f;
-        float crosshairBase = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.baseSize", 10.0f);
-        if (crosshairBase < 8.0f || crosshairBase > 22.0f) crosshairBase = 10.0f;
+        float crosshairBase = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.baseSize", 11.5f);
+        if (crosshairBase < 8.0f || crosshairBase > 22.0f) crosshairBase = 11.5f;
         float crosshairSize = ChartScale.font(crosshairBase * crosshairScale);
         axisSize = Math.max(axisSize, crosshairSize);
 

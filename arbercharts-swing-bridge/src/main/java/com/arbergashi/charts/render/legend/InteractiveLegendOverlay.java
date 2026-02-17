@@ -192,7 +192,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             if (base == null) base = UIManager.getFont("Label.font");
             if (base == null) base = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
 
-            float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.86f);
+            float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 1.06f);
             float baseSize = ChartScale.font((base != null) ? base.getSize2D() : 11f);
             Font font = base.deriveFont(Font.PLAIN, Math.max(10f, baseSize * fontScale));
             Font bold = font.deriveFont(Font.PLAIN);
@@ -205,9 +205,9 @@ public final class InteractiveLegendOverlay extends JComponent {
             boolean showValues = ChartAssets.getBoolean("Chart.legend.showValues", false);
             boolean compact = ChartAssets.getBoolean("Chart.legend.compact", true);
             boolean showSettings = ChartAssets.getBoolean("Chart.legend.settings.enabled", false);
-            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 4f : 6f)));
+            int padding = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.padding", compact ? 5f : 7f)));
             int rowGap = Math.round(ChartScale.scale(compact ? 2f : 3f));
-            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 5f : 7f)));
+            int iconSize = Math.round(ChartScale.scale(ChartAssets.getFloat("Chart.legend.iconSize", compact ? 7f : 8f)));
             int colGap = Math.round(ChartScale.scale(compact ? 5f : 8f));
             int settingsW = showSettings ? Math.round(ChartScale.scale(12f)) : 0;
 
@@ -380,7 +380,7 @@ public final class InteractiveLegendOverlay extends JComponent {
     }
 
     private void renderPillLegend(Graphics2D g2, List<LegendSeriesRow> rows, Font font, FontMetrics fm) {
-        float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 0.82f);
+        float fontScale = ChartAssets.getFloat("Chart.legend.fontScale", 1.06f);
         Font baseFont = font.deriveFont(Font.PLAIN, Math.max(10f, font.getSize2D() * fontScale));
         g2.setFont(baseFont);
         FontMetrics metrics = g2.getFontMetrics();
