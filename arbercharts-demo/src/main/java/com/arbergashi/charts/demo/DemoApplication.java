@@ -1181,7 +1181,7 @@ public final class DemoApplication {
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
-                installCircularRendererAnimation(entry, model, chartPanel);
+                installShowcaseRendererAnimation(entry, model, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
                 wrapper.revalidate();
@@ -1276,8 +1276,10 @@ public final class DemoApplication {
         }
     }
 
-    private void installCircularRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
-        if (!"circular".equals(entry.category())) {
+    private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
+        boolean circular = "circular".equals(entry.category());
+        boolean specialized = "specialized".equals(entry.category());
+        if (!circular && !specialized) {
             return;
         }
         if (!(model instanceof DefaultChartModel defaultModel)) {
@@ -1338,6 +1340,36 @@ public final class DemoApplication {
                     x = x0;
                     y = Math.max(1.0, y0 * (0.78 + 0.28 * Math.sin(phase * 0.9 + i * 0.58)));
                     weight = Math.max(1.0, y);
+                } else if (specialized) {
+                    if (className.endsWith("SankeyRenderer")
+                            || className.endsWith("SankeyProRenderer")
+                            || className.endsWith("AlluvialRenderer")
+                            || className.endsWith("DependencyWheelRenderer")
+                            || className.endsWith("ChordFlowRenderer")
+                            || className.endsWith("MarimekkoRenderer")) {
+                        x = x0;
+                        y = Math.max(1.0, y0 * (0.86 + 0.2 * Math.sin(phase * 0.7 + i * 0.36)));
+                        weight = Math.max(1.0, w0 * (0.84 + 0.2 * Math.cos(phase * 0.65 + i * 0.31)));
+                    } else if (className.endsWith("HeatmapRenderer")
+                            || className.endsWith("HeatmapContourRenderer")
+                            || className.endsWith("SpectrogramRenderer")
+                            || className.endsWith("HorizonRenderer")
+                            || className.endsWith("HorizonChartRenderer")) {
+                        x = x0;
+                        y = Math.max(1.0, y0 + Math.sin(phase * 1.1 + i * 0.22) * (Math.max(2.0, y0 * 0.08)));
+                        weight = Math.max(1.0, w0);
+                    } else if (className.endsWith("SunburstRenderer")
+                            || className.endsWith("TreemapRenderer")
+                            || className.endsWith("NetworkRenderer")
+                            || className.endsWith("DendrogramRenderer")) {
+                        x = x0;
+                        y = Math.max(1.0, y0 * (0.9 + 0.16 * Math.sin(phase * 0.55 + i * 0.41)));
+                        weight = Math.max(1.0, w0 * (0.9 + 0.14 * Math.cos(phase * 0.6 + i * 0.29)));
+                    } else {
+                        x = x0;
+                        y = Math.max(1.0, y0 * (0.83 + 0.22 * Math.sin(phase * 0.9 + i * 0.46)));
+                        weight = Math.max(1.0, w0 * (0.82 + 0.2 * Math.cos(phase * 0.8 + i * 0.38)));
+                    }
                 } else {
                     x = x0;
                     y = Math.max(1.0, y0 * (0.8 + 0.22 * Math.sin(phase * 0.85 + i * 0.52)));
