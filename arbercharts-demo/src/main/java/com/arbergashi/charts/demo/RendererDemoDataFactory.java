@@ -326,17 +326,95 @@ public final class RendererDemoDataFactory {
             return commonUtilityModel();
         }
         return switch (category) {
-            case "financial" -> financialModel();
-            case "statistical" -> statisticalModel();
-            case "medical" -> medicalModel();
-            case "circular" -> circularModel();
-            case "predictive" -> predictiveModel();
-            case "forensic" -> forensicModel();
-            case "analysis" -> trendAnalysisModel();
-            case "security" -> securityVoxelModel();
-            case "common" -> commonUtilityModel();
+            case "standard" -> standardRendererModel(simple);
+            case "financial" -> financialRendererModel(simple);
+            case "statistical" -> statisticalRendererModel(simple);
+            case "medical" -> medicalRendererModel(simple);
+            case "specialized" -> specializedRendererModel(simple);
+            case "circular" -> circularRendererModel(simple);
+            case "predictive" -> predictiveRendererModel(simple);
+            case "forensic" -> forensicRendererModel(simple);
+            case "analysis" -> analysisRendererModel(simple);
+            case "security" -> securityRendererModel(simple);
+            case "common" -> commonRendererModel(simple);
+            default -> standardRendererModel(simple);
+        };
+    }
+
+    private static ChartModel standardRendererModel(String simple) {
+        return switch (simple) {
+            case "ScatterRenderer", "BubbleRenderer" -> distributionModel();
+            case "RangeRenderer", "BaselineAreaRenderer", "StepAreaRenderer", "StackedAreaRenderer" -> trendAnalysisModel();
             default -> standardModel();
         };
+    }
+
+    private static ChartModel financialRendererModel(String simple) {
+        return switch (simple) {
+            case "VolumeRenderer", "VolumeProfileRenderer", "LiquidityHeatmapRenderer" -> distributionModel();
+            case "WaterfallRenderer" -> paretoModel();
+            default -> financialModel();
+        };
+    }
+
+    private static ChartModel statisticalRendererModel(String simple) {
+        return switch (simple) {
+            case "HistogramRenderer", "QQPlotRenderer", "QuantileRegressionRenderer", "ViolinPlotRenderer", "BoxPlotRenderer" -> statisticalModel();
+            case "BandRenderer", "ErrorBarRenderer", "ConfidenceIntervalRenderer", "QuantileBandRenderer", "StatisticalErrorBarRenderer" -> trendAnalysisModel();
+            case "BeeswarmRenderer", "DotPlotRenderer", "RidgeLineRenderer", "LiveDistributionOverlayRenderer" -> distributionModel();
+            default -> statisticalModel();
+        };
+    }
+
+    private static ChartModel medicalRendererModel(String simple) {
+        return switch (simple) {
+            case "CalibrationRenderer", "SpectrogramMedicalRenderer", "SpirometryRenderer" -> medicalModel();
+            default -> medicalModel();
+        };
+    }
+
+    private static ChartModel specializedRendererModel(String simple) {
+        return switch (simple) {
+            case "ArcDiagramRenderer", "BulletChartRenderer", "ControlChartRenderer", "JoyplotRenderer", "RadarGlowRenderer", "WindRoseRenderer" -> trendAnalysisModel();
+            case "CandlestickHollowRenderer", "GanttResourceViewRenderer", "ChernoffFacesRenderer" -> standardModel();
+            default -> standardModel();
+        };
+    }
+
+    private static ChartModel circularRendererModel(String simple) {
+        return switch (simple) {
+            case "CircularLatencyOverlayRenderer" -> gaugeModel();
+            default -> circularModel();
+        };
+    }
+
+    private static ChartModel predictiveRendererModel(String simple) {
+        return predictiveModel();
+    }
+
+    private static ChartModel forensicRendererModel(String simple) {
+        return forensicModel();
+    }
+
+    private static ChartModel analysisRendererModel(String simple) {
+        return switch (simple) {
+            case "ChangePointRenderer", "OutlierDetectionRenderer" -> anomalyModel();
+            case "SlopeRenderer" -> slopeModel();
+            case "MovingCorrelationRenderer" -> correlationModel();
+            case "AdaptiveFunctionRenderer" -> functionDomainModel();
+            case "VectorFieldRenderer" -> vectorFieldDomainModel();
+            case "AutocorrelationRenderer", "LiveFFTRenderer", "FourierOverlayRenderer" -> spectralAnalysisModel();
+            case "LoessRenderer", "MovingAverageRenderer", "PolynomialRegressionRenderer", "RegressionLineRenderer", "TrendDecompositionRenderer" -> trendAnalysisModel();
+            default -> overlayAnalysisModel();
+        };
+    }
+
+    private static ChartModel securityRendererModel(String simple) {
+        return securityVoxelModel();
+    }
+
+    private static ChartModel commonRendererModel(String simple) {
+        return commonUtilityModel();
     }
 
     static List<ChartModel> standardSeries(int count) {
@@ -412,13 +490,17 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel gaugeModel() {
         DefaultChartModel model = new DefaultChartModel("Latency SLA");
-        model.setPoint(0, 73.0, 70.0, 76.0, 73.0, "SLA Health");
+        int seed = RENDERER_SEED.get();
+        double y = 68.0 + seededRange(seed, 0.0, 24.0, 2500);
+        model.setPoint(0, y, y - 3.0, y + 3.0, y, "SLA Health");
         return model;
     }
 
     private static DefaultChartModel semiDonutModel() {
         DefaultChartModel model = new DefaultChartModel("Adoption Progress");
-        model.setPoint(0, 81.0, 78.0, 84.0, 81.0, "Completion");
+        int seed = RENDERER_SEED.get();
+        double y = 72.0 + seededRange(seed, 0.0, 24.0, 2501);
+        model.setPoint(0, y, y - 3.0, y + 3.0, y, "Completion");
         return model;
     }
 
@@ -525,8 +607,11 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel slopeModel() {
         DefaultChartModel model = new DefaultChartModel("Slope");
-        model.setPoint(0, 12, 10, 14, 1.0, "A");
-        model.setPoint(1, 26, 24, 28, 1.0, "B");
+        int seed = RENDERER_SEED.get();
+        double a = 10.0 + seededRange(seed, 0.0, 8.0, 2502);
+        double b = a + 10.0 + seededRange(seed, 0.0, 16.0, 2503);
+        model.setPoint(0, a, a - 2.0, a + 2.0, 1.0, "A");
+        model.setPoint(1, b, b - 2.0, b + 2.0, 1.0, "B");
         return model;
     }
 
