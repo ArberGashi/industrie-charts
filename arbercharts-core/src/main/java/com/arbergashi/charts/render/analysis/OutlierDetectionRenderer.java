@@ -7,6 +7,8 @@ import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
+import com.arbergashi.charts.util.ColorUtils;
+import com.arbergashi.charts.util.ChartAssets;
 /**
  * Outlier detection overlay.
  *
@@ -43,30 +45,49 @@ public final class OutlierDetectionRenderer extends BaseRenderer {
         if (count < 5) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        if (xData == null || yData == null) return;
+        int limit = Math.min(count, Math.min(xData.length, yData.length));
+        if (limit < 5) return;
 
         // Copy y-values (allocations kept out of render loop? This renderer is analysis-only.
-        if (valBuffer.length < count) valBuffer = RendererAllocationCache.getDoubleArray(this, "valBuffer", Math.max(count, valBuffer.length * 2));
+        if (valBuffer.length < limit) valBuffer = RendererAllocationCache.getDoubleArray(this, "valBuffer", Math.max(limit, valBuffer.length * 2));
 
-        System.arraycopy(yData, 0, valBuffer, 0, count);
+        System.arraycopy(yData, 0, valBuffer, 0, limit);
 
         // Note: median modifies the buffer (sorts it), so we need to be careful if we needed original order.
         // Here we just need the median value.
-        double median = median(valBuffer, count);
-        for (int i = 0; i < count; i++) valBuffer[i] = Math.abs(yData[i] - median); // Recalculate diffs into buffer
-        double mad = median(valBuffer, count);
-        if (mad < 1e-12) return;
+        double median = median(valBuffer, limit);
+        for (int i = 0; i < limit; i++) valBuffer[i] = Math.abs(yData[i] - median); // Recalculate diffs into buffer
+        double mad = median(valBuffer, limit);
+        if (mad < 1e-12) {
+            // fallback: tiny MAD often happens on smooth demo data; keep renderer visible and useful
+            mad = 1e-6;
+        }
 
-        double threshold = 3.5; // robust z-score threshold
+        double threshold = ChartAssets.getFloat("chart.render.outlier.threshold", 2.8f); // robust z-score threshold
 
         ArberColor base = seriesOrBase(model, context, 0);
-        ArberColor mark = base;
-        ArberColor halo = base;
+        ArberColor mark = base != null ? base : themeAccent(context);
+        ArberColor halo = ColorUtils.applyAlpha(mark, 0.28f);
+        ArberColor guide = ColorUtils.applyAlpha(themeForeground(context), 0.42f);
 
-        double r = ChartScale.scale(4.0);
+        double r = ChartScale.scale(5.0);
 
-        canvas.setStroke((float) ChartScale.scale(1.5));
+        // Draw an analysis baseline path so renderer is visible even with few outliers.
+        float[] xs = RendererAllocationCache.getFloatArray(this, "outlier.path.x", limit);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "outlier.path.y", limit);
+        for (int i = 0; i < limit; i++) {
+            context.mapToPixel(xData[i], yData[i], pBuffer);
+            xs[i] = (float) pBuffer[0];
+            ys[i] = (float) pBuffer[1];
+        }
+        canvas.setColor(guide);
+        canvas.setStroke((float) ChartScale.scale(1.4));
+        canvas.drawPolyline(xs, ys, limit);
 
-        for (int i = 0; i < count; i++) {
+        canvas.setStroke((float) ChartScale.scale(1.8));
+
+        for (int i = 0; i < limit; i++) {
             double z = 0.6745 * (yData[i] - median) / mad;
             if (Math.abs(z) < threshold) continue;
 
