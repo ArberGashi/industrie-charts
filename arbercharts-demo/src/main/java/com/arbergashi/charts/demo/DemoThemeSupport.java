@@ -5,7 +5,6 @@ import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberFont;
 import com.arbergashi.charts.util.ChartAssets;
-import com.arbergashi.charts.util.ColorRegistry;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
@@ -22,6 +21,7 @@ final class DemoThemeSupport {
     }
 
     static String setupLookAndFeel() {
+        verifyThemeResources();
         try {
             Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
             java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");
@@ -45,6 +45,12 @@ final class DemoThemeSupport {
 
         ChartAssets.clearCache();
         return theme;
+    }
+
+    static void verifyThemeResources() {
+        requireResource("themes/FlatDarkLaf.properties");
+        requireResource("themes/FlatLightLaf.properties");
+        requireResource("themes/charts.properties");
     }
 
     static String normalizeTheme(String themeName) {
@@ -76,18 +82,18 @@ final class DemoThemeSupport {
         boolean light = "light".equals(themeName);
         String p = light ? "Demo.chart.light." : "Demo.chart.dark.";
 
-        ArberColor bg = ChartAssets.getColor(p + "background", toArberColor(uiColor("Panel.background", "control")));
-        ArberColor fg = ChartAssets.getColor(p + "foreground", toArberColor(uiColor("Label.foreground", "textText")));
-        ArberColor grid = ChartAssets.getColor(p + "grid", toArberColor(uiColor("Separator.foreground", "Component.borderColor")));
-        ArberColor axis = ChartAssets.getColor(p + "axis", toArberColor(uiColor("Component.grayForeground", "Label.disabledForeground")));
-        ArberColor accent = ChartAssets.getColor(p + "accent", toArberColor(uiColor("Component.focusColor", "Component.linkColor")));
+        ArberColor bg = requireColor(p + "background");
+        ArberColor fg = requireColor(p + "foreground");
+        ArberColor grid = requireColor(p + "grid");
+        ArberColor axis = requireColor(p + "axis");
+        ArberColor accent = requireColor(p + "accent");
 
         ArberColor[] series = new ArberColor[]{
-                ChartAssets.getColor(p + "series1", accent),
-                ChartAssets.getColor(p + "series2", accent),
-                ChartAssets.getColor(p + "series3", accent),
-                ChartAssets.getColor(p + "series4", accent),
-                ChartAssets.getColor(p + "series5", accent)
+                requireColor(p + "series1"),
+                requireColor(p + "series2"),
+                requireColor(p + "series3"),
+                requireColor(p + "series4"),
+                requireColor(p + "series5")
         };
 
         Font base = UIManager.getFont("defaultFont");
@@ -137,8 +143,17 @@ final class DemoThemeSupport {
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
     }
 
-    private static ArberColor toArberColor(Color color) {
-        Color safe = (color != null) ? color : new JPanel().getForeground();
-        return ColorRegistry.of(safe.getRed(), safe.getGreen(), safe.getBlue(), safe.getAlpha());
+    private static ArberColor requireColor(String key) {
+        ArberColor color = ChartAssets.getColor(key, null);
+        if (color == null) {
+            throw new IllegalStateException("Missing theme color in resources/themes/charts.properties: " + key);
+        }
+        return color;
+    }
+
+    private static void requireResource(String path) {
+        if (DemoThemeSupport.class.getClassLoader().getResource(path) == null) {
+            throw new IllegalStateException("Missing required demo theme resource: " + path);
+        }
     }
 }
