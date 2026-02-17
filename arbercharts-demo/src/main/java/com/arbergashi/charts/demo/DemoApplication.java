@@ -21,10 +21,10 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -49,6 +49,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.BorderLayout;
+import java.awt.BasicStroke;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -56,6 +57,9 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -140,7 +144,6 @@ public final class DemoApplication {
     private final JLabel countLabel = new JLabel();
     private final JLabel metricsLabel = new JLabel();
     private final JTextField searchField = new JTextField();
-    private final JComboBox<String> themeSelector = new JComboBox<>();
     private final JTree tree;
     private JMenuItem aboutMenuItem;
     private JMenuItem preferencesMenuItem;
@@ -259,7 +262,7 @@ public final class DemoApplication {
 
         // Cmd/Ctrl+F - Focus Search
         mainFrame.getRootPane().registerKeyboardAction(
-            e -> searchField.requestFocusInWindow(),
+            e -> showSearchEverywhereDialog(),
             KeyStroke.getKeyStroke(KeyEvent.VK_F, mask),
             javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
         );
@@ -319,56 +322,19 @@ public final class DemoApplication {
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
         right.setBackground(palette.windowBackground());
-        searchField.setMaximumSize(new Dimension(280, 32));
-        searchField.setPreferredSize(new Dimension(280, 32));
-        searchField.setToolTipText("Search renderer by name (⌘F)");
-        searchField.setFont(searchField.getFont().deriveFont(13f));
-        JButton findButton = new JButton("Find");
-        findButton.setFont(findButton.getFont().deriveFont(12f));
-        findButton.addActionListener(evt -> selectFromSearch());
-        JButton reloadButton = new JButton("Reload");
-        reloadButton.setFont(reloadButton.getFont().deriveFont(12f));
-        reloadButton.setToolTipText("Reload current renderer (⌘R)");
-        reloadButton.addActionListener(evt -> refreshCurrent());
-        JButton exportButton = new JButton("Export");
-        exportButton.setFont(exportButton.getFont().deriveFont(12f));
-        exportButton.setToolTipText("Export current chart (⌘E)");
-        exportButton.addActionListener(evt -> exportCurrentChart());
-        JButton benchmarkButton = new JButton("Benchmark");
-        benchmarkButton.setFont(benchmarkButton.getFont().deriveFont(12f));
-        benchmarkButton.setToolTipText("Run performance benchmark (⌘B)");
-        benchmarkButton.addActionListener(evt -> runBenchmark());
+        JButton searchEverywhereButton = new JButton("Search Everywhere", new SearchEverywhereIcon(palette.muted()));
+        searchEverywhereButton.setFont(searchEverywhereButton.getFont().deriveFont(12f));
+        searchEverywhereButton.setToolTipText("Search renderer by name (⌘F)");
+        searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
 
-        // Demo uses only local FlatLaf themes from resources/themes.
-        themeSelector.addItem("Dark");
-        themeSelector.addItem("Light");
-        themeSelector.setSelectedItem(capitalize(currentThemeName));
-        themeSelector.setMaximumSize(new Dimension(130, 30));
-        themeSelector.setToolTipText("Select chart theme (⌘T to toggle)");
-        themeSelector.addActionListener(evt -> {
-            String selected = (String) themeSelector.getSelectedItem();
-            if (selected != null) {
-                setThemeByName(selected.toLowerCase(Locale.US));
-            }
-        });
+        JButton themeSwitchButton = new JButton("Theme Switch", new ThemeSwitchIcon(palette.muted()));
+        themeSwitchButton.setFont(themeSwitchButton.getFont().deriveFont(12f));
+        themeSwitchButton.setToolTipText("Toggle dark/light theme (⌘T)");
+        themeSwitchButton.addActionListener(evt -> toggleTheme());
 
-        JLabel searchLabel = new JLabel("Search: ");
-        searchLabel.setForeground(palette.muted());
-        right.add(searchLabel);
-        right.add(searchField);
-        right.add(Box.createHorizontalStrut(8));
-        right.add(findButton);
-        right.add(Box.createHorizontalStrut(8));
-        right.add(reloadButton);
-        right.add(Box.createHorizontalStrut(8));
-        right.add(exportButton);
-        right.add(Box.createHorizontalStrut(8));
-        right.add(benchmarkButton);
-        right.add(Box.createHorizontalStrut(12));
-        JLabel themeLabel = new JLabel("Theme: ");
-        themeLabel.setForeground(palette.muted());
-        right.add(themeLabel);
-        right.add(themeSelector);
+        right.add(searchEverywhereButton);
+        right.add(Box.createHorizontalStrut(10));
+        right.add(themeSwitchButton);
 
         header.add(left, BorderLayout.WEST);
         header.add(right, BorderLayout.EAST);
@@ -769,9 +735,6 @@ public final class DemoApplication {
         applyThemeToCharts(detailHost, theme);
         rebuildRendererPanelsForTheme();
 
-        // Update selector
-        themeSelector.setSelectedItem(capitalize(themeName));
-
         updateStatus("Theme: " + capitalize(themeName));
     }
 
@@ -812,6 +775,20 @@ public final class DemoApplication {
             tree.scrollPathToVisible(path);
             statusLabel.setText("Selected " + entry.simpleName());
         }
+    }
+
+    private void showSearchEverywhereDialog() {
+        String query = JOptionPane.showInputDialog(
+                mainFrame,
+                "Search renderer:",
+                "Search Everywhere",
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (query == null || query.isBlank()) {
+            return;
+        }
+        searchField.setText(query.trim());
+        selectFromSearch();
     }
 
     private TreePath findTreePath(RendererCatalogEntry entry) {
@@ -1423,6 +1400,70 @@ public final class DemoApplication {
             if (input == null || input.isBlank()) return "";
             if (input.length() == 1) return input.toUpperCase(Locale.US);
             return input.substring(0, 1).toUpperCase(Locale.US) + input.substring(1);
+        }
+    }
+
+    private static final class SearchEverywhereIcon implements Icon {
+        private final Color color;
+
+        private SearchEverywhereIcon(Color color) {
+            this.color = color;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawOval(x + 1, y + 1, 9, 9);
+                g2.drawLine(x + 9, y + 9, x + 13, y + 13);
+            } finally {
+                g2.dispose();
+            }
+        }
+
+        @Override
+        public int getIconWidth() {
+            return 14;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 14;
+        }
+    }
+
+    private static final class ThemeSwitchIcon implements Icon {
+        private final Color color;
+
+        private ThemeSwitchIcon(Color color) {
+            this.color = color;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawOval(x + 1, y + 1, 12, 12);
+                g2.fillArc(x + 2, y + 2, 10, 10, 90, 180);
+            } finally {
+                g2.dispose();
+            }
+        }
+
+        @Override
+        public int getIconWidth() {
+            return 14;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 14;
         }
     }
 
