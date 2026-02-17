@@ -68,6 +68,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -120,6 +121,7 @@ public final class DemoApplication {
     private static final String COPYRIGHT = "© 2026 Arber Gashi";
     private static final String TABLER_OUTLINE_DIR = System.getProperty("user.home")
             + "/Documents/workspace/tabler-icons-main/icons/outline";
+    private static final Map<String, Icon> ICON_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Main entry point for the demo application.
@@ -315,13 +317,13 @@ public final class DemoApplication {
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
         right.setBackground(palette.windowBackground());
         JButton searchEverywhereButton = new JButton("Search Everywhere",
-                loadTablerOutlineIcon("search.svg", 16, UIManager.getIcon("FileView.fileIcon")));
+                loadTablerOutlineIcon("search.svg", 16, UIManager.getIcon("FileView.fileIcon"), palette.muted()));
         searchEverywhereButton.setFont(searchEverywhereButton.getFont().deriveFont(12f));
         searchEverywhereButton.setToolTipText("Search renderer by name (⌘F)");
         searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
 
         JButton themeSwitchButton = new JButton("Theme Switch",
-                loadTablerOutlineIcon("sun-moon.svg", 16, UIManager.getIcon("Tree.expandedIcon")));
+                loadTablerOutlineIcon("sun-moon.svg", 16, UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
         themeSwitchButton.setFont(themeSwitchButton.getFont().deriveFont(12f));
         themeSwitchButton.setToolTipText("Toggle dark/light theme (⌘T)");
         themeSwitchButton.addActionListener(evt -> toggleTheme());
@@ -1360,14 +1362,7 @@ public final class DemoApplication {
     }
 
     private static final class RendererTreeCell extends DefaultTreeCellRenderer {
-        private final Icon folderIcon = loadTablerOutlineIcon("folder.svg", 16, UIManager.getIcon("Tree.closedIcon"));
-        private final Icon folderOpenIcon = loadTablerOutlineIcon("folder-open.svg", 16, UIManager.getIcon("Tree.openIcon"));
-        private final Icon rendererIcon = loadTablerOutlineIcon("chart-line.svg", 16, UIManager.getIcon("Tree.leafIcon"));
-
         private RendererTreeCell() {
-            setClosedIcon(folderIcon);
-            setOpenIcon(folderOpenIcon);
-            setLeafIcon(rendererIcon);
         }
 
         @Override
@@ -1385,15 +1380,18 @@ public final class DemoApplication {
                 setText(entry.simpleName());
                 setToolTipText(entry.className());
                 setFont(baseFont.deriveFont(Font.PLAIN, 13f));
+                Color iconColor = sel ? tree.getForeground() : DemoThemeSupport.uiColor("Label.foreground", "textText");
+                setIcon(rendererIconForCategory(entry.category(), iconColor));
             } else if (user instanceof String label) {
                 setText(capitalize(label) + " (" + node.getChildCount() + ")");
                 setToolTipText(null);
                 setFont(baseFont.deriveFont(Font.BOLD, 13f));
+                Color categoryColor = UIManager.getColor("Component.grayForeground");
+                if (categoryColor == null) {
+                    categoryColor = tree.getForeground();
+                }
+                setIcon(categoryIconFor(label, expanded, categoryColor));
                 if (!sel) {
-                    Color categoryColor = UIManager.getColor("Component.grayForeground");
-                    if (categoryColor == null) {
-                        categoryColor = tree.getForeground();
-                    }
                     setForeground(categoryColor);
                 }
             }
@@ -1407,12 +1405,61 @@ public final class DemoApplication {
         }
     }
 
-    private static Icon loadTablerOutlineIcon(String fileName, int size, Icon fallback) {
+    private static Icon categoryIconFor(String category, boolean expanded, Color tint) {
+        String normalized = category == null ? "" : category.toLowerCase(Locale.US);
+        String file = switch (normalized) {
+            case "financial" -> "chart-candle.svg";
+            case "medical" -> "activity-heartbeat.svg";
+            case "statistical" -> "chart-histogram.svg";
+            case "analysis" -> "chart-scatter.svg";
+            case "predictive" -> "chart-arrows.svg";
+            case "forensic" -> "shield-search.svg";
+            case "security" -> "shield.svg";
+            case "specialized" -> "chart-sankey.svg";
+            case "circular" -> "circle.svg";
+            case "common" -> "chart-bar.svg";
+            case "standard" -> "chart-line.svg";
+            default -> expanded ? "folder-open.svg" : "folder.svg";
+        };
+        Icon fallback = expanded ? UIManager.getIcon("Tree.openIcon") : UIManager.getIcon("Tree.closedIcon");
+        return loadTablerOutlineIcon(file, 16, fallback, tint);
+    }
+
+    private static Icon rendererIconForCategory(String category, Color tint) {
+        String normalized = category == null ? "" : category.toLowerCase(Locale.US);
+        String file = switch (normalized) {
+            case "financial" -> "chart-candle.svg";
+            case "medical" -> "activity-heartbeat.svg";
+            case "statistical" -> "chart-histogram.svg";
+            case "analysis" -> "chart-scatter.svg";
+            case "predictive" -> "chart-arrows.svg";
+            case "forensic" -> "shield-search.svg";
+            case "security" -> "shield.svg";
+            case "specialized" -> "chart-sankey.svg";
+            case "circular" -> "circle.svg";
+            default -> "chart-line.svg";
+        };
+        return loadTablerOutlineIcon(file, 16, UIManager.getIcon("Tree.leafIcon"), tint);
+    }
+
+    private static Icon loadTablerOutlineIcon(String fileName, int size, Icon fallback, Color tint) {
         try {
+            String cacheKey = fileName + "|" + size + "|" + (tint != null ? tint.getRGB() : 0);
+            Icon cached = ICON_CACHE.get(cacheKey);
+            if (cached != null) {
+                return cached;
+            }
             Path iconPath = Path.of(TABLER_OUTLINE_DIR, fileName);
             if (Files.isRegularFile(iconPath)) {
                 FlatSVGIcon icon = new FlatSVGIcon(iconPath.toFile());
-                return icon.derive(size, size);
+                FlatSVGIcon derived = icon.derive(size, size);
+                if (tint != null) {
+                    FlatSVGIcon.ColorFilter filter = new FlatSVGIcon.ColorFilter((component, color) ->
+                            new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), color.getAlpha()));
+                    derived.setColorFilter(filter);
+                }
+                ICON_CACHE.put(cacheKey, derived);
+                return derived;
             }
         } catch (Exception ignored) {
             // fall through to fallback
