@@ -360,7 +360,7 @@
         }
         var previewState = card.querySelector('.preview-state');
         if (previewState) {
-            previewState.textContent = renderMs <= 40 ? 'Excellent' : (renderMs <= 100 ? 'Good' : 'Ready');
+            previewState.textContent = Number.isFinite(renderMs) ? 'Ready' : 'Loaded';
         }
     }
 
