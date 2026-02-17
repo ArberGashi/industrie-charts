@@ -2,6 +2,7 @@ package com.arbergashi.charts.demo;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
 import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
@@ -62,6 +63,7 @@ import java.awt.Frame;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.InputEvent;
+import java.awt.event.HierarchyEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -1177,6 +1179,7 @@ public final class DemoApplication {
                 chartPanel.setPreferredSize(new Dimension(1100, 680));
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
+                installCircularRendererAnimation(entry, model, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
                 wrapper.revalidate();
@@ -1220,6 +1223,94 @@ public final class DemoApplication {
 
         // Enable crosshair and animations for optimal user experience
         panel.setAnimationsEnabled(true);
+    }
+
+    private void installCircularRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
+        if (!"circular".equals(entry.category())) {
+            return;
+        }
+        if (!(model instanceof DefaultChartModel defaultModel)) {
+            return;
+        }
+        int count = defaultModel.getPointCount();
+        if (count <= 0) {
+            return;
+        }
+
+        String className = entry.className();
+        if ("com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer".equals(className)) {
+            return;
+        }
+
+        double[] baseX = defaultModel.getXData();
+        double[] baseY = defaultModel.getYData();
+        double[] baseW = defaultModel.getWeightData();
+        String[] labels = new String[count];
+        for (int i = 0; i < count; i++) {
+            labels[i] = defaultModel.getLabel(i);
+        }
+
+        Timer animation = new Timer(42, evt -> {
+            if (!panel.isDisplayable()) {
+                ((Timer) evt.getSource()).stop();
+                return;
+            }
+            double phase = (System.nanoTime() * 1.0e-9) * 1.4;
+            defaultModel.clear();
+            for (int i = 0; i < count; i++) {
+                double x0 = i < baseX.length ? baseX[i] : i;
+                double y0 = i < baseY.length ? baseY[i] : 0.0;
+                double w0 = i < baseW.length ? baseW[i] : Math.abs(y0);
+                String label = labels[i];
+
+                double y;
+                double x;
+                double weight;
+
+                if (className.endsWith("GaugeRenderer")
+                        || className.endsWith("GaugeBandsRenderer")
+                        || className.endsWith("SemiDonutRenderer")) {
+                    x = x0;
+                    y = (i == 0) ? clamp(y0 + Math.sin(phase * 0.9) * 18.0, 8.0, 96.0) : y0;
+                    weight = Math.max(1.0, y);
+                } else if (className.endsWith("PolarRenderer") || className.endsWith("PolarLineRenderer")) {
+                    x = x0;
+                    y = Math.max(1.0, y0 * (0.82 + 0.24 * Math.sin(phase + i * 0.55)));
+                    weight = Math.max(1.0, w0 * (0.78 + 0.22 * Math.cos(phase * 0.8 + i * 0.45)));
+                } else if (className.endsWith("PolarAdvancedRenderer") || className.endsWith("RadialStackedRenderer")) {
+                    x = Math.max(0.0, x0 * (0.9 + 0.12 * Math.sin(phase * 0.7 + i * 0.4)));
+                    y = Math.max(1.0, y0 * (0.8 + 0.25 * Math.cos(phase * 0.95 + i * 0.6)));
+                    weight = Math.max(1.0, w0);
+                } else if (className.endsWith("NightingaleRoseRenderer")
+                        || className.endsWith("RadarRenderer")
+                        || className.endsWith("RadialBarRenderer")) {
+                    x = x0;
+                    y = Math.max(1.0, y0 * (0.78 + 0.28 * Math.sin(phase * 0.9 + i * 0.58)));
+                    weight = Math.max(1.0, y);
+                } else {
+                    x = x0;
+                    y = Math.max(1.0, y0 * (0.8 + 0.22 * Math.sin(phase * 0.85 + i * 0.52)));
+                    weight = Math.max(1.0, w0 * (0.8 + 0.2 * Math.cos(phase * 0.7 + i * 0.47)));
+                }
+
+                double min = y - Math.max(1.0, y * 0.08);
+                double max = y + Math.max(1.0, y * 0.08);
+                defaultModel.setPoint(x, y, min, max, weight, label);
+            }
+        });
+        animation.start();
+
+        panel.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
+                animation.stop();
+            }
+        });
+    }
+
+    private static double clamp(double value, double min, double max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
     }
 
     /**
