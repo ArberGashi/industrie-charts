@@ -70,7 +70,6 @@ final class DemoThemeSupport {
     }
 
     static void verifyThemeResources() {
-        requireResource("themes/FlatLaf.properties");
         requireResource("themes/FlatDarkLaf.properties");
         requireResource("themes/FlatLightLaf.properties");
         requireResource("themes/charts.properties");
