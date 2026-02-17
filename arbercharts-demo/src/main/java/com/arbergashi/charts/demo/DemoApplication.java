@@ -1319,6 +1319,17 @@ public final class DemoApplication {
             return;
         }
 
+        if ("com.arbergashi.charts.render.financial.RSIRenderer".equals(className)) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(true);
+            y.setRequestedTickCount(6).setShowGrid(true).setFixedRange(0.0, 100.0);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+            return;
+        }
+
         if ("com.arbergashi.charts.render.circular.RadarRenderer".equals(className)
                 || "com.arbergashi.charts.render.circular.PolarRenderer".equals(className)
                 || "com.arbergashi.charts.render.circular.PolarLineRenderer".equals(className)

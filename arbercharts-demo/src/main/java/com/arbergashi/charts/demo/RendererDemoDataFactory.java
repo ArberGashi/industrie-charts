@@ -351,6 +351,8 @@ public final class RendererDemoDataFactory {
 
     private static ChartModel financialRendererModel(String simple) {
         return switch (simple) {
+            case "RSIRenderer" -> rsiModel();
+            case "RenkoRenderer" -> renkoModel();
             case "VolumeRenderer", "VolumeProfileRenderer", "LiquidityHeatmapRenderer" -> distributionModel();
             case "WaterfallRenderer" -> paretoModel();
             default -> financialModel();
@@ -1070,6 +1072,42 @@ public final class RendererDemoDataFactory {
             String label = (i == evtA) ? "Earnings +" : (i == evtB) ? "Guidance -" : (i == evtC) ? "Upgrade" : null;
             model.setOHLC(i, open, high, low, close, volume, label);
             price = close;
+        }
+        return model;
+    }
+
+    private static DefaultChartModel rsiModel() {
+        DefaultChartModel model = new DefaultChartModel("RSI (14)");
+        int seed = RENDERER_SEED.get();
+        int points = 220;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = 50.0
+                    + Math.sin(i * (0.085 + seededRange(seed, 0.0, 0.02, 3000))) * 18.0
+                    + Math.cos(i * (0.031 + seededRange(seed, 0.0, 0.01, 3001))) * 9.0;
+            if (i > 70 && i < 88) {
+                y += 14.0;
+            }
+            if (i > 146 && i < 165) {
+                y -= 16.0;
+            }
+            y = Math.max(4.0, Math.min(96.0, y));
+            model.setPoint(x, y, Math.max(0.0, y - 3.0), Math.min(100.0, y + 3.0), y, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel renkoModel() {
+        DefaultChartModel model = new DefaultChartModel("Renko Trend");
+        int seed = RENDERER_SEED.get();
+        int points = 240;
+        double price = 100.0 + seededRange(seed, -8.0, 8.0, 3010);
+        for (int i = 0; i < points; i++) {
+            double trend = i < 80 ? 0.34 : (i < 150 ? -0.28 : 0.39);
+            double noise = Math.sin(i * (0.21 + seededRange(seed, 0.0, 0.02, 3011))) * 0.22
+                    + Math.cos(i * (0.09 + seededRange(seed, 0.0, 0.01, 3012))) * 0.16;
+            price += trend + noise;
+            model.setPoint(i, price, price - 0.6, price + 0.6, price, null);
         }
         return model;
     }
