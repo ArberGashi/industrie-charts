@@ -12,7 +12,13 @@ import com.arbergashi.charts.render.analysis.VectorFieldRenderer;
 import com.arbergashi.charts.render.financial.PredictiveCandleRenderer;
 import com.arbergashi.charts.render.forensic.PlaybackStatusRenderer;
 import com.arbergashi.charts.render.grid.MedicalGridLayer;
+import com.arbergashi.charts.render.grid.AnalysisGridLayer;
+import com.arbergashi.charts.render.grid.FinancialGridLayer;
+import com.arbergashi.charts.render.grid.IsometricGridLayer;
+import com.arbergashi.charts.render.grid.PolarGridLayer;
 import com.arbergashi.charts.render.grid.SmithChartGridLayer;
+import com.arbergashi.charts.render.grid.StatisticalGridLayer;
+import com.arbergashi.charts.render.grid.TernaryGridLayer;
 import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.LatencyTracker;
@@ -1214,14 +1220,33 @@ public final class DemoApplication {
     }
 
     private void configureChart(RendererCatalogEntry entry, ArberChartPanel panel) {
-        // Configure grid based on category
-        if ("medical".equals(entry.category())) {
+        // Use core grid layers by renderer/category so presentation stays consistent.
+        String category = entry.category();
+        String simple = entry.simpleName();
+        if ("medical".equals(category)) {
             panel.setGridLayer(new MedicalGridLayer());
-        } else {
-            String simple = entry.simpleName();
-            if ("SmithChartRenderer".equals(simple) || "VSWRCircleRenderer".equals(simple)) {
-                panel.setGridLayer(new SmithChartGridLayer());
-            }
+        } else if ("financial".equals(category)) {
+            panel.setGridLayer(new FinancialGridLayer());
+        } else if ("statistical".equals(category)) {
+            panel.setGridLayer(new StatisticalGridLayer());
+        } else if ("analysis".equals(category)) {
+            panel.setGridLayer(new AnalysisGridLayer());
+        } else if ("security".equals(category)
+                || "LineSpatialRenderer".equals(simple)
+                || "Candlestick3DRenderer".equals(simple)) {
+            panel.setGridLayer(new IsometricGridLayer());
+        } else if ("SmithChartRenderer".equals(simple) || "VSWRCircleRenderer".equals(simple)) {
+            panel.setGridLayer(new SmithChartGridLayer());
+        } else if ("PolarRenderer".equals(simple)
+                || "PolarLineRenderer".equals(simple)
+                || "PolarAdvancedRenderer".equals(simple)
+                || "RadarRenderer".equals(simple)
+                || "WindRoseRenderer".equals(simple)) {
+            panel.setGridLayer(new PolarGridLayer());
+        } else if ("TernaryPlotRenderer".equals(simple)
+                || "TernaryContourRenderer".equals(simple)
+                || "TernaryPhasediagramRenderer".equals(simple)) {
+            panel.setGridLayer(new TernaryGridLayer());
         }
 
         // Configure axis for optimal presentation
@@ -2054,6 +2079,10 @@ public final class DemoApplication {
                         out[1] = (Math.sin(x * 0.24 - t * 0.95) - Math.cos(y * 0.13 + t * 0.8)) * pulse;
                         return true;
                     }).setGridResolution(16);
+            case "com.arbergashi.charts.render.standard.LineSpatialRenderer" ->
+                    new com.arbergashi.charts.render.standard.LineSpatialRenderer()
+                            .setZScale(0.012)
+                            .setZOffset(0.0);
             case "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer" ->
                     new CircularLatencyOverlayRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer" ->
