@@ -520,90 +520,109 @@ public final class DemoApplication {
     }
 
     private void showAboutDialog(JFrame frame) {
+        DemoPalette palette = currentPalette();
+        Color muted = palette.muted();
+
         JDialog dialog = new JDialog(frame, "About " + APP_NAME, true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setLayout(new BorderLayout());
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        dialog.setResizable(false);
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border(), 1));
+
+        JPanel root = new JPanel();
+        root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
+        root.setBorder(BorderFactory.createEmptyBorder(16, 18, 14, 18));
+        root.setBackground(palette.surfaceBackground());
+
+        JPanel hero = new JPanel(new BorderLayout(12, 0));
+        hero.setOpaque(true);
+        hero.setBackground(palette.contentBackground());
+        hero.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(palette.border(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+        hero.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel icon = new JLabel(loadTablerOutlineIcon("chart-line.svg", 26, UIManager.getIcon("FileView.fileIcon"), palette.foreground()));
+        icon.setVerticalAlignment(SwingConstants.TOP);
+
+        JPanel heroText = new JPanel();
+        heroText.setOpaque(false);
+        heroText.setLayout(new BoxLayout(heroText, BoxLayout.Y_AXIS));
 
         JLabel title = new JLabel(APP_NAME);
         title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        JLabel subtitle = new JLabel("Enterprise charting demo for production-grade Swing applications");
+        subtitle.setForeground(muted);
+        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         JLabel version = new JLabel("Version " + VERSION);
+        version.setForeground(muted);
         version.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel detail = new JLabel("Enterprise-grade charting framework for Java 25.");
-        detail.setAlignmentX(Component.LEFT_ALIGNMENT);
+        heroText.add(title);
+        heroText.add(Box.createVerticalStrut(4));
+        heroText.add(subtitle);
+        heroText.add(Box.createVerticalStrut(6));
+        heroText.add(version);
 
-        JPanel features = new JPanel();
-        features.setLayout(new BoxLayout(features, BoxLayout.Y_AXIS));
-        features.setOpaque(false);
-        features.setAlignmentX(Component.LEFT_ALIGNMENT);
-        Color muted = DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground");
+        hero.add(icon, BorderLayout.WEST);
+        hero.add(heroText, BorderLayout.CENTER);
 
-        JLabel featuresHeader = new JLabel("Features:");
-        featuresHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
-        featuresHeader.setForeground(muted);
-        featuresHeader.setFont(featuresHeader.getFont().deriveFont(Font.BOLD));
-        features.add(featuresHeader);
-        features.add(Box.createVerticalStrut(4));
+        JPanel details = new JPanel();
+        details.setOpaque(false);
+        details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
+        details.setBorder(BorderFactory.createEmptyBorder(12, 2, 6, 2));
+        details.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel f1 = new JLabel("• Financial: Candlestick, MACD, Ichimoku, Renko, ...");
-        f1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        f1.setForeground(muted);
-        features.add(f1);
-
-        JLabel f2 = new JLabel("• Medical: ECG, EEG, Spirometry, Capnography, ...");
-        f2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        f2.setForeground(muted);
-        features.add(f2);
-
-        JLabel f3 = new JLabel("• Statistical: BoxPlot, Violin, KDE, Q-Q Plot, ...");
-        f3.setAlignmentX(Component.LEFT_ALIGNMENT);
-        f3.setForeground(muted);
-        features.add(f3);
-
-        JLabel f4 = new JLabel("• Analysis: FFT, Wavelet, Correlation, Peak Detection, ...");
-        f4.setAlignmentX(Component.LEFT_ALIGNMENT);
-        f4.setForeground(muted);
-        features.add(f4);
-
-        JLabel f5 = new JLabel("• Specialized: Smith Chart, Ternary, Sankey, ...");
-        f5.setAlignmentX(Component.LEFT_ALIGNMENT);
-        f5.setForeground(muted);
-        features.add(f5);
-
-        JLabel java = new JLabel("Java: " + System.getProperty("java.version") +
-                " (" + System.getProperty("java.vendor") + ")");
-        java.setAlignmentX(Component.LEFT_ALIGNMENT);
-        java.setForeground(muted);
+        details.add(createAboutRow("Renderers", Integer.toString(catalog.entries().size()), muted));
+        details.add(createAboutRow("Modules", "core, swing-bridge, server-bridge, spring-boot-starter", muted));
+        details.add(createAboutRow("Java Runtime",
+                System.getProperty("java.version") + " (" + System.getProperty("java.vendor") + ")",
+                muted));
+        details.add(createAboutRow("License", "MIT License", muted));
+        details.add(createAboutRow("Support Model", "Commercial support, closed-source product delivery", muted));
 
         JLabel copyright = new JLabel(COPYRIGHT);
+        copyright.setForeground(muted);
         copyright.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        content.add(title);
-        content.add(Box.createVerticalStrut(8));
-        content.add(version);
-        content.add(Box.createVerticalStrut(12));
-        content.add(detail);
-        content.add(Box.createVerticalStrut(8));
-        content.add(features);
-        content.add(Box.createVerticalStrut(8));
-        content.add(java);
-        content.add(Box.createVerticalStrut(16));
-        content.add(copyright);
-
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
+        footer.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         JButton close = new JButton("Close");
         close.addActionListener(evt -> dialog.dispose());
-        JPanel footer = new JPanel();
-        footer.add(close);
+        footer.add(copyright, BorderLayout.WEST);
+        footer.add(close, BorderLayout.EAST);
 
-        dialog.add(content, BorderLayout.CENTER);
-        dialog.add(footer, BorderLayout.SOUTH);
-        dialog.pack();
+        root.add(hero);
+        root.add(details);
+        root.add(footer);
+
+        dialog.add(root, BorderLayout.CENTER);
+        dialog.setSize(640, 340);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
+    }
+
+    private static JPanel createAboutRow(String key, String value, Color muted) {
+        JPanel row = new JPanel(new BorderLayout(12, 0));
+        row.setOpaque(false);
+        row.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel k = new JLabel(key);
+        k.setForeground(muted);
+        k.setPreferredSize(new Dimension(112, k.getPreferredSize().height));
+
+        JLabel v = new JLabel(value);
+        v.setFont(v.getFont().deriveFont(Font.PLAIN, 13f));
+
+        row.add(k, BorderLayout.WEST);
+        row.add(v, BorderLayout.CENTER);
+        return row;
     }
 
     /**
