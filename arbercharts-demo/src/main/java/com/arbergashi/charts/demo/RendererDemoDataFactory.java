@@ -97,6 +97,15 @@ public final class RendererDemoDataFactory {
     private static final Set<String> POLAR_ADV_RENDERERS = Set.of(
             "PolarAdvancedRenderer"
     );
+    private static final Set<String> POLAR_RENDERERS = Set.of(
+            "PolarRenderer"
+    );
+    private static final Set<String> POLAR_LINE_RENDERERS = Set.of(
+            "PolarLineRenderer"
+    );
+    private static final Set<String> RADAR_RENDERERS = Set.of(
+            "RadarRenderer"
+    );
 
     private RendererDemoDataFactory() {
     }
@@ -142,6 +151,15 @@ public final class RendererDemoDataFactory {
         }
         if (POLAR_ADV_RENDERERS.contains(simple)) {
             return polarAdvancedModel();
+        }
+        if (POLAR_RENDERERS.contains(simple)) {
+            return polarModel();
+        }
+        if (POLAR_LINE_RENDERERS.contains(simple)) {
+            return polarLineModel();
+        }
+        if (RADAR_RENDERERS.contains(simple)) {
+            return radarModel();
         }
         return switch (category) {
             case "financial" -> financialModel();
@@ -342,6 +360,51 @@ public final class RendererDemoDataFactory {
             base = Math.max(4.0, base);
             value = Math.max(3.0, value);
             model.setPoint(base, value, 0.0, base + value, value, "Sector " + (i + 1));
+        }
+        return model;
+    }
+
+    private static DefaultChartModel polarModel() {
+        DefaultChartModel model = new DefaultChartModel("Global Wind Field");
+        int seed = RENDERER_SEED.get();
+        int points = 24;
+        for (int i = 0; i < points; i++) {
+            double angle = (360.0 / points) * i;
+            double base = 44.0 + Math.sin(i * 0.58 + seededRange(seed, 0.0, 0.45, 210)) * 16.0;
+            double gust = 7.5 + Math.cos(i * 0.34 + seededRange(seed, 0.0, 0.35, 211)) * 3.8;
+            double radius = Math.max(8.0, base + gust);
+            double weight = Math.max(0.08, 0.52 + Math.sin(i * 0.41 + seededRange(seed, 0.0, 0.3, 212)) * 0.35);
+            model.setPoint(angle, radius, radius - 4.0, radius + 4.0, Math.min(1.0, weight), "Dir " + (i * 15) + "°");
+        }
+        return model;
+    }
+
+    private static DefaultChartModel polarLineModel() {
+        DefaultChartModel model = new DefaultChartModel("Orbital Profile");
+        int seed = RENDERER_SEED.get();
+        int points = 18;
+        for (int i = 0; i < points; i++) {
+            double angle = (360.0 / points) * i;
+            double wave = 48.0 + Math.sin(i * 0.72 + seededRange(seed, 0.0, 0.4, 220)) * 18.0;
+            double harmonic = Math.cos(i * 1.2 + seededRange(seed, 0.0, 0.35, 221)) * 9.0;
+            double radius = Math.max(10.0, wave + harmonic);
+            model.setPoint(angle, radius, radius - 3.5, radius + 3.5, Math.max(6.0, radius * 0.4), "Node " + (i + 1));
+        }
+        return model;
+    }
+
+    private static DefaultChartModel radarModel() {
+        DefaultChartModel model = new DefaultChartModel("Platform Capability Matrix");
+        int seed = RENDERER_SEED.get();
+        String[] axes = {
+                "Latency", "Throughput", "Resilience", "Coverage",
+                "Security", "Scalability", "DevEx", "Observability"
+        };
+        double[] targets = {82, 88, 79, 91, 86, 84, 77, 89};
+        for (int i = 0; i < axes.length; i++) {
+            double y = targets[i] + seededRange(seed, -4.0, 4.0, 230 + i);
+            y = Math.max(40.0, Math.min(98.0, y));
+            model.setPoint(i, y, y - 5.0, y + 5.0, y, axes[i]);
         }
         return model;
     }
