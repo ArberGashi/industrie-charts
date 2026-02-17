@@ -481,12 +481,15 @@ public final class RendererDemoDataFactory {
     private static DefaultChartModel smithModel() {
         DefaultChartModel model = new DefaultChartModel("Smith");
         int seed = RENDERER_SEED.get();
-        int points = 96;
+        int points = 128;
         for (int i = 0; i < points; i++) {
             double t = i * (Math.PI * 2.0 / points);
-            double radius = 0.65 + 0.25 * Math.sin(i * (0.15 + seededRange(seed, 0.0, 0.04, 40)));
-            double x = Math.cos(t) * radius;
-            double y = Math.sin(t) * radius;
+            double envelope = 0.58 + 0.2 * Math.sin(i * (0.11 + seededRange(seed, 0.0, 0.03, 40)));
+            double resonance = 0.12 * Math.cos(i * (0.23 + seededRange(seed, 0.0, 0.04, 41)));
+            double radius = Math.max(0.08, Math.min(0.96, envelope + resonance));
+            double phaseSkew = 0.28 * Math.sin(i * (0.09 + seededRange(seed, 0.0, 0.02, 42)));
+            double x = Math.cos(t + phaseSkew) * radius;
+            double y = Math.sin(t - phaseSkew * 0.7) * radius;
             model.setPoint(x, y, y - 0.02, y + 0.02, radius, null);
         }
         return model;

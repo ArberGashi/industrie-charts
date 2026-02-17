@@ -1365,6 +1365,15 @@ public final class DemoApplication {
                     x = x0;
                     y = (i == 0) ? clamp(y0 + Math.sin(phase * 0.9) * (18.0 * amp), 8.0, 96.0) : y0;
                     weight = Math.max(1.0, y);
+                } else if (className.endsWith("SmithChartRenderer") || className.endsWith("VSWRCircleRenderer")) {
+                    double theta = Math.atan2(y0, x0);
+                    double radius = Math.hypot(x0, y0);
+                    double spin = phase * 0.35;
+                    double ripple = 1.0 + 0.12 * amp * Math.sin(phase * 0.9 + i * 0.18);
+                    double r = clamp(radius * ripple, 0.08, 0.98);
+                    x = Math.cos(theta + spin) * r;
+                    y = Math.sin(theta + spin) * r;
+                    weight = Math.max(0.05, r);
                 } else if (className.endsWith("PolarRenderer") || className.endsWith("PolarLineRenderer")) {
                     x = x0;
                     y = Math.max(1.0, y0 * (0.82 + (0.24 * amp) * Math.sin(phase + i * 0.55)));
@@ -1415,8 +1424,15 @@ public final class DemoApplication {
                     weight = Math.max(1.0, w0 * (0.8 + (0.2 * amp) * Math.cos(phase * 0.7 + i * 0.47)));
                 }
 
-                double min = y - Math.max(1.0, y * 0.08);
-                double max = y + Math.max(1.0, y * 0.08);
+                double min;
+                double max;
+                if (className.endsWith("SmithChartRenderer") || className.endsWith("VSWRCircleRenderer")) {
+                    min = y - 0.04;
+                    max = y + 0.04;
+                } else {
+                    min = y - Math.max(1.0, y * 0.08);
+                    max = y + Math.max(1.0, y * 0.08);
+                }
                 defaultModel.setPoint(x, y, min, max, weight, label);
             }
         });
@@ -1431,6 +1447,7 @@ public final class DemoApplication {
 
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
+        if (className.contains("Smith") || className.contains("VSWR")) return 1.0;
         if (className.contains("Gauge") || className.contains("SemiDonut")) return 1.1;
         if (className.contains("Heatmap") || className.contains("Spectrogram")) return 0.95;
         if (className.contains("Sankey") || className.contains("Alluvial") || className.contains("Chord")) return 0.85;
@@ -1440,6 +1457,7 @@ public final class DemoApplication {
 
     private static double showcaseAnimationAmplitude(String className) {
         if (className == null) return 1.0;
+        if (className.contains("Smith") || className.contains("VSWR")) return 0.75;
         if (className.contains("Gauge") || className.contains("SemiDonut")) return 0.9;
         if (className.contains("Sankey") || className.contains("Alluvial") || className.contains("Chord")) return 0.7;
         if (className.contains("Heatmap") || className.contains("Spectrogram")) return 0.65;
