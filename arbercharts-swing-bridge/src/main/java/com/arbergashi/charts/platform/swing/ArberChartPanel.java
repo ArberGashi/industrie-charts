@@ -1860,10 +1860,14 @@ public class ArberChartPanel extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        // Detect DPI scaling (single point of policy in ChartScale).
+        // On Java 9+, Swing handles HiDPI scaling itself. Keep framework scale at 1x unless forced.
         float scale = 1.0f;
-        if (getGraphicsConfiguration() != null && getGraphicsConfiguration().getDefaultTransform() != null) {
-            scale = (float) getGraphicsConfiguration().getDefaultTransform().getScaleX();
+        boolean forceGraphicsScale = Boolean.parseBoolean(System.getProperty("arbercharts.hidpi.autodetect", "false"));
+        boolean modernJdk = Runtime.version().feature() >= 9;
+        if (forceGraphicsScale || !modernJdk) {
+            if (getGraphicsConfiguration() != null && getGraphicsConfiguration().getDefaultTransform() != null) {
+                scale = (float) getGraphicsConfiguration().getDefaultTransform().getScaleX();
+            }
         }
         ChartScale.autoDetect(scale);
     }
