@@ -16,6 +16,7 @@ import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.LatencyTracker;
 import com.arbergashi.charts.platform.export.ChartExportService;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import com.formdev.flatlaf.util.SystemInfo;
 
 import javax.swing.BorderFactory;
@@ -23,13 +24,13 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JDialog;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -41,7 +42,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
 import java.awt.Toolkit;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -57,15 +59,21 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -139,14 +147,12 @@ public final class DemoApplication {
     }
 
     private final RendererCatalog catalog = RendererCatalog.load();
-    private final Map<String, RendererCatalogEntry> byName = new HashMap<>();
     private final Map<String, JPanel> rendererPanels = new HashMap<>();
     private final CardLayout detailLayout = new CardLayout();
     private final JPanel detailHost = new JPanel(detailLayout);
     private final JLabel statusLabel = new JLabel("Ready");
     private final JLabel countLabel = new JLabel();
     private final JLabel metricsLabel = new JLabel();
-    private final JTextField searchField = new JTextField();
     private final JTree tree;
     private JMenuItem aboutMenuItem;
     private JMenuItem preferencesMenuItem;
@@ -158,6 +164,10 @@ public final class DemoApplication {
     private JPanel footerPanel;
     private JLabel headerTitleLabel;
     private JLabel versionLabel;
+    private JDialog searchEverywhereDialog;
+    private JTextField searchEverywhereField;
+    private JList<RendererCatalogEntry> searchEverywhereResults;
+    private DefaultListModel<RendererCatalogEntry> searchEverywhereModel;
     private ArberChartPanel currentChartPanel;
     private final boolean vectorAvailable = isVectorAvailable();
     private final StringBuilder speedSearch = new StringBuilder();
@@ -183,7 +193,6 @@ public final class DemoApplication {
                 root.add(node);
                 return node;
             }).add(new DefaultMutableTreeNode(entry));
-            byName.put(entry.simpleName().toLowerCase(Locale.US), entry);
         }
         tree = new JTree(new DefaultTreeModel(root));
         tree.setRootVisible(false);
@@ -335,6 +344,7 @@ public final class DemoApplication {
         header.add(left, BorderLayout.WEST);
         header.add(right, BorderLayout.EAST);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
+        installHeaderWindowGestures(header);
         return header;
     }
 
@@ -596,17 +606,14 @@ public final class DemoApplication {
             return;
         }
 
-        JFileChooser chooser = new JFileChooser();
+        SystemFileChooser chooser = new SystemFileChooser();
         chooser.setDialogTitle("Export Chart as PNG");
-        chooser.setFileFilter(new FileNameExtensionFilter("PNG Images", "png"));
+        chooser.setFileFilter(new SystemFileChooser.FileNameExtensionFilter("PNG Images", "png"));
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         chooser.setSelectedFile(new File("chart_" + timestamp + ".png"));
 
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().toLowerCase().endsWith(".png")) {
-                file = new File(file.getAbsolutePath() + ".png");
-            }
+        if (chooser.showSaveDialog(mainFrame) == SystemFileChooser.APPROVE_OPTION) {
+            File file = ensureExtension(chooser.getSelectedFile(), ".png");
             try {
                 ChartExportService.exportPng(currentChartPanel, file);
                 updateStatus("Exported to: " + file.getName());
@@ -627,17 +634,14 @@ public final class DemoApplication {
             return;
         }
 
-        JFileChooser chooser = new JFileChooser();
+        SystemFileChooser chooser = new SystemFileChooser();
         chooser.setDialogTitle("Export Chart as PDF");
-        chooser.setFileFilter(new FileNameExtensionFilter("PDF Documents", "pdf"));
+        chooser.setFileFilter(new SystemFileChooser.FileNameExtensionFilter("PDF Documents", "pdf"));
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         chooser.setSelectedFile(new File("chart_" + timestamp + ".pdf"));
 
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().toLowerCase().endsWith(".pdf")) {
-                file = new File(file.getAbsolutePath() + ".pdf");
-            }
+        if (chooser.showSaveDialog(mainFrame) == SystemFileChooser.APPROVE_OPTION) {
+            File file = ensureExtension(chooser.getSelectedFile(), ".pdf");
             try {
                 ChartExportService.exportPdf(currentChartPanel, file);
                 updateStatus("Exported PDF to: " + file.getName());
@@ -656,17 +660,14 @@ public final class DemoApplication {
             return;
         }
 
-        JFileChooser chooser = new JFileChooser();
+        SystemFileChooser chooser = new SystemFileChooser();
         chooser.setDialogTitle("Export Chart as SVG");
-        chooser.setFileFilter(new FileNameExtensionFilter("SVG Images", "svg"));
+        chooser.setFileFilter(new SystemFileChooser.FileNameExtensionFilter("SVG Images", "svg"));
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         chooser.setSelectedFile(new File("chart_" + timestamp + ".svg"));
 
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().toLowerCase().endsWith(".svg")) {
-                file = new File(file.getAbsolutePath() + ".svg");
-            }
+        if (chooser.showSaveDialog(mainFrame) == SystemFileChooser.APPROVE_OPTION) {
+            File file = ensureExtension(chooser.getSelectedFile(), ".svg");
             try {
                 ChartExportService.exportSvg(currentChartPanel, file);
                 updateStatus("Exported SVG to: " + file.getName());
@@ -755,36 +756,241 @@ public final class DemoApplication {
         return input.substring(0, 1).toUpperCase(Locale.US) + input.substring(1);
     }
 
-    private void selectFromSearch() {
-        String query = searchField.getText();
-        if (query == null || query.isBlank()) {
+    private static File ensureExtension(File file, String extension) {
+        if (file == null) {
+            return null;
+        }
+        String lowerName = file.getName().toLowerCase(Locale.US);
+        if (lowerName.endsWith(extension)) {
+            return file;
+        }
+        return new File(file.getAbsolutePath() + extension);
+    }
+
+    private void showSearchEverywhereDialog() {
+        ensureSearchEverywhereDialog();
+        if (searchEverywhereDialog == null) {
             return;
         }
-        RendererCatalogEntry entry = byName.get(query.trim().toLowerCase(Locale.US));
+        searchEverywhereField.setText("");
+        updateSearchEverywhereResults("");
+        positionSearchEverywhereDialog();
+        searchEverywhereDialog.setVisible(true);
+        SwingUtilities.invokeLater(() -> searchEverywhereField.requestFocusInWindow());
+    }
+
+    private void ensureSearchEverywhereDialog() {
+        if (searchEverywhereDialog != null || mainFrame == null) {
+            return;
+        }
+
+        JDialog dialog = new JDialog(mainFrame, false);
+        dialog.setUndecorated(true);
+        dialog.setLayout(new BorderLayout());
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(currentPalette().border(), 1));
+
+        JPanel content = new JPanel(new BorderLayout(0, 8));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        content.setBackground(currentPalette().surfaceBackground());
+
+        JTextField field = new JTextField();
+        field.putClientProperty("JTextField.placeholderText", "Search Everywhere");
+        field.addActionListener(evt -> openSelectedFromSearchEverywhere());
+        field.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateSearchEverywhereResults(field.getText());
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateSearchEverywhereResults(field.getText());
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateSearchEverywhereResults(field.getText());
+            }
+        });
+        field.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    dialog.setVisible(false);
+                    return;
+                }
+                if (searchEverywhereResults == null) {
+                    return;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    int index = searchEverywhereResults.getSelectedIndex();
+                    if (index < searchEverywhereModel.getSize() - 1) {
+                        searchEverywhereResults.setSelectedIndex(index + 1);
+                        searchEverywhereResults.ensureIndexIsVisible(index + 1);
+                    }
+                } else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    int index = searchEverywhereResults.getSelectedIndex();
+                    if (index > 0) {
+                        searchEverywhereResults.setSelectedIndex(index - 1);
+                        searchEverywhereResults.ensureIndexIsVisible(index - 1);
+                    }
+                }
+            }
+        });
+
+        DefaultListModel<RendererCatalogEntry> model = new DefaultListModel<>();
+        JList<RendererCatalogEntry> results = new JList<>(model);
+        results.setVisibleRowCount(12);
+        results.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                JLabel cell = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof RendererCatalogEntry entry) {
+                    cell.setText(entry.simpleName() + "  [" + entry.category() + "]");
+                    Color iconTint = isSelected ? list.getSelectionForeground() : currentPalette().muted();
+                    cell.setIcon(rendererIconForCategory(entry.category(), iconTint));
+                }
+                return cell;
+            }
+        });
+        results.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
+                    openSelectedFromSearchEverywhere();
+                }
+            }
+        });
+
+        JScrollPane resultsScroll = new JScrollPane(results);
+        resultsScroll.setBorder(BorderFactory.createEmptyBorder());
+
+        content.add(field, BorderLayout.NORTH);
+        content.add(resultsScroll, BorderLayout.CENTER);
+        dialog.add(content, BorderLayout.CENTER);
+        dialog.setSize(new Dimension(620, 420));
+
+        this.searchEverywhereDialog = dialog;
+        this.searchEverywhereField = field;
+        this.searchEverywhereResults = results;
+        this.searchEverywhereModel = model;
+        updateSearchEverywhereResults("");
+    }
+
+    private void updateSearchEverywhereResults(String query) {
+        if (searchEverywhereModel == null) {
+            return;
+        }
+        searchEverywhereModel.clear();
+        String normalized = query == null ? "" : query.trim().toLowerCase(Locale.US);
+        List<RendererCatalogEntry> matches = catalog.entries().stream()
+                .filter(entry -> normalized.isBlank()
+                        || entry.simpleName().toLowerCase(Locale.US).contains(normalized)
+                        || entry.className().toLowerCase(Locale.US).contains(normalized)
+                        || entry.category().toLowerCase(Locale.US).contains(normalized))
+                .sorted((left, right) -> left.simpleName().compareToIgnoreCase(right.simpleName()))
+                .limit(120)
+                .toList();
+        for (RendererCatalogEntry entry : matches) {
+            searchEverywhereModel.addElement(entry);
+        }
+        if (!searchEverywhereModel.isEmpty() && searchEverywhereResults != null) {
+            searchEverywhereResults.setSelectedIndex(0);
+        }
+    }
+
+    private void openSelectedFromSearchEverywhere() {
+        if (searchEverywhereResults == null) {
+            return;
+        }
+        RendererCatalogEntry entry = searchEverywhereResults.getSelectedValue();
         if (entry == null) {
-            statusLabel.setText("No renderer named: " + query);
             return;
         }
         TreePath path = findTreePath(entry);
         if (path != null) {
             tree.setSelectionPath(path);
             tree.scrollPathToVisible(path);
-            statusLabel.setText("Selected " + entry.simpleName());
+            updateStatus("Selected " + entry.simpleName());
+        }
+        if (searchEverywhereDialog != null) {
+            searchEverywhereDialog.setVisible(false);
         }
     }
 
-    private void showSearchEverywhereDialog() {
-        String query = JOptionPane.showInputDialog(
-                mainFrame,
-                "Search renderer:",
-                "Search Everywhere",
-                JOptionPane.PLAIN_MESSAGE
-        );
-        if (query == null || query.isBlank()) {
+    private void positionSearchEverywhereDialog() {
+        if (searchEverywhereDialog == null || mainFrame == null) {
             return;
         }
-        searchField.setText(query.trim());
-        selectFromSearch();
+        int width = Math.min(700, Math.max(520, mainFrame.getWidth() / 2));
+        int x = mainFrame.getX() + ((mainFrame.getWidth() - width) / 2);
+        int y = mainFrame.getY() + 56;
+        searchEverywhereDialog.setSize(new Dimension(width, 420));
+        searchEverywhereDialog.setLocation(x, y);
+    }
+
+    private void installHeaderWindowGestures(JPanel header) {
+        HeaderWindowMouseHandler handler = new HeaderWindowMouseHandler();
+        header.addMouseListener(handler);
+        header.addMouseMotionListener(handler);
+    }
+
+    private final class HeaderWindowMouseHandler extends MouseAdapter {
+        private Point dragOffset;
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            if (!SwingUtilities.isLeftMouseButton(e)) {
+                return;
+            }
+            dragOffset = e.getPoint();
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            dragOffset = null;
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent e) {
+            if (mainFrame == null || dragOffset == null || !SwingUtilities.isLeftMouseButton(e)) {
+                return;
+            }
+            if ((mainFrame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0) {
+                return;
+            }
+            Point screen = e.getLocationOnScreen();
+            mainFrame.setLocation(screen.x - dragOffset.x, screen.y - dragOffset.y);
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            if (!SwingUtilities.isLeftMouseButton(e) || e.getClickCount() != 2) {
+                return;
+            }
+            toggleWindowMaximizeRestore();
+        }
+    }
+
+    private void toggleWindowMaximizeRestore() {
+        if (mainFrame == null) {
+            return;
+        }
+        int state = mainFrame.getExtendedState();
+        if ((state & Frame.MAXIMIZED_BOTH) != 0) {
+            mainFrame.setExtendedState(state & ~Frame.MAXIMIZED_BOTH);
+            return;
+        }
+        Rectangle screenBounds = mainFrame.getGraphicsConfiguration().getBounds();
+        java.awt.Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(mainFrame.getGraphicsConfiguration());
+        mainFrame.setMaximizedBounds(new Rectangle(
+                screenBounds.x + insets.left,
+                screenBounds.y + insets.top,
+                screenBounds.width - insets.left - insets.right,
+                screenBounds.height - insets.top - insets.bottom
+        ));
+        mainFrame.setExtendedState(state | Frame.MAXIMIZED_BOTH);
     }
 
     private TreePath findTreePath(RendererCatalogEntry entry) {
@@ -1225,12 +1431,15 @@ public final class DemoApplication {
     }
 
     private static void configurePlatformDefaults() {
-        if (!SystemInfo.isMacOS) {
-            return;
+        if (SystemInfo.isLinux) {
+            JFrame.setDefaultLookAndFeelDecorated(true);
+            JDialog.setDefaultLookAndFeelDecorated(true);
         }
-        System.setProperty("apple.laf.useScreenMenuBar", "true");
-        System.setProperty("apple.awt.application.name", "ArberCharts Demo");
-        System.setProperty("apple.awt.application.appearance", "system");
+        if (SystemInfo.isMacOS) {
+            System.setProperty("apple.laf.useScreenMenuBar", "true");
+            System.setProperty("apple.awt.application.name", "ArberCharts Demo");
+            System.setProperty("apple.awt.application.appearance", "system");
+        }
     }
 
     private static void configurePlatformWindow(JFrame frame) {
@@ -1251,8 +1460,10 @@ public final class DemoApplication {
         }
 
         // Cross-platform FlatLaf title bar hints (Windows/Linux).
+        frame.getRootPane().putClientProperty("JRootPane.useWindowDecorations", Boolean.TRUE);
+        frame.getRootPane().putClientProperty("JRootPane.menuBarEmbedded", Boolean.TRUE);
         frame.getRootPane().putClientProperty("JRootPane.titleBarShowIcon", Boolean.TRUE);
-        frame.getRootPane().putClientProperty("JRootPane.titleBarShowTitle", Boolean.TRUE);
+        frame.getRootPane().putClientProperty("JRootPane.titleBarShowTitle", Boolean.FALSE);
         frame.getRootPane().putClientProperty("JRootPane.titleBarBackground",
                 DemoThemeSupport.uiColor("TitlePane.background", "Panel.background"));
         frame.getRootPane().putClientProperty("JRootPane.titleBarForeground",
