@@ -1258,6 +1258,7 @@ public final class DemoApplication {
             y.setRequestedTickCount(8).setShowGrid(true);
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
+            applyAnalysisRendererAxisPreset(className, panel);
         }
 
         if (renderer instanceof com.arbergashi.charts.render.circular.GaugeRenderer gaugeRenderer) {
@@ -1362,6 +1363,9 @@ public final class DemoApplication {
 
         double speed = showcaseAnimationSpeed(className);
         double amp = showcaseAnimationAmplitude(className);
+        if (speed <= 0.0 || amp <= 0.0) {
+            return;
+        }
         Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
             if (!panel.isDisplayable()) {
                 ((Timer) evt.getSource()).stop();
@@ -1409,7 +1413,13 @@ public final class DemoApplication {
                     y = Math.max(1.0, y0 * (0.78 + (0.28 * amp) * Math.sin(phase * 0.9 + i * 0.58)));
                     weight = Math.max(1.0, y);
                 } else if (analysis) {
-                    if (className.endsWith("OutlierDetectionRenderer")
+                    if (className.endsWith("AdaptiveFunctionRenderer")
+                            || className.endsWith("VectorFieldRenderer")
+                            || className.endsWith("ReferenceLineRenderer")) {
+                        x = x0;
+                        y = y0;
+                        weight = Math.max(0.05, w0);
+                    } else if (className.endsWith("OutlierDetectionRenderer")
                             || className.endsWith("PeakDetectionRenderer")
                             || className.endsWith("ChangePointRenderer")
                             || className.endsWith("ThresholdRenderer")
@@ -1417,6 +1427,14 @@ public final class DemoApplication {
                         x = x0;
                         y = y0 + Math.sin(phase * 0.8 + i * 0.21) * (Math.max(0.8, Math.abs(y0) * 0.08) * amp);
                         weight = Math.max(0.05, w0 * (0.92 + 0.14 * amp * Math.cos(phase * 0.9 + i * 0.17)));
+                    } else if (className.endsWith("EnvelopeRenderer")) {
+                        x = x0;
+                        y = y0 * (0.94 + 0.10 * amp * Math.sin(phase * 0.7 + i * 0.14));
+                        weight = Math.max(0.05, w0 * (0.95 + 0.08 * amp * Math.cos(phase * 0.6 + i * 0.11)));
+                    } else if (className.endsWith("SlopeRenderer")) {
+                        x = x0;
+                        y = y0 + Math.sin(phase * 0.9 + i * 0.5) * 0.9 * amp;
+                        weight = Math.max(0.05, w0);
                     } else if (className.endsWith("LiveFFTRenderer")
                             || className.endsWith("FourierOverlayRenderer")
                             || className.endsWith("AutocorrelationRenderer")) {
@@ -1560,6 +1578,9 @@ public final class DemoApplication {
 
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
+        if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
+        if (className.contains("Slope")) return 0.8;
+        if (className.contains("Envelope")) return 0.72;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 1.0;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 1.2;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.95;
@@ -1573,6 +1594,9 @@ public final class DemoApplication {
 
     private static double showcaseAnimationAmplitude(String className) {
         if (className == null) return 1.0;
+        if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
+        if (className.contains("Slope")) return 0.45;
+        if (className.contains("Envelope")) return 0.55;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 0.7;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 0.9;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.75;
@@ -1588,6 +1612,44 @@ public final class DemoApplication {
         if (value < min) return min;
         if (value > max) return max;
         return value;
+    }
+
+    private static void applyAnalysisRendererAxisPreset(String className, ArberChartPanel panel) {
+        if (className == null || panel == null) {
+            return;
+        }
+        com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+        com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+        x.setShowGrid(true);
+        y.setShowGrid(true);
+
+        if (className.endsWith("AutocorrelationRenderer")) {
+            x.setRequestedTickCount(12).setShowGrid(true);
+            y.setRequestedTickCount(6).setShowGrid(true).setFixedRange(-1.0, 1.0);
+        } else if (className.endsWith("LiveFFTRenderer")
+                || className.endsWith("FourierOverlayRenderer")) {
+            x.setRequestedTickCount(12).setShowGrid(true);
+            y.setRequestedTickCount(8).setShowGrid(true);
+        } else if (className.endsWith("VectorFieldRenderer")) {
+            x.setRequestedTickCount(9).setShowGrid(true).setFixedRange(-10.0, 10.0);
+            y.setRequestedTickCount(9).setShowGrid(true).setFixedRange(-10.0, 10.0);
+        } else if (className.endsWith("AdaptiveFunctionRenderer")) {
+            x.setRequestedTickCount(10).setShowGrid(true).setFixedRange(-36.0, 36.0);
+            y.setRequestedTickCount(8).setShowGrid(true);
+        } else if (className.endsWith("ThresholdRenderer")
+                || className.endsWith("ReferenceLineRenderer")) {
+            x.setRequestedTickCount(10).setShowGrid(true);
+            y.setRequestedTickCount(8).setShowGrid(true);
+        } else if (className.endsWith("SlopeRenderer")) {
+            x.setRequestedTickCount(3).setShowGrid(true);
+            y.setRequestedTickCount(7).setShowGrid(true);
+        } else {
+            x.setRequestedTickCount(10).setShowGrid(true);
+            y.setRequestedTickCount(8).setShowGrid(true);
+        }
+
+        panel.setXAxisConfig(x);
+        panel.setYAxisConfig(y);
     }
 
     /**
