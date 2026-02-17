@@ -1399,6 +1399,10 @@ public final class DemoApplication {
             }
             return;
         }
+        if (model instanceof com.arbergashi.charts.model.DefaultFinancialChartModel financialModel) {
+            installFinancialShowcaseAnimation(financialModel, panel, entry.className());
+            return;
+        }
         if (!(model instanceof DefaultChartModel defaultModel)) {
             return;
         }
@@ -1663,6 +1667,58 @@ public final class DemoApplication {
         });
     }
 
+    private void installFinancialShowcaseAnimation(com.arbergashi.charts.model.DefaultFinancialChartModel model,
+                                                   ArberChartPanel panel,
+                                                   String className) {
+        final int count = model.getPointCount();
+        if (count <= 1) {
+            return;
+        }
+
+        final double[] x = {model.getX(count - 1)};
+        final double[] lastClose = {model.getClose(count - 1)};
+        final long[] tick = {0L};
+        final double speed = showcaseAnimationSpeed(className);
+        final double amp = showcaseAnimationAmplitude(className);
+        if (speed <= 0.0 || amp <= 0.0) {
+            return;
+        }
+
+        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
+            if (!panel.isDisplayable()) {
+                ((Timer) evt.getSource()).stop();
+                return;
+            }
+            tick[0]++;
+            x[0] += 1.0;
+            double phase = (System.nanoTime() * 1.0e-9) * speed;
+            double trend = Math.sin(phase * 0.2) * 0.08;
+            double cycle = Math.sin(phase * 0.9 + tick[0] * 0.07) * (0.9 * amp);
+            double micro = Math.cos(phase * 1.6 + tick[0] * 0.11) * (0.35 * amp);
+            double delta = trend + cycle + micro;
+
+            double open = lastClose[0];
+            double close = Math.max(1.0, open + delta);
+            double body = Math.abs(close - open);
+            double wickUp = Math.max(0.15, body * (0.55 + Math.abs(Math.sin(phase * 0.7)) * 0.45));
+            double wickDown = Math.max(0.15, body * (0.52 + Math.abs(Math.cos(phase * 0.6)) * 0.48));
+            double high = Math.max(open, close) + wickUp;
+            double low = Math.min(open, close) - wickDown;
+            double volume = 30_000_000 + (Math.abs(delta) * 12_000_000) + Math.abs(Math.sin(phase * 0.4)) * 8_000_000;
+
+            model.setOHLC(x[0], open, high, low, close, volume, null);
+            lastClose[0] = close;
+            panel.repaint();
+        });
+        animation.start();
+
+        panel.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
+                animation.stop();
+            }
+        });
+    }
+
     private static int detectMedicalChannels(CircularFastMedicalModel model, int maxProbe) {
         int channels = 0;
         for (int c = 0; c < maxProbe; c++) {
@@ -1678,6 +1734,7 @@ public final class DemoApplication {
 
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
+        if (className.contains("AuditTrail")) return 0.0;
         if (className.contains("Candlestick") || className.contains("MACD") || className.contains("RSI")
                 || className.contains("ADX") || className.contains("Ichimoku")) return 0.62;
         if (className.contains("BoxPlot") || className.contains("Violin") || className.contains("Histogram")
@@ -1705,6 +1762,7 @@ public final class DemoApplication {
 
     private static double showcaseAnimationAmplitude(String className) {
         if (className == null) return 1.0;
+        if (className.contains("AuditTrail")) return 0.0;
         if (className.contains("Candlestick") || className.contains("MACD") || className.contains("RSI")
                 || className.contains("ADX") || className.contains("Ichimoku")) return 0.42;
         if (className.contains("BoxPlot") || className.contains("Violin") || className.contains("Histogram")
