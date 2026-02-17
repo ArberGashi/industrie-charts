@@ -156,9 +156,9 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultChartModel linkLabelModel() {
-        DefaultChartModel model = new DefaultChartModel("Links");
-        String[] pairs = {"A:B", "A:C", "B:D", "C:D", "C:E", "D:E", "E:A"};
-        double[] weights = {12, 18, 10, 14, 9, 11, 7};
+        DefaultChartModel model = new DefaultChartModel("Dependency Links");
+        String[] pairs = {"Ingest:Validate", "Validate:Risk", "Risk:Route", "Route:Execute", "Execute:Settle", "Settle:Archive"};
+        double[] weights = {24, 21, 17, 16, 13, 9};
         for (int i = 0; i < pairs.length; i++) {
             double w = weights[i % weights.length];
             model.setPoint(i, w, 0.0, w, w, pairs[i]);
@@ -211,15 +211,17 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel distributionModel() {
         DefaultChartModel model = new DefaultChartModel("Distribution");
-        int points = 180;
+        int points = 220;
         for (int i = 0; i < points; i++) {
-            double noise = Math.sin(i * 0.37) * 3 + Math.cos(i * 0.11) * 2;
-            double sample = Math.sin(i * 0.09) * 18 + Math.cos(i * 0.04) * 9 + noise;
+            double clusterA = Math.sin(i * 0.11) * 8.0 + 16.0;
+            double clusterB = Math.cos(i * 0.13) * 7.0 - 12.0;
+            double mixing = (i % 5 < 3) ? clusterA : clusterB;
+            double sample = mixing + Math.sin(i * 0.37) * 2.4 + Math.cos(i * 0.09) * 1.8;
             double x = sample;
             double y = sample;
-            double min = sample - 2.5;
-            double max = sample + 2.5;
-            double weight = Math.abs(sample) + 4;
+            double min = sample - 2.2;
+            double max = sample + 2.2;
+            double weight = Math.abs(sample) * 0.45 + 4.0;
             model.setPoint(x, y, min, max, weight, null);
         }
         return model;
@@ -239,12 +241,13 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultChartModel correlationModel() {
-        DefaultChartModel model = new DefaultChartModel("Correlation");
+        DefaultChartModel model = new DefaultChartModel("Moving Correlation");
         int points = 240;
         for (int i = 0; i < points; i++) {
             double x = i;
-            double y = Math.sin(i * 0.05) * 24 + Math.cos(i * 0.02) * 9;
-            double weight = y * 0.55 + Math.cos(i * 0.11) * 6;
+            double windowShift = (i < 110) ? 14.0 : (i < 175 ? -8.0 : 9.0);
+            double y = Math.sin(i * 0.05) * 21 + Math.cos(i * 0.018) * 11 + windowShift;
+            double weight = y * 0.48 + Math.cos(i * 0.11) * 5;
             double min = y - 6;
             double max = y + 6;
             model.setPoint(x, y, min, max, weight, null);
@@ -332,13 +335,13 @@ public final class RendererDemoDataFactory {
 
     private static DefaultMatrixChartModel matrixModel() {
         double[][] matrix = {
-                {0, 6, 2, 4, 3},
-                {3, 0, 5, 1, 2},
-                {4, 2, 0, 7, 5},
-                {1, 5, 3, 0, 6},
-                {2, 3, 4, 5, 0}
+                {0.0, 0.82, 0.57, 0.36, -0.14},
+                {0.82, 0.0, 0.49, 0.32, -0.09},
+                {0.57, 0.49, 0.0, 0.43, 0.11},
+                {0.36, 0.32, 0.43, 0.0, 0.27},
+                {-0.14, -0.09, 0.11, 0.27, 0.0}
         };
-        List<String> labels = List.of("Risk", "FX", "Rates", "Equity", "Macro");
+        List<String> labels = List.of("US Eq", "EU Eq", "Rates", "Cmdty", "Vol");
         return new DefaultMatrixChartModel(matrix, labels).setName("Matrix");
     }
 
@@ -371,19 +374,24 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultHierarchicalChartModel hierarchicalModel() {
-        DefaultHierarchicalChartModel.DefaultNode root = new DefaultHierarchicalChartModel.DefaultNode("Portfolio", 0);
-        DefaultHierarchicalChartModel.DefaultNode fx = new DefaultHierarchicalChartModel.DefaultNode("FX", 0);
-        fx.setChild(new DefaultHierarchicalChartModel.DefaultNode("EURUSD", 32));
-        fx.setChild(new DefaultHierarchicalChartModel.DefaultNode("USDJPY", 24));
-        DefaultHierarchicalChartModel.DefaultNode rates = new DefaultHierarchicalChartModel.DefaultNode("Rates", 0);
-        rates.setChild(new DefaultHierarchicalChartModel.DefaultNode("UST", 18));
-        rates.setChild(new DefaultHierarchicalChartModel.DefaultNode("Bund", 12));
-        DefaultHierarchicalChartModel.DefaultNode eq = new DefaultHierarchicalChartModel.DefaultNode("Equity", 0);
-        eq.setChild(new DefaultHierarchicalChartModel.DefaultNode("US", 22));
-        eq.setChild(new DefaultHierarchicalChartModel.DefaultNode("EU", 16));
-        root.setChild(fx);
-        root.setChild(rates);
-        root.setChild(eq);
+        DefaultHierarchicalChartModel.DefaultNode root = new DefaultHierarchicalChartModel.DefaultNode("Global Portfolio", 0);
+        DefaultHierarchicalChartModel.DefaultNode equities = new DefaultHierarchicalChartModel.DefaultNode("Equities", 0);
+        equities.setChild(new DefaultHierarchicalChartModel.DefaultNode("US", 34));
+        equities.setChild(new DefaultHierarchicalChartModel.DefaultNode("Europe", 18));
+        equities.setChild(new DefaultHierarchicalChartModel.DefaultNode("EM", 10));
+
+        DefaultHierarchicalChartModel.DefaultNode fixedIncome = new DefaultHierarchicalChartModel.DefaultNode("Fixed Income", 0);
+        fixedIncome.setChild(new DefaultHierarchicalChartModel.DefaultNode("Gov", 16));
+        fixedIncome.setChild(new DefaultHierarchicalChartModel.DefaultNode("IG Corp", 11));
+        fixedIncome.setChild(new DefaultHierarchicalChartModel.DefaultNode("HY", 5));
+
+        DefaultHierarchicalChartModel.DefaultNode alternatives = new DefaultHierarchicalChartModel.DefaultNode("Alternatives", 0);
+        alternatives.setChild(new DefaultHierarchicalChartModel.DefaultNode("REIT", 4));
+        alternatives.setChild(new DefaultHierarchicalChartModel.DefaultNode("Commodities", 2));
+
+        root.setChild(equities);
+        root.setChild(fixedIncome);
+        root.setChild(alternatives);
         return new DefaultHierarchicalChartModel(root).setName("Hierarchy");
     }
 

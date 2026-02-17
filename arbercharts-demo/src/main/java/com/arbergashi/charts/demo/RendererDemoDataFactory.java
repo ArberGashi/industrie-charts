@@ -158,25 +158,31 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel standardModel(String name, int index, int total) {
         DefaultChartModel model = new DefaultChartModel(name);
-        int points = 200;
+        int points = 280;
         double offset = (index - (total - 1) * 0.5) * 15.0;
         double phase = index * Math.PI / 3;
-        double amplitude = 40 - index * 8;
+        double amplitude = 34 - index * 6;
 
         for (int i = 0; i < points; i++) {
             double x = i;
-            // Clean multi-frequency wave
+            double trend = i < 110 ? i * 0.09 : (i < 210 ? 9.9 - (i - 110) * 0.06 : 3.9 + (i - 210) * 0.08);
             double y = Math.sin(i * 0.05 + phase) * amplitude
-                     + Math.sin(i * 0.02 + phase) * (amplitude * 0.4)
-                     + offset;
+                    + Math.sin(i * 0.018 + phase) * (amplitude * 0.42)
+                    + trend
+                    + offset;
+            if (i == 84 || i == 192) {
+                y += 14.0;
+            }
+            if (i == 148) {
+                y -= 11.0;
+            }
 
-            // Error bands
-            double bandWidth = 5 + Math.sin(i * 0.08) * 3;
+            double bandWidth = 4.0 + Math.abs(Math.sin(i * 0.08 + phase)) * 3.2;
             double min = y - bandWidth;
             double max = y + bandWidth;
-            double weight = Math.abs(y - offset) + 10;
+            double weight = Math.abs(y - offset) * 0.6 + 8.0;
 
-            String label = null;
+            String label = (i == 84) ? "Event A" : (i == 148) ? "Correction" : (i == 192) ? "Event B" : null;
             model.setPoint(x, y, min, max, weight, label);
         }
         return model;
@@ -194,9 +200,9 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultChartModel linkLabelModel() {
-        DefaultChartModel model = new DefaultChartModel("Links");
-        String[] pairs = {"A:B", "A:C", "B:D", "C:D", "C:E", "D:E", "E:A"};
-        double[] weights = {12, 18, 10, 14, 9, 11, 7};
+        DefaultChartModel model = new DefaultChartModel("Dependency Links");
+        String[] pairs = {"Ingest:Validate", "Validate:Risk", "Risk:Route", "Route:Execute", "Execute:Settle", "Settle:Archive"};
+        double[] weights = {24, 21, 17, 16, 13, 9};
         for (int i = 0; i < pairs.length; i++) {
             double w = weights[i % weights.length];
             model.setPoint(i, w, 0.0, w, w, pairs[i]);
@@ -249,15 +255,17 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel distributionModel() {
         DefaultChartModel model = new DefaultChartModel("Distribution");
-        int points = 180;
+        int points = 220;
         for (int i = 0; i < points; i++) {
-            double noise = Math.sin(i * 0.37) * 3 + Math.cos(i * 0.11) * 2;
-            double sample = Math.sin(i * 0.09) * 18 + Math.cos(i * 0.04) * 9 + noise;
+            double clusterA = Math.sin(i * 0.11) * 8.0 + 16.0;
+            double clusterB = Math.cos(i * 0.13) * 7.0 - 12.0;
+            double mixing = (i % 5 < 3) ? clusterA : clusterB;
+            double sample = mixing + Math.sin(i * 0.37) * 2.4 + Math.cos(i * 0.09) * 1.8;
             double x = sample;
             double y = sample;
-            double min = sample - 2.5;
-            double max = sample + 2.5;
-            double weight = Math.abs(sample) + 4;
+            double min = sample - 2.2;
+            double max = sample + 2.2;
+            double weight = Math.abs(sample) * 0.45 + 4.0;
             model.setPoint(x, y, min, max, weight, null);
         }
         return model;
@@ -277,12 +285,13 @@ public final class RendererDemoDataFactory {
     }
 
     private static DefaultChartModel correlationModel() {
-        DefaultChartModel model = new DefaultChartModel("Correlation");
+        DefaultChartModel model = new DefaultChartModel("Moving Correlation");
         int points = 240;
         for (int i = 0; i < points; i++) {
             double x = i;
-            double y = Math.sin(i * 0.05) * 24 + Math.cos(i * 0.02) * 9;
-            double weight = y * 0.55 + Math.cos(i * 0.11) * 6;
+            double windowShift = (i < 110) ? 14.0 : (i < 175 ? -8.0 : 9.0);
+            double y = Math.sin(i * 0.05) * 21 + Math.cos(i * 0.018) * 11 + windowShift;
+            double weight = y * 0.48 + Math.cos(i * 0.11) * 5;
             double min = y - 6;
             double max = y + 6;
             model.setPoint(x, y, min, max, weight, null);
