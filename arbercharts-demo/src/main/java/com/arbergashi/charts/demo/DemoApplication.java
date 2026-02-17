@@ -1238,6 +1238,7 @@ public final class DemoApplication {
         String className = entry.className();
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
+        boolean medical = "medical".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
@@ -1248,6 +1249,10 @@ public final class DemoApplication {
         }
         if (specialized) {
             panel.setLegend(true);
+            panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+        }
+        if (medical) {
+            panel.setLegend(false);
             panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
         }
 
@@ -1311,6 +1316,52 @@ public final class DemoApplication {
             com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
             x.setRequestedTickCount(4).setShowGrid(false);
             y.setRequestedTickCount(4).setShowGrid(false);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
+
+        if (className.startsWith("com.arbergashi.charts.render.medical.")) {
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(false);
+            y.setRequestedTickCount(8).setShowGrid(false);
+
+            switch (className) {
+                case "com.arbergashi.charts.render.medical.ECGRenderer",
+                     "com.arbergashi.charts.render.medical.ECGRhythmRenderer",
+                     "com.arbergashi.charts.render.medical.SweepEraseEKGRenderer",
+                     "com.arbergashi.charts.render.medical.VCGRenderer" ->
+                        y.setFixedRange(-1.8, 2.2);
+                case "com.arbergashi.charts.render.medical.EEGRenderer",
+                     "com.arbergashi.charts.render.medical.NIRSRenderer",
+                     "com.arbergashi.charts.render.medical.EOGRenderer" ->
+                        y.setFixedRange(-1.0, 1.0);
+                case "com.arbergashi.charts.render.medical.EMGRenderer" ->
+                        y.setFixedRange(-1.45, 1.45);
+                case "com.arbergashi.charts.render.medical.VentilatorWaveformRenderer",
+                     "com.arbergashi.charts.render.medical.SpirometryRenderer" -> {
+                    y.setFixedRange(-1.2, 1.9);
+                    panel.setLegend(true);
+                    panel.setDockedLegend(com.arbergashi.charts.domain.legend.LegendDockSide.RIGHT);
+                }
+                case "com.arbergashi.charts.render.medical.CapnographyRenderer" ->
+                        y.setFixedRange(0.0, 1.3);
+                case "com.arbergashi.charts.render.medical.PPGRenderer",
+                     "com.arbergashi.charts.render.medical.IBPRenderer" ->
+                        y.setFixedRange(0.0, 1.35);
+                case "com.arbergashi.charts.render.medical.SpectrogramMedicalRenderer" -> {
+                    y.setFixedRange(0.0, 1.0);
+                    x.setRequestedTickCount(12);
+                }
+                case "com.arbergashi.charts.render.medical.UltrasoundMModeRenderer" -> {
+                    y.setFixedRange(-0.8, 0.8);
+                    x.setRequestedTickCount(12);
+                }
+                case "com.arbergashi.charts.render.medical.CalibrationRenderer" ->
+                        y.setFixedRange(0.0, 1.2);
+                default -> y.setFixedRange(-1.2, 1.2);
+            }
+
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
         }
