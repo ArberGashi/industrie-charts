@@ -1025,6 +1025,14 @@ public class ArberChartPanel extends JPanel {
         float axisSize = ChartScale.font(baseAxisSize * axisScale);
         axisSize = Math.max(10.0f, axisSize);
 
+        // Keep axis labels at least as large as HighPrecisionCrosshair labels.
+        float crosshairScale = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.fontScale", 1.0f);
+        if (crosshairScale < 0.3f || crosshairScale > 3.0f) crosshairScale = 1.0f;
+        float crosshairBase = com.arbergashi.charts.util.ChartAssets.getFloat("Chart.crosshair.label.baseSize", 10.0f);
+        if (crosshairBase < 8.0f || crosshairBase > 22.0f) crosshairBase = 10.0f;
+        float crosshairSize = ChartScale.font(crosshairBase * crosshairScale);
+        axisSize = Math.max(axisSize, crosshairSize);
+
         Font axisFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getAxisFont(axisSize);
         g2.setFont(axisFont);
         g2.setColor(toAwt(t.getAxisLabelColor()));
