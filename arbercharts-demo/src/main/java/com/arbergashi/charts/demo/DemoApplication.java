@@ -771,27 +771,7 @@ public final class DemoApplication {
                         entry.simpleName(), iterations, avgMs, minMs, maxMs
                 );
 
-                SwingUtilities.invokeLater(() -> {
-                    updateStatus(result);
-                    JOptionPane.showMessageDialog(mainFrame,
-                            String.format("""
-                                    <html>
-                                    <h3>Benchmark Results</h3>
-                                    <table cellpadding="4">
-                                    <tr><td><b>Renderer:</b></td><td>%s</td></tr>
-                                    <tr><td><b>Iterations:</b></td><td>%d</td></tr>
-                                    <tr><td><b>Average:</b></td><td>%.2f ms</td></tr>
-                                    <tr><td><b>Minimum:</b></td><td>%.2f ms</td></tr>
-                                    <tr><td><b>Maximum:</b></td><td>%.2f ms</td></tr>
-                                    <tr><td><b>FPS (avg):</b></td><td>%.0f</td></tr>
-                                    </table>
-                                    </html>
-                                    """,
-                                    entry.simpleName(), iterations, avgMs, minMs, maxMs, 1000.0 / avgMs),
-                            "Benchmark Results",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
-                });
+                SwingUtilities.invokeLater(() -> updateStatus(result));
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() ->
                         updateStatus("Benchmark failed: " + ex.getMessage()));
