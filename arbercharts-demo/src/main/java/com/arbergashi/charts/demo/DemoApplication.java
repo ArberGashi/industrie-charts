@@ -308,16 +308,7 @@ public final class DemoApplication {
         if (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) {
             left.add(Box.createHorizontalStrut(70));
         }
-        JLabel title = new JLabel("Renderer Gallery");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
-        title.setForeground(palette.foreground());
-        this.headerTitleLabel = title;
-        left.add(title);
-        left.add(Box.createHorizontalStrut(20));
-        countLabel.setText(catalog.entries().size() + " renderers");
-        countLabel.setForeground(palette.muted());
-        countLabel.setFont(countLabel.getFont().deriveFont(Font.PLAIN, 13f));
-        left.add(countLabel);
+        this.headerTitleLabel = null;
 
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
