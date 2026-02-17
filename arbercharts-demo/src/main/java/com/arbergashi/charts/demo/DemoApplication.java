@@ -1164,6 +1164,7 @@ public final class DemoApplication {
                 }
                 String className = entry.className();
                 ChartModel model = RendererDemoDataFactory.build(entry.category(), className);
+                ChartModel animatedModel = model;
                 ChartRenderer renderer = instantiateRenderer(className);
                 ArberChartPanel chartPanel = new ArberChartPanel(model, renderer);
                 if ("standard".equals(entry.category())) {
@@ -1176,6 +1177,7 @@ public final class DemoApplication {
                             chartPanel.setLayer(series.get(i), instantiateRenderer(className, false));
                         }
                         chartPanel.setMultiColorEnabled(true);
+                        animatedModel = series.getFirst();
                     }
                 }
                 chartPanel.setTheme(getActiveTheme());
@@ -1183,7 +1185,7 @@ public final class DemoApplication {
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
-                installShowcaseRendererAnimation(entry, model, chartPanel);
+                installShowcaseRendererAnimation(entry, animatedModel, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
                 wrapper.revalidate();
@@ -2039,6 +2041,8 @@ public final class DemoApplication {
                     new PredictiveCandleRenderer(new PredictiveShadowRenderer());
             case "com.arbergashi.charts.render.predictive.AnomalyGapRenderer" ->
                     new AnomalyGapRenderer(new PredictiveShadowRenderer());
+            case "com.arbergashi.charts.render.financial.AuditTrailRenderer" ->
+                    new AuditTrailRendererAdapter();
             case "com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer" ->
                     new AdaptiveFunctionRenderer(x -> Math.sin(x * 0.12) * 32 + Math.cos(x * 0.05) * 18);
             case "com.arbergashi.charts.render.analysis.VectorFieldRenderer" ->
