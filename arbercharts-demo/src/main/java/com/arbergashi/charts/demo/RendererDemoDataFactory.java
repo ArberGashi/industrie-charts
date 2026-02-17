@@ -63,11 +63,9 @@ public final class RendererDemoDataFactory {
             "ParallelCoordinatesRenderer",
             "StreamgraphRenderer"
     );
-    private static final Set<String> HIER_RENDERERS = Set.of(
-            "com.arbergashi.charts.render.circular.SunburstRenderer"
-    );
     private static final Set<String> PATH_SUNBURST_RENDERERS = Set.of(
-            "com.arbergashi.charts.render.specialized.SunburstRenderer"
+            "com.arbergashi.charts.render.specialized.SunburstRenderer",
+            "com.arbergashi.charts.render.circular.SunburstRenderer"
     );
     private static final Set<String> LINK_LABEL_RENDERERS = Set.of(
             "ChordFlowRenderer",
@@ -115,11 +113,8 @@ public final class RendererDemoDataFactory {
         if (MULTI_RENDERERS.contains(simple)) {
             return multiDimensionalModel();
         }
-        if (HIER_RENDERERS.contains(className)) {
-            return hierarchicalModel();
-        }
         if (PATH_SUNBURST_RENDERERS.contains(className)) {
-            return hierarchicalModel();
+            return sunburstPathModel();
         }
         if (LINK_LABEL_RENDERERS.contains(simple)) {
             return linkLabelModel();
@@ -561,6 +556,20 @@ public final class RendererDemoDataFactory {
         root.setChild(alts);
 
         return new DefaultHierarchicalChartModel(root).setName("Portfolio Allocation");
+    }
+
+    private static DefaultChartModel sunburstPathModel() {
+        DefaultChartModel model = new DefaultChartModel("Sunburst Paths");
+        int seed = RENDERER_SEED.get();
+        model.setPoint(0, 26 + seededInt(seed, 0, 8, 172), 0, 0, 1, "Portfolio/Equities/US/Large Cap");
+        model.setPoint(1, 12 + seededInt(seed, 0, 6, 173), 0, 0, 1, "Portfolio/Equities/US/Mid Cap");
+        model.setPoint(2, 8 + seededInt(seed, 0, 5, 174), 0, 0, 1, "Portfolio/Equities/Europe/Core");
+        model.setPoint(3, 9 + seededInt(seed, 0, 5, 175), 0, 0, 1, "Portfolio/Equities/Asia/Japan");
+        model.setPoint(4, 11 + seededInt(seed, 0, 6, 176), 0, 0, 1, "Portfolio/FixedIncome/Government/US Treasuries");
+        model.setPoint(5, 7 + seededInt(seed, 0, 4, 177), 0, 0, 1, "Portfolio/FixedIncome/Corporate/Investment Grade");
+        model.setPoint(6, 5 + seededInt(seed, 0, 4, 178), 0, 0, 1, "Portfolio/Alternatives/RealEstate/REITs");
+        model.setPoint(7, 4 + seededInt(seed, 0, 3, 179), 0, 0, 1, "Portfolio/Alternatives/Commodities/Metals");
+        return model;
     }
 
 

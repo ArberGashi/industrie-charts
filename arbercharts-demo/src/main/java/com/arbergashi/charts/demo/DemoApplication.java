@@ -321,15 +321,13 @@ public final class DemoApplication {
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
         right.setBackground(palette.windowBackground());
-        JButton searchEverywhereButton = new JButton("Search Everywhere",
-                loadTablerOutlineIcon("search.svg", 16, UIManager.getIcon("FileView.fileIcon"), palette.muted()));
-        searchEverywhereButton.setFont(searchEverywhereButton.getFont().deriveFont(12f));
+        JButton searchEverywhereButton = createTitlebarIconButton(
+                loadTablerOutlineIcon("search.svg", 18, UIManager.getIcon("FileView.fileIcon"), palette.muted()));
         searchEverywhereButton.setToolTipText("Search renderer by name (⌘F)");
         searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
 
-        JButton themeSwitchButton = new JButton("Theme Switch",
-                loadTablerOutlineIcon("sun-moon.svg", 16, UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
-        themeSwitchButton.setFont(themeSwitchButton.getFont().deriveFont(12f));
+        JButton themeSwitchButton = createTitlebarIconButton(
+                loadTablerOutlineIcon("sun-moon.svg", 18, UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
         themeSwitchButton.setToolTipText("Toggle dark/light theme (⌘T)");
         themeSwitchButton.addActionListener(evt -> toggleTheme());
 
@@ -342,6 +340,19 @@ public final class DemoApplication {
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
         installHeaderWindowGestures(header);
         return header;
+    }
+
+    private JButton createTitlebarIconButton(Icon icon) {
+        JButton button = new JButton(icon);
+        button.putClientProperty("JButton.buttonType", "toolBarButton");
+        button.putClientProperty("JComponent.minimumWidth", 34);
+        button.setFocusable(false);
+        button.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        button.setMargin(new java.awt.Insets(6, 8, 6, 8));
+        button.setPreferredSize(new Dimension(36, 30));
+        button.setMinimumSize(new Dimension(36, 30));
+        button.setMaximumSize(new Dimension(36, 30));
+        return button;
     }
 
     private JPanel buildFooter() {
@@ -1401,7 +1412,9 @@ public final class DemoApplication {
             case "com.arbergashi.charts.render.common.PhysicalScaleRenderer" ->
                     new PhysicalScaleRendererAdapter();
             case "com.arbergashi.charts.render.specialized.SunburstRenderer" ->
-                    new com.arbergashi.charts.render.circular.SunburstRenderer();
+                    new com.arbergashi.charts.render.specialized.SunburstRenderer();
+            case "com.arbergashi.charts.render.circular.SunburstRenderer" ->
+                    new com.arbergashi.charts.render.specialized.SunburstRenderer();
             default -> null;
         };
     }
