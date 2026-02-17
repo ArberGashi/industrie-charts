@@ -3,6 +3,7 @@ package com.arbergashi.charts.demo;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.AnimationProfile;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
@@ -1316,7 +1317,14 @@ public final class DemoApplication {
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
-        if (!circular && !specialized) {
+        boolean medical = "medical".equals(entry.category());
+        if (!circular && !specialized && !medical) {
+            return;
+        }
+        if (medical) {
+            if (model instanceof CircularFastMedicalModel medicalModel) {
+                installMedicalShowcaseAnimation(medicalModel, panel);
+            }
             return;
         }
         if (!(model instanceof DefaultChartModel defaultModel)) {
@@ -1443,6 +1451,75 @@ public final class DemoApplication {
                 animation.stop();
             }
         });
+    }
+
+    private void installMedicalShowcaseAnimation(CircularFastMedicalModel model, ArberChartPanel panel) {
+        final int count = model.getPointCount();
+        if (count <= 0) {
+            return;
+        }
+        final int channels = detectMedicalChannels(model, 8);
+        if (channels <= 0) {
+            return;
+        }
+
+        final double[][] baseline = new double[channels][count];
+        for (int i = 0; i < count; i++) {
+            for (int c = 0; c < channels; c++) {
+                baseline[c][i] = model.getY(i, c);
+            }
+        }
+
+        final double sampleRate = 250.0;
+        final double dt = 1.0 / sampleRate;
+        final double[] t = {model.getX(count - 1)};
+        final int[] cursor = {0};
+        final double[] carry = {0.0};
+        final double[] channelsBuffer = new double[channels];
+
+        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
+            if (!panel.isDisplayable()) {
+                ((Timer) evt.getSource()).stop();
+                return;
+            }
+            carry[0] += sampleRate * (SHOWCASE_ANIMATION_DELAY_MS / 1000.0);
+            int samples = Math.max(1, (int) carry[0]);
+            carry[0] -= samples;
+
+            for (int s = 0; s < samples; s++) {
+                int idx = cursor[0] % count;
+                t[0] += dt;
+                for (int c = 0; c < channels; c++) {
+                    double base = baseline[c][idx];
+                    // Keep renderer character: use baseline shape and only subtle dynamic breathing.
+                    double mod = 1.0 + 0.03 * Math.sin(t[0] * (0.9 + c * 0.2));
+                    channelsBuffer[c] = base * mod;
+                }
+                model.add(t[0], channelsBuffer);
+                cursor[0]++;
+            }
+            panel.repaint();
+        });
+        animation.start();
+
+        panel.addHierarchyListener(e -> {
+            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
+                animation.stop();
+            }
+        });
+    }
+
+    private static int detectMedicalChannels(CircularFastMedicalModel model, int maxProbe) {
+        int channels = 0;
+        for (int c = 0; c < maxProbe; c++) {
+            try {
+                model.getY(0, c);
+                channels++;
+            } catch (RuntimeException ex) {
+                break;
+            }
+        }
+        return channels;
     }
 
     private static double showcaseAnimationSpeed(String className) {
