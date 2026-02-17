@@ -153,6 +153,10 @@ public final class DemoApplication {
     private JMenuItem exportMenuItem;
     private JMenuItem benchmarkMenuItem;
     private JFrame mainFrame;
+    private JPanel headerPanel;
+    private JPanel footerPanel;
+    private JLabel headerTitleLabel;
+    private JLabel versionLabel;
     private ArberChartPanel currentChartPanel;
     private final boolean vectorAvailable = isVectorAvailable();
     private final StringBuilder speedSearch = new StringBuilder();
@@ -228,6 +232,7 @@ public final class DemoApplication {
         }
 
         updateStatus("Ready - " + catalog.entries().size() + " renderers available");
+        applyDemoPalette();
     }
 
     /**
@@ -293,25 +298,32 @@ public final class DemoApplication {
     }
 
     private JPanel buildHeader() {
+        DemoPalette palette = currentPalette();
         JPanel header = new JPanel(new BorderLayout());
+        this.headerPanel = header;
         header.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
+        header.setBackground(palette.windowBackground());
 
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.X_AXIS));
+        left.setBackground(palette.windowBackground());
         if (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) {
             left.add(Box.createHorizontalStrut(70));
         }
         JLabel title = new JLabel("Renderer Gallery");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        title.setForeground(palette.foreground());
+        this.headerTitleLabel = title;
         left.add(title);
         left.add(Box.createHorizontalStrut(20));
         countLabel.setText(catalog.entries().size() + " renderers");
-        countLabel.setForeground(new Color(110, 118, 128));
+        countLabel.setForeground(palette.muted());
         countLabel.setFont(countLabel.getFont().deriveFont(Font.PLAIN, 13f));
         left.add(countLabel);
 
         JPanel right = new JPanel();
         right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
+        right.setBackground(palette.windowBackground());
         searchField.setMaximumSize(new Dimension(280, 32));
         searchField.setPreferredSize(new Dimension(280, 32));
         searchField.setToolTipText("Search renderer by name (⌘F)");
@@ -332,10 +344,9 @@ public final class DemoApplication {
         benchmarkButton.setToolTipText("Run performance benchmark (⌘B)");
         benchmarkButton.addActionListener(evt -> runBenchmark());
 
-        // Theme selector with all available themes
-        for (String themeName : ChartThemes.getAvailableThemes()) {
-            themeSelector.addItem(capitalize(themeName));
-        }
+        // Demo uses only local FlatLaf themes from resources/themes.
+        themeSelector.addItem("Dark");
+        themeSelector.addItem("Light");
         themeSelector.setSelectedItem(capitalize(currentThemeName));
         themeSelector.setMaximumSize(new Dimension(130, 30));
         themeSelector.setToolTipText("Select chart theme (⌘T to toggle)");
@@ -346,7 +357,9 @@ public final class DemoApplication {
             }
         });
 
-        right.add(new JLabel("Search: "));
+        JLabel searchLabel = new JLabel("Search: ");
+        searchLabel.setForeground(palette.muted());
+        right.add(searchLabel);
         right.add(searchField);
         right.add(Box.createHorizontalStrut(8));
         right.add(findButton);
@@ -357,36 +370,43 @@ public final class DemoApplication {
         right.add(Box.createHorizontalStrut(8));
         right.add(benchmarkButton);
         right.add(Box.createHorizontalStrut(12));
-        right.add(new JLabel("Theme: "));
+        JLabel themeLabel = new JLabel("Theme: ");
+        themeLabel.setForeground(palette.muted());
+        right.add(themeLabel);
         right.add(themeSelector);
 
         header.add(left, BorderLayout.WEST);
         header.add(right, BorderLayout.EAST);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(222, 226, 232)));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
         return header;
     }
 
     private JPanel buildFooter() {
+        DemoPalette palette = currentPalette();
         JPanel footer = new JPanel(new BorderLayout());
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(210, 214, 222)));
+        this.footerPanel = footer;
+        footer.setBackground(palette.windowBackground());
+        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, palette.border()));
 
         statusLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        statusLabel.setForeground(new Color(106, 114, 124));
+        statusLabel.setForeground(palette.muted());
         statusLabel.setFont(statusLabel.getFont().deriveFont(12f));
 
         metricsLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         metricsLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        metricsLabel.setForeground(new Color(106, 114, 124));
+        metricsLabel.setForeground(palette.muted());
         metricsLabel.setFont(metricsLabel.getFont().deriveFont(12f));
         metricsLabel.setText("Renders: 0 | Avg: 0.00ms");
 
         JLabel versionLabel = new JLabel("v" + VERSION);
+        this.versionLabel = versionLabel;
         versionLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        versionLabel.setForeground(new Color(150, 158, 168));
+        versionLabel.setForeground(palette.softMuted());
         versionLabel.setFont(versionLabel.getFont().deriveFont(11f));
 
         JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setOpaque(false);
         leftPanel.add(statusLabel, BorderLayout.WEST);
         leftPanel.add(versionLabel, BorderLayout.EAST);
 
@@ -435,7 +455,7 @@ public final class DemoApplication {
 
         // Theme submenu
         JMenu themeMenu = new JMenu("Theme");
-        for (String themeName : ChartThemes.getAvailableThemes()) {
+        for (String themeName : new String[]{"dark", "light"}) {
             JMenuItem themeItem = new JMenuItem(capitalize(themeName));
             themeItem.addActionListener(evt -> setThemeByName(themeName));
             themeMenu.add(themeItem);
@@ -832,23 +852,26 @@ public final class DemoApplication {
      * @param themeName the theme name
      */
     private void setThemeByName(String themeName) {
+        themeName = normalizeDemoTheme(themeName);
         if (themeName.equals(currentThemeName)) {
             return;
         }
         currentThemeName = themeName;
 
         // Update Look and Feel for dark/light base
-        if ("light".equals(themeName) || "solarized-light".equals(themeName)) {
+        if ("light".equals(themeName)) {
             FlatLightLaf.setup();
         } else {
             FlatDarkLaf.setup();
         }
 
         FlatLaf.updateUI();
+        applyDemoPalette();
 
         // Update chart themes
-        ChartTheme theme = ChartThemes.getTheme(themeName);
+        ChartTheme theme = getActiveTheme();
         applyThemeToCharts(detailHost, theme);
+        rebuildRendererPanelsForTheme();
 
         // Update selector
         themeSelector.setSelectedItem(capitalize(themeName));
@@ -1002,22 +1025,27 @@ public final class DemoApplication {
     }
 
     private JPanel buildRendererPanel(RendererCatalogEntry entry) {
+        DemoPalette palette = currentPalette();
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(palette.contentBackground());
         panel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         // Header with renderer name and class
         JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
         header.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
         JLabel title = new JLabel(entry.simpleName());
         title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
+        title.setForeground(palette.foreground());
         JLabel subtitle = new JLabel(entry.className());
-        subtitle.setForeground(new Color(110, 118, 128));
+        subtitle.setForeground(palette.muted());
         subtitle.setFont(subtitle.getFont().deriveFont(12f));
         header.add(title, BorderLayout.NORTH);
         header.add(subtitle, BorderLayout.SOUTH);
 
         // Chart container with proper spacing
         JPanel chartHost = new JPanel(new BorderLayout());
+        chartHost.setBackground(palette.contentBackground());
         chartHost.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
 
         // Metadata tiles
@@ -1037,12 +1065,15 @@ public final class DemoApplication {
     }
 
     private JPanel buildChart(RendererCatalogEntry entry) {
+        DemoPalette palette = currentPalette();
         JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(palette.surfaceBackground());
         wrapper.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 214, 222), 1, true),
+                BorderFactory.createLineBorder(palette.border(), 1, true),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12))
         );
         JLabel status = new JLabel("Rendering...", SwingConstants.CENTER);
+        status.setForeground(palette.muted());
         status.setFont(status.getFont().deriveFont(13f));
         wrapper.add(status, BorderLayout.CENTER);
 
@@ -1177,16 +1208,19 @@ public final class DemoApplication {
     }
 
     private JPanel infoTile(String label, String value) {
+        DemoPalette palette = currentPalette();
         JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setBackground(palette.surfaceBackground());
         JLabel top = new JLabel(label);
-        top.setForeground(new Color(110, 118, 128));
+        top.setForeground(palette.muted());
         top.setFont(top.getFont().deriveFont(11f));
         JLabel bottom = new JLabel(value);
+        bottom.setForeground(palette.foreground());
         bottom.setFont(bottom.getFont().deriveFont(Font.BOLD, 13f));
         panel.add(top, BorderLayout.NORTH);
         panel.add(bottom, BorderLayout.CENTER);
         panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 214, 222), 1, true),
+                BorderFactory.createLineBorder(palette.border(), 1, true),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12))
         );
         return panel;
@@ -1211,7 +1245,10 @@ public final class DemoApplication {
     }
 
     private ChartTheme getActiveTheme() {
-        return ChartThemes.getTheme(currentThemeName);
+        if ("light".equals(currentThemeName)) {
+            return ChartThemes.getLightTheme();
+        }
+        return ChartThemes.getDarkTheme();
     }
 
 
@@ -1227,23 +1264,27 @@ public final class DemoApplication {
     }
 
     private JPanel buildEmptyDetail() {
+        DemoPalette palette = currentPalette();
         JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(palette.contentBackground());
         panel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
 
         JPanel center = new JPanel();
         center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+        center.setOpaque(false);
 
         JLabel icon = new JLabel("📊");
         icon.setFont(icon.getFont().deriveFont(48f));
+        icon.setForeground(palette.softMuted());
         icon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel label = new JLabel("Select a renderer from the left panel");
-        label.setForeground(new Color(110, 118, 128));
+        label.setForeground(palette.muted());
         label.setFont(label.getFont().deriveFont(16f));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel hint = new JLabel("Or use ⌘F to search by name");
-        hint.setForeground(new Color(140, 148, 158));
+        hint.setForeground(palette.softMuted());
         hint.setFont(hint.getFont().deriveFont(13f));
         hint.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -1358,12 +1399,11 @@ public final class DemoApplication {
         // Register custom theme properties BEFORE setup
         FlatLaf.registerCustomDefaultsSource("themes");
 
-        String theme = System.getProperty("demo.theme", "dark").toLowerCase(Locale.US);
+        String theme = normalizeDemoTheme(System.getProperty("demo.theme", "dark").toLowerCase(Locale.US));
         if ("light".equals(theme)) {
             FlatLightLaf.setup();
         } else {
             FlatDarkLaf.setup();
-            theme = "dark";
         }
 
         // Set Inter as the default font for chart elements
@@ -1461,6 +1501,92 @@ public final class DemoApplication {
         ChartAssets.setProperty("Chart.grid.majorAlpha", "0.35");
     }
 
+    private void rebuildRendererPanelsForTheme() {
+        String selectedKey = currentRendererKey;
+        detailHost.removeAll();
+        rendererPanels.clear();
+        detailHost.add(buildEmptyDetail(), "empty");
+        detailLayout.show(detailHost, "empty");
+        if (selectedKey != null && !selectedKey.isBlank()) {
+            RendererCatalogEntry selected = catalog.getRequired(selectedKey);
+            openRenderer(selected);
+        }
+        detailHost.revalidate();
+        detailHost.repaint();
+    }
+
+    private void applyDemoPalette() {
+        DemoPalette palette = currentPalette();
+        if (headerPanel != null) {
+            headerPanel.setBackground(palette.windowBackground());
+            headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
+        }
+        if (footerPanel != null) {
+            footerPanel.setBackground(palette.windowBackground());
+            footerPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, palette.border()));
+        }
+        if (headerTitleLabel != null) {
+            headerTitleLabel.setForeground(palette.foreground());
+        }
+        if (versionLabel != null) {
+            versionLabel.setForeground(palette.softMuted());
+        }
+        countLabel.setForeground(palette.muted());
+        statusLabel.setForeground(palette.muted());
+        metricsLabel.setForeground(palette.muted());
+        tree.setBackground(palette.sidebarBackground());
+        tree.setForeground(palette.foreground());
+        detailHost.setBackground(palette.contentBackground());
+    }
+
+    private DemoPalette currentPalette() {
+        Color window = uiColor("Panel.background", "control", new Color(30, 30, 30));
+        Color content = uiColor("Panel.background", "control", window);
+        Color surface = uiColor("TextField.background", "Panel.background", content);
+        Color sidebar = uiColor("Tree.background", "control", content);
+        Color border = uiColor("Component.borderColor", "Separator.foreground", new Color(60, 60, 60));
+        Color foreground = uiColor("Label.foreground", "textText", new Color(204, 204, 204));
+        Color muted = uiColor("Component.grayForeground", "Label.disabledForeground", new Color(152, 160, 170));
+        Color softMuted = withAlpha(muted, 210);
+        return new DemoPalette(
+                window,
+                content,
+                surface,
+                sidebar,
+                border,
+                foreground,
+                muted,
+                softMuted
+        );
+    }
+
+    private static String normalizeDemoTheme(String themeName) {
+        return "light".equalsIgnoreCase(themeName) ? "light" : "dark";
+    }
+
+    private static Color uiColor(String key, String fallbackKey, Color hardFallback) {
+        Color c = UIManager.getColor(key);
+        if (c != null) return c;
+        c = UIManager.getColor(fallbackKey);
+        return c != null ? c : hardFallback;
+    }
+
+    private static Color withAlpha(Color color, int alpha) {
+        if (color == null) return null;
+        return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
+    }
+
+    private record DemoPalette(
+            Color windowBackground,
+            Color contentBackground,
+            Color surfaceBackground,
+            Color sidebarBackground,
+            Color border,
+            Color foreground,
+            Color muted,
+            Color softMuted
+    ) {}
+
     private void expandAll() {
         for (int i = 0; i < tree.getRowCount(); i++) {
             tree.expandRow(i);
@@ -1522,8 +1648,6 @@ public final class DemoApplication {
     }
 
     private static final class RendererTreeCell extends DefaultTreeCellRenderer {
-        private static final Color CATEGORY_COLOR = new Color(80, 90, 100);
-
         @Override
         public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
                                                       boolean leaf, int row, boolean hasFocus) {
@@ -1544,7 +1668,11 @@ public final class DemoApplication {
                 setToolTipText(null);
                 setFont(baseFont.deriveFont(Font.BOLD, 13f));
                 if (!sel) {
-                    setForeground(CATEGORY_COLOR);
+                    Color categoryColor = UIManager.getColor("Component.grayForeground");
+                    if (categoryColor == null) {
+                        categoryColor = new Color(120, 130, 140);
+                    }
+                    setForeground(categoryColor);
                 }
             }
             return comp;
