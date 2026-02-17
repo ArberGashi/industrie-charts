@@ -126,14 +126,19 @@ public final class RendererDemoDataFactory {
 
     private static DefaultChartModel standardModel() {
         DefaultChartModel model = new DefaultChartModel("Standard");
-        int points = 240;
+        int points = 320;
+        double baseline = 24.0;
         for (int i = 0; i < points; i++) {
             double x = i;
-            double y = Math.sin(i * 0.08) * 28 + Math.cos(i * 0.03) * 14;
-            double min = y - (8 + Math.sin(i * 0.2) * 4);
-            double max = y + (8 + Math.cos(i * 0.2) * 4);
-            double weight = Math.abs(y) + 10;
-            String label = (i % 40 == 0) ? "P" + i : null;
+            double trend = i < 140 ? i * 0.11 : (i < 250 ? 15.5 - (i - 140) * 0.06 : 8.9 + (i - 250) * 0.09);
+            double seasonal = Math.sin(i * 0.07) * 18 + Math.cos(i * 0.021) * 10;
+            double event = (i == 88) ? 24 : (i == 168 ? -18 : (i == 212 ? 20 : 0));
+            double y = baseline + trend + seasonal + event;
+            double spread = 7 + Math.abs(Math.sin(i * 0.16)) * 4.5;
+            double min = y - spread;
+            double max = y + spread;
+            double weight = 8 + Math.abs(y * 0.35) + Math.abs(event) * 0.6;
+            String label = (i == 88) ? "Spike" : (i == 168) ? "Correction" : (i == 212) ? "Breakout" : null;
             model.setPoint(x, y, min, max, weight, label);
         }
         return model;
@@ -249,16 +254,23 @@ public final class RendererDemoDataFactory {
 
     private static DefaultFinancialChartModel financialModel() {
         DefaultFinancialChartModel model = new DefaultFinancialChartModel("Financial");
-        double price = 120.0;
-        int points = 240;
+        double price = 142.0;
+        int points = 300;
         for (int i = 0; i < points; i++) {
-            double wave = Math.sin(i * 0.08) * 2.5 + Math.cos(i * 0.03) * 4.0;
+            double regime = i < 90 ? 0.16 : (i < 170 ? -0.11 : 0.21);
+            double volatility = 1.8 + Math.abs(Math.sin(i * 0.045)) * 2.4;
+            double drift = Math.sin(i * 0.09) * 1.4 + Math.cos(i * 0.031) * 2.1;
+            double shock = (i == 75) ? 8.5 : (i == 162 ? -10.0 : (i == 230 ? 7.2 : 0.0));
+            double wave = drift + regime + shock;
             double open = price;
             double close = price + wave;
-            double high = Math.max(open, close) + 1.2;
-            double low = Math.min(open, close) - 1.2;
-            double volume = 700 + 400 * Math.abs(Math.sin(i * 0.05));
-            model.setOHLC(i, open, high, low, close, volume, null);
+            double high = Math.max(open, close) + volatility;
+            double low = Math.min(open, close) - volatility;
+            double baseVolume = 1_200 + 700 * Math.abs(Math.sin(i * 0.052));
+            double eventVolume = Math.abs(shock) * 220;
+            double volume = baseVolume + eventVolume;
+            String label = (i == 75) ? "Earnings +" : (i == 162) ? "Macro -" : (i == 230) ? "Guidance +" : null;
+            model.setOHLC(i, open, high, low, close, volume, label);
             price = close;
         }
         return model;
@@ -266,13 +278,14 @@ public final class RendererDemoDataFactory {
 
     private static DefaultStatisticalChartModel statisticalModel() {
         DefaultStatisticalChartModel model = new DefaultStatisticalChartModel("Statistical");
-        int points = 12;
+        int points = 16;
         for (int i = 0; i < points; i++) {
-            double center = 50 + Math.sin(i * 0.6) * 18;
-            double q1 = center - 12 - Math.cos(i) * 2;
-            double q3 = center + 12 + Math.sin(i) * 2;
-            double min = q1 - 8 - i * 0.3;
-            double max = q3 + 8 + i * 0.2;
+            double center = 55 + Math.sin(i * 0.48) * 15 + (i > 10 ? 6 : 0);
+            double iqr = 10 + Math.abs(Math.cos(i * 0.4)) * 4;
+            double q1 = center - iqr * 0.5;
+            double q3 = center + iqr * 0.5;
+            double min = q1 - 6 - Math.abs(Math.sin(i * 0.19)) * 3.5;
+            double max = q3 + 6 + Math.abs(Math.cos(i * 0.23)) * 3.8;
             model.setBoxPlot(i, center, q1, q3, min, max, "S" + (i + 1));
         }
         return model;
@@ -283,9 +296,16 @@ public final class RendererDemoDataFactory {
         CircularFastMedicalModel model = new CircularFastMedicalModel(points, 3);
         double t = 0.0;
         for (int i = 0; i < points; i++) {
-            double y1 = Math.sin(t * 0.05) * 0.9 + Math.sin(t * 0.2) * 0.2;
-            double y2 = Math.cos(t * 0.03) * 0.7 + Math.sin(t * 0.11) * 0.3;
-            double y3 = Math.sin(t * 0.02) * 0.4 + Math.cos(t * 0.07) * 0.2;
+            double phase = (i % 80) / 80.0;
+            double pWave = gaussian(phase, 0.18, 0.03) * 0.15;
+            double qrs = gaussian(phase, 0.32, 0.012) * 1.25
+                    - gaussian(phase, 0.29, 0.01) * 0.35
+                    - gaussian(phase, 0.35, 0.01) * 0.28;
+            double tWave = gaussian(phase, 0.62, 0.06) * 0.33;
+            double baseline = Math.sin(t * 0.01) * 0.03;
+            double y1 = pWave + qrs + tWave + baseline;
+            double y2 = Math.sin(t * 0.045) * 0.55 + Math.cos(t * 0.018) * 0.24 + gaussian(phase, 0.34, 0.014) * 0.42;
+            double y3 = Math.sin(t * 0.02) * 0.35 + Math.cos(t * 0.061) * 0.16 + gaussian(phase, 0.62, 0.07) * 0.21;
             model.add(t, new double[]{y1, y2, y3});
             t += 1.0;
         }
@@ -294,16 +314,18 @@ public final class RendererDemoDataFactory {
 
     private static DefaultFlowChartModel flowModel() {
         List<DefaultFlowChartModel.DefaultNode> nodes = List.of(
-                new DefaultFlowChartModel.DefaultNode("a", "Ingress"),
-                new DefaultFlowChartModel.DefaultNode("b", "Pricing"),
+                new DefaultFlowChartModel.DefaultNode("a", "Gateway"),
+                new DefaultFlowChartModel.DefaultNode("b", "Analytics"),
                 new DefaultFlowChartModel.DefaultNode("c", "Risk"),
-                new DefaultFlowChartModel.DefaultNode("d", "Execution")
+                new DefaultFlowChartModel.DefaultNode("d", "Execution"),
+                new DefaultFlowChartModel.DefaultNode("e", "Settlement")
         );
         List<DefaultFlowChartModel.DefaultLink> links = List.of(
-                new DefaultFlowChartModel.DefaultLink("a", "b", 24),
-                new DefaultFlowChartModel.DefaultLink("a", "c", 16),
-                new DefaultFlowChartModel.DefaultLink("b", "d", 20),
-                new DefaultFlowChartModel.DefaultLink("c", "d", 12)
+                new DefaultFlowChartModel.DefaultLink("a", "b", 29),
+                new DefaultFlowChartModel.DefaultLink("a", "c", 18),
+                new DefaultFlowChartModel.DefaultLink("b", "d", 24),
+                new DefaultFlowChartModel.DefaultLink("c", "d", 14),
+                new DefaultFlowChartModel.DefaultLink("d", "e", 21)
         );
         return new DefaultFlowChartModel(nodes, links).setName("Flow");
     }
@@ -368,5 +390,10 @@ public final class RendererDemoDataFactory {
     private static String simpleName(String className) {
         int idx = className.lastIndexOf('.');
         return idx >= 0 ? className.substring(idx + 1) : className;
+    }
+
+    private static double gaussian(double x, double mean, double sigma) {
+        double d = (x - mean) / sigma;
+        return Math.exp(-0.5 * d * d);
     }
 }

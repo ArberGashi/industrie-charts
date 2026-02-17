@@ -94,6 +94,10 @@
         card.querySelectorAll('.size-controls button').forEach(function(button) {
             button.classList.toggle('active', button.dataset.size === size);
         });
+        var previewTheme = card.querySelector('.preview-theme');
+        if (previewTheme) {
+            previewTheme.textContent = theme === 'dark' ? 'Dark' : 'Light';
+        }
     }
 
     function bindHeaderActions() {
@@ -239,11 +243,6 @@
             return;
         }
 
-        if (action === 'benchmark') {
-            runBenchmark(card, canvas.dataset.rendererClass);
-            return;
-        }
-
         if (action === 'animate') {
             toggleAnimation(card, canvas);
         }
@@ -359,16 +358,9 @@
         if (!Number.isFinite(renderMs)) {
             renderMs = fallbackMs;
         }
-
-        var renderValue = card.querySelector('.render-time');
-        if (renderValue) {
-            renderValue.textContent = renderMs.toFixed(1) + ' ms';
-        }
-
-        var fps = Math.max(1, Math.min(240, Math.round(1000 / Math.max(1, renderMs))));
-        var fpsValue = card.querySelector('.fps-counter');
-        if (fpsValue) {
-            fpsValue.textContent = String(fps);
+        var previewState = card.querySelector('.preview-state');
+        if (previewState) {
+            previewState.textContent = renderMs <= 40 ? 'Excellent' : (renderMs <= 100 ? 'Good' : 'Ready');
         }
     }
 
@@ -379,9 +371,9 @@
         if (errorMessage) {
             errorMessage.textContent = message;
         }
-        var renderValue = card.querySelector('.render-time');
-        if (renderValue) {
-            renderValue.textContent = '--';
+        var previewState = card.querySelector('.preview-state');
+        if (previewState) {
+            previewState.textContent = 'Error';
         }
     }
 
@@ -436,34 +428,6 @@
             notify('No animation-capable renderers found', 'info');
         } else {
             notify('Started animation demo for ' + started + ' renderers', 'success');
-        }
-    }
-
-    async function runBenchmark(card, rendererClass) {
-        if (!rendererClass) {
-            return;
-        }
-
-        try {
-            var response = await fetch('/api/benchmark/' + encodeURIComponent(rendererClass) + '?iterations=100&warmup=20');
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-            var result = await response.json();
-            var message = 'Avg ' + result.avgTimeMs.toFixed(2) + ' ms, p99 ' + result.p99Ms.toFixed(2) + ' ms, throughput ' + result.throughput.toFixed(1) + '/s';
-            notify(message, 'success');
-
-            var renderValue = card.querySelector('.render-time');
-            if (renderValue) {
-                renderValue.textContent = result.avgTimeMs.toFixed(1) + ' ms';
-            }
-            var fpsValue = card.querySelector('.fps-counter');
-            if (fpsValue) {
-                fpsValue.textContent = String(Math.max(1, Math.round(result.throughput)));
-            }
-        } catch (error) {
-            console.error('Benchmark failed for ' + rendererClass + ':', error);
-            notify('Benchmark failed', 'error');
         }
     }
 
