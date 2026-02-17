@@ -543,23 +543,51 @@ public final class DemoApplication {
         JLabel version = new JLabel("Version " + VERSION);
         version.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel detail = new JLabel("<html>Enterprise-grade charting framework for Java 25.<br/>" +
-                "158 production renderers • Zero-GC rendering • Medical-grade</html>");
+        JLabel detail = new JLabel("Enterprise-grade charting framework for Java 25.");
         detail.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel features = new JLabel("<html><br/><b>Features:</b><br/>" +
-                "• Financial: Candlestick, MACD, Ichimoku, Renko, ...<br/>" +
-                "• Medical: ECG, EEG, Spirometry, Capnography, ...<br/>" +
-                "• Statistical: BoxPlot, Violin, KDE, Q-Q Plot, ...<br/>" +
-                "• Analysis: FFT, Wavelet, Correlation, Peak Detection, ...<br/>" +
-                "• Specialized: Smith Chart, Ternary, Sankey, ...</html>");
+        JPanel features = new JPanel();
+        features.setLayout(new BoxLayout(features, BoxLayout.Y_AXIS));
+        features.setOpaque(false);
         features.setAlignmentX(Component.LEFT_ALIGNMENT);
-        features.setForeground(DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground"));
+        Color muted = DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground");
 
-        JLabel java = new JLabel("<html><br/>Java: " + System.getProperty("java.version") +
-                " (" + System.getProperty("java.vendor") + ")</html>");
+        JLabel featuresHeader = new JLabel("Features:");
+        featuresHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        featuresHeader.setForeground(muted);
+        featuresHeader.setFont(featuresHeader.getFont().deriveFont(Font.BOLD));
+        features.add(featuresHeader);
+        features.add(Box.createVerticalStrut(4));
+
+        JLabel f1 = new JLabel("• Financial: Candlestick, MACD, Ichimoku, Renko, ...");
+        f1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        f1.setForeground(muted);
+        features.add(f1);
+
+        JLabel f2 = new JLabel("• Medical: ECG, EEG, Spirometry, Capnography, ...");
+        f2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        f2.setForeground(muted);
+        features.add(f2);
+
+        JLabel f3 = new JLabel("• Statistical: BoxPlot, Violin, KDE, Q-Q Plot, ...");
+        f3.setAlignmentX(Component.LEFT_ALIGNMENT);
+        f3.setForeground(muted);
+        features.add(f3);
+
+        JLabel f4 = new JLabel("• Analysis: FFT, Wavelet, Correlation, Peak Detection, ...");
+        f4.setAlignmentX(Component.LEFT_ALIGNMENT);
+        f4.setForeground(muted);
+        features.add(f4);
+
+        JLabel f5 = new JLabel("• Specialized: Smith Chart, Ternary, Sankey, ...");
+        f5.setAlignmentX(Component.LEFT_ALIGNMENT);
+        f5.setForeground(muted);
+        features.add(f5);
+
+        JLabel java = new JLabel("Java: " + System.getProperty("java.version") +
+                " (" + System.getProperty("java.vendor") + ")");
         java.setAlignmentX(Component.LEFT_ALIGNMENT);
-        java.setForeground(DemoThemeSupport.uiColor("Component.grayForeground", "Label.disabledForeground"));
+        java.setForeground(muted);
 
         JLabel copyright = new JLabel(COPYRIGHT);
         copyright.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -569,7 +597,9 @@ public final class DemoApplication {
         content.add(version);
         content.add(Box.createVerticalStrut(12));
         content.add(detail);
+        content.add(Box.createVerticalStrut(8));
         content.add(features);
+        content.add(Box.createVerticalStrut(8));
         content.add(java);
         content.add(Box.createVerticalStrut(16));
         content.add(copyright);
