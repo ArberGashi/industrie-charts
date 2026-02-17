@@ -468,29 +468,29 @@
     }
 
     function openFullscreen(card, canvas) {
-        var rendererClass = canvas.dataset.rendererClass || 'Renderer';
-        var title = rendererClass.split('.').pop();
-        var dataUrl;
-
-        try {
-            dataUrl = canvas.toDataURL('image/png');
-        } catch (error) {
-            console.error('Fullscreen export failed:', error);
-            notify('Fullscreen export failed', 'error');
+        var target = card.querySelector('.preview-container') || card;
+        if (!target) {
+            notify('Fullscreen unavailable', 'error');
             return;
         }
 
-        var win = window.open('', '_blank', 'noopener,noreferrer');
-        if (!win) {
-            notify('Popup blocked by browser', 'error');
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(function(error) {
+                console.error('Exit fullscreen failed:', error);
+                notify('Exit fullscreen failed', 'error');
+            });
             return;
         }
 
-        win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title>' +
-            '<style>body{margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh}' +
-            'img{max-width:98vw;max-height:98vh;object-fit:contain;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.45)}' +
-            '</style></head><body><img alt="' + title + '" src="' + dataUrl + '"></body></html>');
-        win.document.close();
+        if (typeof target.requestFullscreen !== 'function') {
+            notify('Fullscreen not supported in this browser', 'error');
+            return;
+        }
+
+        target.requestFullscreen().catch(function(error) {
+            console.error('Enter fullscreen failed:', error);
+            notify('Fullscreen failed', 'error');
+        });
     }
 
     function notify(message, type) {
