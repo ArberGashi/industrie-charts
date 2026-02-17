@@ -1338,6 +1338,17 @@ public final class DemoApplication {
             return;
         }
 
+        if ("com.arbergashi.charts.render.financial.PointAndFigureAdvancedRenderer".equals(className)) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(8).setShowGrid(false);
+            y.setRequestedTickCount(5).setShowGrid(true).setFixedRange(-2.0, 2.0);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+            return;
+        }
+
         if ("com.arbergashi.charts.render.circular.RadarRenderer".equals(className)
                 || "com.arbergashi.charts.render.circular.PolarRenderer".equals(className)
                 || "com.arbergashi.charts.render.circular.PolarLineRenderer".equals(className)
