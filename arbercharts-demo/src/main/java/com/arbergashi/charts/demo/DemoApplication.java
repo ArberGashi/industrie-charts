@@ -1236,6 +1236,7 @@ public final class DemoApplication {
         String className = entry.className();
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
+        boolean analysis = "analysis".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
@@ -1247,6 +1248,16 @@ public final class DemoApplication {
         if (specialized) {
             panel.setLegend(true);
             panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+        }
+        if (analysis) {
+            panel.setLegend(false);
+            panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(true);
+            y.setRequestedTickCount(8).setShowGrid(true);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
         }
 
         if (renderer instanceof com.arbergashi.charts.render.circular.GaugeRenderer gaugeRenderer) {
@@ -1317,8 +1328,9 @@ public final class DemoApplication {
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
+        boolean analysis = "analysis".equals(entry.category());
         boolean medical = "medical".equals(entry.category());
-        if (!circular && !specialized && !medical) {
+        if (!circular && !specialized && !analysis && !medical) {
             return;
         }
         if (medical) {
@@ -1396,6 +1408,26 @@ public final class DemoApplication {
                     x = x0;
                     y = Math.max(1.0, y0 * (0.78 + (0.28 * amp) * Math.sin(phase * 0.9 + i * 0.58)));
                     weight = Math.max(1.0, y);
+                } else if (analysis) {
+                    if (className.endsWith("OutlierDetectionRenderer")
+                            || className.endsWith("PeakDetectionRenderer")
+                            || className.endsWith("ChangePointRenderer")
+                            || className.endsWith("ThresholdRenderer")
+                            || className.endsWith("MinMaxMarkerRenderer")) {
+                        x = x0;
+                        y = y0 + Math.sin(phase * 0.8 + i * 0.21) * (Math.max(0.8, Math.abs(y0) * 0.08) * amp);
+                        weight = Math.max(0.05, w0 * (0.92 + 0.14 * amp * Math.cos(phase * 0.9 + i * 0.17)));
+                    } else if (className.endsWith("LiveFFTRenderer")
+                            || className.endsWith("FourierOverlayRenderer")
+                            || className.endsWith("AutocorrelationRenderer")) {
+                        x = x0;
+                        y = y0 * (0.9 + 0.18 * amp * Math.sin(phase * 1.2 + i * 0.18));
+                        weight = Math.max(0.05, w0);
+                    } else {
+                        x = x0;
+                        y = y0 * (0.88 + 0.2 * amp * Math.sin(phase * 0.95 + i * 0.33));
+                        weight = Math.max(0.05, w0 * (0.9 + 0.16 * amp * Math.cos(phase * 0.7 + i * 0.27)));
+                    }
                 } else if (specialized) {
                     if (className.endsWith("SankeyRenderer")
                             || className.endsWith("SankeyProRenderer")
@@ -1437,6 +1469,10 @@ public final class DemoApplication {
                 if (className.endsWith("SmithChartRenderer") || className.endsWith("VSWRCircleRenderer")) {
                     min = y - 0.04;
                     max = y + 0.04;
+                } else if (analysis) {
+                    double band = Math.max(0.5, Math.abs(y) * 0.09);
+                    min = y - band;
+                    max = y + band;
                 } else {
                     min = y - Math.max(1.0, y * 0.08);
                     max = y + Math.max(1.0, y * 0.08);
@@ -1524,6 +1560,9 @@ public final class DemoApplication {
 
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
+        if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 1.0;
+        if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 1.2;
+        if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.95;
         if (className.contains("Smith") || className.contains("VSWR")) return 1.0;
         if (className.contains("Gauge") || className.contains("SemiDonut")) return 1.1;
         if (className.contains("Heatmap") || className.contains("Spectrogram")) return 0.95;
@@ -1534,6 +1573,9 @@ public final class DemoApplication {
 
     private static double showcaseAnimationAmplitude(String className) {
         if (className == null) return 1.0;
+        if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 0.7;
+        if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 0.9;
+        if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.75;
         if (className.contains("Smith") || className.contains("VSWR")) return 0.75;
         if (className.contains("Gauge") || className.contains("SemiDonut")) return 0.9;
         if (className.contains("Sankey") || className.contains("Alluvial") || className.contains("Chord")) return 0.7;
