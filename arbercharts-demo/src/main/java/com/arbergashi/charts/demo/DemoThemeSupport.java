@@ -9,6 +9,8 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 
+import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 import java.awt.Color;
@@ -31,6 +33,10 @@ final class DemoThemeSupport {
 
     static String setupLookAndFeel() {
         bootstrapThemeResources();
+        // Use FlatLaf window decorations across platforms where supported.
+        System.setProperty("flatlaf.useWindowDecorations", "true");
+        JFrame.setDefaultLookAndFeelDecorated(true);
+        JDialog.setDefaultLookAndFeelDecorated(true);
         try {
             Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
             java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");

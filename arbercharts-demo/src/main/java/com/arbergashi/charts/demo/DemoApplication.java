@@ -122,7 +122,7 @@ public final class DemoApplication {
      * @param args command line arguments (unused)
      */
     public static void main(String[] args) {
-        configureMacOSDefaults();
+        configurePlatformDefaults();
         DemoThemeSupport.bootstrapThemeResources();
         SwingUtilities.invokeLater(() -> {
             String theme = DemoThemeSupport.setupLookAndFeel();
@@ -210,7 +210,7 @@ public final class DemoApplication {
         mainFrame.add(split, BorderLayout.CENTER);
         mainFrame.add(buildFooter(), BorderLayout.SOUTH);
 
-        configureMacOSWindow(mainFrame);
+        configurePlatformWindow(mainFrame);
         configureMacOSMenuHandlers(mainFrame);
         setupKeyboardShortcuts();
         startMetricsTimer();
@@ -1251,7 +1251,7 @@ public final class DemoApplication {
         return tracker;
     }
 
-    private static void configureMacOSDefaults() {
+    private static void configurePlatformDefaults() {
         if (!SystemInfo.isMacOS) {
             return;
         }
@@ -1260,22 +1260,30 @@ public final class DemoApplication {
         System.setProperty("apple.awt.application.appearance", "system");
     }
 
-    private static void configureMacOSWindow(JFrame frame) {
-        if (!SystemInfo.isMacOS) {
+    private static void configurePlatformWindow(JFrame frame) {
+        if (SystemInfo.isMacOS) {
+            if (SystemInfo.isMacFullWindowContentSupported) {
+                frame.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
+                frame.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+                if (SystemInfo.isJava_17_orLater) {
+                    frame.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
+                } else {
+                    frame.setTitle(null);
+                }
+            }
+            if (!SystemInfo.isJava_11_orLater) {
+                frame.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
+            }
             return;
         }
-        if (SystemInfo.isMacFullWindowContentSupported) {
-            frame.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
-            frame.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            if (SystemInfo.isJava_17_orLater) {
-                frame.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-            } else {
-                frame.setTitle(null);
-            }
-        }
-        if (!SystemInfo.isJava_11_orLater) {
-            frame.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
-        }
+
+        // Cross-platform FlatLaf title bar hints (Windows/Linux).
+        frame.getRootPane().putClientProperty("JRootPane.titleBarShowIcon", Boolean.TRUE);
+        frame.getRootPane().putClientProperty("JRootPane.titleBarShowTitle", Boolean.TRUE);
+        frame.getRootPane().putClientProperty("JRootPane.titleBarBackground",
+                DemoThemeSupport.uiColor("TitlePane.background", "Panel.background"));
+        frame.getRootPane().putClientProperty("JRootPane.titleBarForeground",
+                DemoThemeSupport.uiColor("TitlePane.foreground", "Label.foreground"));
     }
 
     private void rebuildRendererPanelsForTheme() {
