@@ -566,12 +566,12 @@ public final class DemoApplication {
                 "• Analysis: FFT, Wavelet, Correlation, Peak Detection, ...<br/>" +
                 "• Specialized: Smith Chart, Ternary, Sankey, ...</html>");
         features.setAlignmentX(Component.LEFT_ALIGNMENT);
-        features.setForeground(new Color(100, 108, 118));
+        features.setForeground(uiColor("Component.grayForeground", "Label.disabledForeground"));
 
         JLabel java = new JLabel("<html><br/>Java: " + System.getProperty("java.version") +
                 " (" + System.getProperty("java.vendor") + ")</html>");
         java.setAlignmentX(Component.LEFT_ALIGNMENT);
-        java.setForeground(new Color(130, 138, 148));
+        java.setForeground(uiColor("Component.grayForeground", "Label.disabledForeground"));
 
         JLabel copyright = new JLabel(COPYRIGHT);
         copyright.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1457,13 +1457,13 @@ public final class DemoApplication {
     }
 
     private DemoPalette currentPalette() {
-        Color window = uiColor("Panel.background", "control", new Color(30, 30, 30));
-        Color content = uiColor("Panel.background", "control", window);
-        Color surface = uiColor("TextField.background", "Panel.background", content);
-        Color sidebar = uiColor("Tree.background", "control", content);
-        Color border = uiColor("Component.borderColor", "Separator.foreground", new Color(60, 60, 60));
-        Color foreground = uiColor("Label.foreground", "textText", new Color(204, 204, 204));
-        Color muted = uiColor("Component.grayForeground", "Label.disabledForeground", new Color(152, 160, 170));
+        Color window = uiColor("Panel.background", "control");
+        Color content = uiColor("Panel.background", "control");
+        Color surface = uiColor("TextField.background", "Panel.background");
+        Color sidebar = uiColor("Tree.background", "Panel.background");
+        Color border = uiColor("Component.borderColor", "Separator.foreground");
+        Color foreground = uiColor("Label.foreground", "textText");
+        Color muted = uiColor("Component.grayForeground", "Label.disabledForeground");
         Color softMuted = withAlpha(muted, 210);
         return new DemoPalette(
                 window,
@@ -1481,11 +1481,11 @@ public final class DemoApplication {
         boolean light = "light".equals(currentThemeName);
         String p = light ? "Demo.chart.light." : "Demo.chart.dark.";
 
-        ArberColor bg = ChartAssets.getColor(p + "background", ColorRegistry.of(30, 30, 30, 255));
-        ArberColor fg = ChartAssets.getColor(p + "foreground", ColorRegistry.of(204, 204, 204, 255));
-        ArberColor grid = ChartAssets.getColor(p + "grid", ColorRegistry.of(60, 60, 60, 255));
-        ArberColor axis = ChartAssets.getColor(p + "axis", ColorRegistry.of(156, 163, 175, 255));
-        ArberColor accent = ChartAssets.getColor(p + "accent", ColorRegistry.of(77, 163, 255, 255));
+        ArberColor bg = ChartAssets.getColor(p + "background", toArberColor(uiColor("Panel.background", "control")));
+        ArberColor fg = ChartAssets.getColor(p + "foreground", toArberColor(uiColor("Label.foreground", "textText")));
+        ArberColor grid = ChartAssets.getColor(p + "grid", toArberColor(uiColor("Separator.foreground", "Component.borderColor")));
+        ArberColor axis = ChartAssets.getColor(p + "axis", toArberColor(uiColor("Component.grayForeground", "Label.disabledForeground")));
+        ArberColor accent = ChartAssets.getColor(p + "accent", toArberColor(uiColor("Component.focusColor", "Component.linkColor")));
 
         ArberColor[] series = new ArberColor[]{
                 ChartAssets.getColor(p + "series1", accent),
@@ -1515,16 +1515,26 @@ public final class DemoApplication {
         return "light".equalsIgnoreCase(themeName) ? "light" : "dark";
     }
 
-    private static Color uiColor(String key, String fallbackKey, Color hardFallback) {
+    private static Color uiColor(String key, String fallbackKey) {
         Color c = UIManager.getColor(key);
         if (c != null) return c;
         c = UIManager.getColor(fallbackKey);
-        return c != null ? c : hardFallback;
+        if (c != null) return c;
+        c = UIManager.getColor("Panel.foreground");
+        if (c != null) return c;
+        c = UIManager.getColor("Label.foreground");
+        if (c != null) return c;
+        return new JPanel().getForeground();
     }
 
     private static Color withAlpha(Color color, int alpha) {
         if (color == null) return null;
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), Math.max(0, Math.min(255, alpha)));
+    }
+
+    private static ArberColor toArberColor(Color color) {
+        Color safe = (color != null) ? color : new JPanel().getForeground();
+        return ColorRegistry.of(safe.getRed(), safe.getGreen(), safe.getBlue(), safe.getAlpha());
     }
 
     private record DemoPalette(
@@ -1621,7 +1631,7 @@ public final class DemoApplication {
                 if (!sel) {
                     Color categoryColor = UIManager.getColor("Component.grayForeground");
                     if (categoryColor == null) {
-                        categoryColor = new Color(120, 130, 140);
+                        categoryColor = tree.getForeground();
                     }
                     setForeground(categoryColor);
                 }
