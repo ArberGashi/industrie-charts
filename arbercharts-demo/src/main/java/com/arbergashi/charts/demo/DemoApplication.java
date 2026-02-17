@@ -2,9 +2,7 @@ package com.arbergashi.charts.demo;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.AnimationProfile;
-import com.arbergashi.charts.api.BasicChartTheme;
 import com.arbergashi.charts.model.ChartModel;
-import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
@@ -1184,7 +1182,6 @@ public final class DemoApplication {
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
-                applyMedicalColorPreset(entry, model, renderer);
                 installShowcaseRendererAnimation(entry, model, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
@@ -1238,7 +1235,6 @@ public final class DemoApplication {
         String className = entry.className();
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
-        boolean medical = "medical".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
@@ -1249,10 +1245,6 @@ public final class DemoApplication {
         }
         if (specialized) {
             panel.setLegend(true);
-            panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
-        }
-        if (medical) {
-            panel.setLegend(false);
             panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
         }
 
@@ -1319,65 +1311,12 @@ public final class DemoApplication {
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
         }
-
-        if (className.startsWith("com.arbergashi.charts.render.medical.")) {
-            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
-            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
-            x.setRequestedTickCount(10).setShowGrid(false);
-            y.setRequestedTickCount(8).setShowGrid(false);
-
-            switch (className) {
-                case "com.arbergashi.charts.render.medical.ECGRenderer",
-                     "com.arbergashi.charts.render.medical.ECGRhythmRenderer",
-                     "com.arbergashi.charts.render.medical.SweepEraseEKGRenderer",
-                     "com.arbergashi.charts.render.medical.VCGRenderer" ->
-                        y.setFixedRange(-1.8, 2.2);
-                case "com.arbergashi.charts.render.medical.EEGRenderer",
-                     "com.arbergashi.charts.render.medical.NIRSRenderer",
-                     "com.arbergashi.charts.render.medical.EOGRenderer" ->
-                        y.setFixedRange(-1.0, 1.0);
-                case "com.arbergashi.charts.render.medical.EMGRenderer" ->
-                        y.setFixedRange(-1.45, 1.45);
-                case "com.arbergashi.charts.render.medical.VentilatorWaveformRenderer",
-                     "com.arbergashi.charts.render.medical.SpirometryRenderer" -> {
-                    y.setFixedRange(-1.2, 1.9);
-                    panel.setLegend(true);
-                    panel.setDockedLegend(com.arbergashi.charts.domain.legend.LegendDockSide.RIGHT);
-                }
-                case "com.arbergashi.charts.render.medical.CapnographyRenderer" ->
-                        y.setFixedRange(0.0, 1.3);
-                case "com.arbergashi.charts.render.medical.PPGRenderer",
-                     "com.arbergashi.charts.render.medical.IBPRenderer" ->
-                        y.setFixedRange(0.0, 1.35);
-                case "com.arbergashi.charts.render.medical.SpectrogramMedicalRenderer" -> {
-                    y.setFixedRange(0.0, 1.0);
-                    x.setRequestedTickCount(12);
-                }
-                case "com.arbergashi.charts.render.medical.UltrasoundMModeRenderer" -> {
-                    y.setFixedRange(-0.8, 0.8);
-                    x.setRequestedTickCount(12);
-                }
-                case "com.arbergashi.charts.render.medical.CalibrationRenderer" ->
-                        y.setFixedRange(0.0, 1.2);
-                default -> y.setFixedRange(-1.2, 1.2);
-            }
-
-            panel.setXAxisConfig(x);
-            panel.setYAxisConfig(y);
-        }
     }
 
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
-        boolean medical = "medical".equals(entry.category());
-        if (!circular && !specialized && !medical) {
-            return;
-        }
-        if (medical) {
-            if (model instanceof CircularFastMedicalModel medicalModel) {
-                installMedicalShowcaseAnimation(entry, medicalModel, panel);
-            }
+        if (!circular && !specialized) {
             return;
         }
         if (!(model instanceof DefaultChartModel defaultModel)) {
@@ -1506,66 +1445,6 @@ public final class DemoApplication {
         });
     }
 
-    private void installMedicalShowcaseAnimation(RendererCatalogEntry entry, CircularFastMedicalModel model, ArberChartPanel panel) {
-        String className = entry.className();
-        MedicalAnimProfile profile = medicalAnimProfile(className);
-        final double sampleRate = 250.0;
-        final double dt = 1.0 / sampleRate;
-        final double[] t = {model.getPointCount() > 0 ? model.getX(model.getPointCount() - 1) : 0.0};
-        final double[] carry = {0.0};
-        final double[] channels = new double[3];
-
-        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
-            if (!panel.isDisplayable()) {
-                ((Timer) evt.getSource()).stop();
-                return;
-            }
-            carry[0] += sampleRate * (SHOWCASE_ANIMATION_DELAY_MS / 1000.0);
-            int samples = Math.max(1, (int) carry[0]);
-            carry[0] -= samples;
-            for (int i = 0; i < samples; i++) {
-                t[0] += dt;
-                fillMedicalChannels(profile, t[0], channels);
-                model.add(t[0], channels);
-            }
-            panel.repaint();
-        });
-        animation.start();
-
-        panel.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
-                animation.stop();
-            }
-        });
-    }
-
-    private void applyMedicalColorPreset(RendererCatalogEntry entry, ChartModel model, ChartRenderer renderer) {
-        if (!"medical".equals(entry.category())) {
-            return;
-        }
-        boolean dark = !"light".equalsIgnoreCase(currentThemeName);
-        MedicalColorPreset preset = medicalColorPreset(entry.className(), dark);
-        if (preset == null) {
-            return;
-        }
-        ChartTheme active = getActiveTheme();
-        ChartTheme themed = new BasicChartTheme(
-                active.getBackground(),
-                preset.foreground() != null ? preset.foreground() : active.getForeground(),
-                preset.grid() != null ? preset.grid() : active.getGridColor(),
-                preset.axis() != null ? preset.axis() : active.getAxisLabelColor(),
-                preset.accent() != null ? preset.accent() : active.getAccentColor(),
-                preset.series() != null ? preset.series() : new com.arbergashi.charts.api.types.ArberColor[]{active.getSeriesColor(0), active.getSeriesColor(1), active.getSeriesColor(2)},
-                active.getBaseFont()
-        );
-        if (renderer instanceof com.arbergashi.charts.render.BaseRenderer baseRenderer) {
-            baseRenderer.setTheme(themed);
-        }
-        if (model instanceof CircularFastMedicalModel medicalModel && preset.primary() != null) {
-            medicalModel.setColor(preset.primary());
-        }
-    }
-
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
         if (className.contains("Smith") || className.contains("VSWR")) return 1.0;
@@ -1590,263 +1469,6 @@ public final class DemoApplication {
         if (value < min) return min;
         if (value > max) return max;
         return value;
-    }
-
-    private static void fillMedicalChannels(MedicalAnimProfile profile, double t, double[] out) {
-        switch (profile.kind()) {
-            case ECG -> {
-            double hr = profile.baseRate + Math.sin(t * 0.25) * (5.0 * profile.modulation);
-            double l1 = ecgWave(t, hr, 1.00 * profile.gain);
-            double l2 = ecgWave(t + 0.012, hr, 1.12 * profile.gain);
-            double wander = Math.sin(t * 2.0 * Math.PI * 0.18) * (0.025 * profile.modulation);
-            out[0] = l1 + wander;
-            out[1] = l2 + wander * 0.8;
-            out[2] = (l2 - l1) * 0.9 + wander * 0.5;
-            return;
-            }
-            case EEG -> {
-            double alpha = Math.sin(t * 2.0 * Math.PI * 10.0);
-            double theta = Math.sin(t * 2.0 * Math.PI * 5.5 + 0.4);
-            double beta = Math.sin(t * 2.0 * Math.PI * 18.0 + 1.1);
-            out[0] = (alpha * 0.22 + theta * 0.14 + beta * 0.08) * profile.gain;
-            out[1] = (alpha * 0.18 + theta * 0.16 + Math.sin(t * 2.0 * Math.PI * 13.0) * 0.06) * profile.gain;
-            out[2] = (theta * 0.2 + Math.sin(t * 2.0 * Math.PI * 2.2) * 0.1) * profile.gain;
-            return;
-            }
-            case EMG -> {
-            double burst = Math.max(0.15, 0.35 + 0.65 * Math.sin(t * 2.0 * Math.PI * (0.7 * profile.modulation)));
-            double hf1 = Math.sin(t * 2.0 * Math.PI * 45.0 + 0.2);
-            double hf2 = Math.sin(t * 2.0 * Math.PI * 68.0 + 0.9);
-            double hf3 = Math.sin(t * 2.0 * Math.PI * 92.0 + 1.4);
-            out[0] = burst * (hf1 * 0.25 + hf2 * 0.18) * profile.gain;
-            out[1] = burst * (hf2 * 0.22 + hf3 * 0.16) * profile.gain;
-            out[2] = burst * (hf1 * 0.2 + hf3 * 0.2) * profile.gain;
-            return;
-            }
-            case VENTILATION -> {
-            double f = 0.24 * profile.modulation;
-            double flow = Math.sin(t * 2.0 * Math.PI * f) + Math.sin(t * 2.0 * Math.PI * f * 2.0) * 0.2;
-            double pressure = 0.65 + Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f)) * 0.8;
-            double volume = 0.75 + Math.sin(t * 2.0 * Math.PI * f - Math.PI / 2.0) * 0.55;
-            out[0] = flow * 0.85 * profile.gain;
-            out[1] = pressure * profile.gain;
-            out[2] = volume * profile.gain;
-            return;
-            }
-            case CAPNOGRAPHY -> {
-            double f = 0.22 * profile.modulation;
-            double phase = (t * f) - Math.floor(t * f);
-            double capno;
-            if (phase < 0.12) {
-                capno = phase / 0.12 * 0.92;
-            } else if (phase < 0.65) {
-                capno = 0.92 + Math.sin((phase - 0.12) * 9.0) * 0.03;
-            } else if (phase < 0.82) {
-                capno = 0.92 * (1.0 - ((phase - 0.65) / 0.17));
-            } else {
-                capno = 0.05 + Math.sin(phase * 24.0) * 0.01;
-            }
-            out[0] = capno * profile.gain;
-            out[1] = Math.max(0.0, (capno * 0.92 + 0.03) * profile.gain);
-            out[2] = Math.max(0.0, (capno * 0.82 + 0.05) * profile.gain);
-            return;
-            }
-            case PERFUSION -> {
-            double f = 1.18 * profile.modulation;
-            double pulse = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f));
-            pulse = pulse * pulse * (1.0 + 0.25 * Math.sin(t * 2.0 * Math.PI * 0.2));
-            out[0] = 0.15 + pulse * (0.95 * profile.gain);
-            out[1] = 0.18 + pulse * (0.88 * profile.gain);
-            out[2] = 0.22 + pulse * (0.78 * profile.gain);
-            return;
-            }
-            case ULTRASOUND -> {
-                double gate = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * (0.9 * profile.modulation)));
-                double carrierA = Math.sin(t * 2.0 * Math.PI * 26.0);
-                double carrierB = Math.sin(t * 2.0 * Math.PI * 34.0 + 0.6);
-                out[0] = (carrierA * 0.45 + carrierB * 0.22) * gate * profile.gain;
-                out[1] = (carrierB * 0.4 + Math.sin(t * 2.0 * Math.PI * 41.0 + 0.3) * 0.18) * gate * profile.gain;
-                out[2] = Math.sin(t * 2.0 * Math.PI * 0.3) * 0.2 * profile.gain;
-                return;
-            }
-            case CALIBRATION -> {
-                double tick = Math.sin(t * 2.0 * Math.PI * 1.0) > 0.85 ? 1.0 : 0.0;
-                out[0] = 0.05 + tick * 0.9;
-                out[1] = 0.03 + tick * 0.85;
-                out[2] = 0.01 + tick * 0.8;
-                return;
-            }
-            case GENERIC -> {
-                double base = Math.sin(t * 2.0 * Math.PI * 1.1);
-                double mod = Math.sin(t * 2.0 * Math.PI * 0.23);
-                out[0] = (base * 0.5 + mod * 0.08) * profile.gain;
-                out[1] = (Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06) * profile.gain;
-                out[2] = (Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05) * profile.gain;
-            }
-        }
-    }
-
-    private static double ecgWave(double t, double heartRate, double gain) {
-        double rr = 60.0 / Math.max(45.0, heartRate);
-        double phase = (t / rr) - Math.floor(t / rr);
-        double y = 0.0;
-        if (phase > 0.03 && phase < 0.12) {
-            double p = (phase - 0.075) / 0.03;
-            y += 0.14 * Math.exp(-p * p * 3.5);
-        }
-        if (phase > 0.14 && phase < 0.2) {
-            double qrs = (phase - 0.17) / 0.015;
-            y -= 0.12 * Math.exp(-(qrs + 0.9) * (qrs + 0.9) * 4.5);
-            y += 1.12 * Math.exp(-qrs * qrs * 5.5);
-            y -= 0.22 * Math.exp(-(qrs - 0.7) * (qrs - 0.7) * 5.0);
-        }
-        if (phase > 0.24 && phase < 0.45) {
-            double tw = (phase - 0.34) / 0.08;
-            y += 0.32 * Math.exp(-tw * tw * 2.0);
-        }
-        return y * gain;
-    }
-
-    private static MedicalAnimProfile medicalAnimProfile(String className) {
-        String simple = rendererSimpleName(className);
-        return switch (simple) {
-            case "ECGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 74.0, 1.0, 1.06);
-            case "ECGRhythmRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 72.0, 0.92, 1.02);
-            case "SweepEraseEKGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 76.0, 1.05, 1.1);
-            case "VCGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ECG, 70.0, 0.95, 1.15);
-            case "EEGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 68.0, 0.72, 0.86);
-            case "NIRSRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 66.0, 0.66, 0.74);
-            case "EOGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 64.0, 0.55, 0.62);
-            case "SpectrogramMedicalRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EEG, 70.0, 0.84, 0.96);
-            case "EMGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.EMG, 82.0, 1.4, 1.32);
-            case "CapnographyRenderer" -> new MedicalAnimProfile(MedicalSignalKind.CAPNOGRAPHY, 16.0, 0.98, 1.2);
-            case "VentilatorWaveformRenderer" -> new MedicalAnimProfile(MedicalSignalKind.VENTILATION, 14.0, 0.88, 1.16);
-            case "SpirometryRenderer" -> new MedicalAnimProfile(MedicalSignalKind.VENTILATION, 15.0, 0.95, 1.1);
-            case "PPGRenderer" -> new MedicalAnimProfile(MedicalSignalKind.PERFUSION, 74.0, 1.08, 1.1);
-            case "IBPRenderer" -> new MedicalAnimProfile(MedicalSignalKind.PERFUSION, 76.0, 1.03, 1.04);
-            case "UltrasoundMModeRenderer" -> new MedicalAnimProfile(MedicalSignalKind.ULTRASOUND, 62.0, 1.1, 1.0);
-            case "CalibrationRenderer" -> new MedicalAnimProfile(MedicalSignalKind.CALIBRATION, 60.0, 1.0, 1.0);
-            case "MedicalSweepRenderer" -> new MedicalAnimProfile(MedicalSignalKind.GENERIC, 72.0, 1.0, 1.0);
-            default -> new MedicalAnimProfile(MedicalSignalKind.GENERIC, 72.0, 1.0, 1.0);
-        };
-    }
-
-    private static MedicalColorPreset medicalColorPreset(String className, boolean dark) {
-        String simple = rendererSimpleName(className);
-        return switch (simple) {
-            case "ECGRenderer", "ECGRhythmRenderer", "SweepEraseEKGRenderer", "VCGRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(120, 246, 170), rgb(52, 222, 186), rgb(253, 203, 86),
-                    rgb(120, 246, 170), rgb(222, 234, 245), rgb(62, 90, 98), rgb(133, 196, 177), rgb(76, 224, 184))
-                    : new MedicalColorPreset(
-                    rgb(20, 160, 98), rgb(35, 142, 178), rgb(176, 125, 24),
-                    rgb(20, 160, 98), rgb(42, 58, 70), rgb(190, 216, 220), rgb(64, 88, 98), rgb(26, 145, 102));
-            case "EEGRenderer", "NIRSRenderer", "EOGRenderer", "SpectrogramMedicalRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(151, 176, 255), rgb(145, 228, 216), rgb(197, 151, 255),
-                    rgb(145, 228, 216), rgb(224, 232, 242), rgb(64, 78, 98), rgb(150, 176, 208), rgb(149, 176, 255))
-                    : new MedicalColorPreset(
-                    rgb(66, 92, 166), rgb(46, 144, 124), rgb(108, 78, 160),
-                    rgb(46, 144, 124), rgb(40, 52, 64), rgb(196, 205, 220), rgb(74, 94, 112), rgb(66, 92, 166));
-            case "EMGRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(255, 170, 92), rgb(255, 120, 120), rgb(255, 216, 112),
-                    rgb(255, 170, 92), rgb(236, 226, 214), rgb(104, 72, 72), rgb(214, 160, 124), rgb(255, 150, 97))
-                    : new MedicalColorPreset(
-                    rgb(180, 98, 44), rgb(162, 52, 52), rgb(165, 122, 16),
-                    rgb(180, 98, 44), rgb(52, 44, 42), rgb(234, 212, 204), rgb(108, 86, 80), rgb(170, 94, 52));
-            case "VentilatorWaveformRenderer", "SpirometryRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(110, 220, 255), rgb(114, 250, 216), rgb(155, 196, 255),
-                    rgb(110, 220, 255), rgb(220, 235, 242), rgb(52, 80, 92), rgb(136, 182, 200), rgb(100, 206, 246))
-                    : new MedicalColorPreset(
-                    rgb(24, 131, 172), rgb(24, 145, 120), rgb(56, 92, 156),
-                    rgb(24, 131, 172), rgb(36, 54, 62), rgb(186, 214, 224), rgb(70, 96, 106), rgb(20, 123, 158));
-            case "CapnographyRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(255, 208, 100), rgb(255, 176, 92), rgb(255, 232, 153),
-                    rgb(255, 208, 100), rgb(240, 232, 214), rgb(102, 86, 58), rgb(204, 184, 132), rgb(255, 194, 90))
-                    : new MedicalColorPreset(
-                    rgb(186, 126, 20), rgb(174, 94, 20), rgb(194, 162, 72),
-                    rgb(186, 126, 20), rgb(60, 48, 32), rgb(236, 220, 182), rgb(112, 96, 70), rgb(176, 112, 16));
-            case "PPGRenderer", "IBPRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(255, 125, 138), rgb(255, 173, 122), rgb(255, 208, 160),
-                    rgb(255, 125, 138), rgb(244, 226, 228), rgb(96, 66, 72), rgb(206, 148, 154), rgb(248, 110, 128))
-                    : new MedicalColorPreset(
-                    rgb(168, 44, 64), rgb(162, 88, 52), rgb(166, 120, 80),
-                    rgb(168, 44, 64), rgb(62, 38, 42), rgb(236, 204, 208), rgb(108, 80, 84), rgb(160, 44, 60));
-            case "UltrasoundMModeRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(174, 196, 218), rgb(120, 212, 255), rgb(238, 244, 252),
-                    rgb(120, 212, 255), rgb(232, 238, 246), rgb(70, 82, 94), rgb(172, 188, 206), rgb(120, 212, 255))
-                    : new MedicalColorPreset(
-                    rgb(78, 98, 122), rgb(52, 136, 176), rgb(220, 228, 238),
-                    rgb(52, 136, 176), rgb(52, 60, 72), rgb(200, 210, 222), rgb(84, 98, 116), rgb(52, 136, 176));
-            case "CalibrationRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(255, 236, 184), rgb(255, 198, 115), rgb(255, 244, 214),
-                    rgb(255, 198, 115), rgb(236, 232, 224), rgb(92, 84, 72), rgb(194, 180, 152), rgb(255, 198, 115))
-                    : new MedicalColorPreset(
-                    rgb(164, 128, 58), rgb(182, 120, 38), rgb(214, 196, 152),
-                    rgb(182, 120, 38), rgb(58, 52, 44), rgb(224, 214, 190), rgb(106, 94, 76), rgb(176, 112, 24));
-            case "MedicalSweepRenderer" -> dark
-                    ? new MedicalColorPreset(
-                    rgb(140, 236, 196), rgb(112, 210, 236), rgb(196, 160, 255),
-                    rgb(140, 236, 196), rgb(224, 234, 242), rgb(64, 84, 92), rgb(140, 178, 186), rgb(132, 228, 186))
-                    : new MedicalColorPreset(
-                    rgb(30, 148, 112), rgb(34, 122, 156), rgb(108, 76, 156),
-                    rgb(30, 148, 112), rgb(44, 58, 66), rgb(186, 206, 214), rgb(72, 88, 100), rgb(28, 140, 108));
-            default -> dark
-                    ? new MedicalColorPreset(
-                    rgb(138, 224, 186), rgb(112, 198, 232), rgb(190, 156, 252),
-                    rgb(138, 224, 186), rgb(222, 232, 242), rgb(62, 84, 94), rgb(140, 176, 188), rgb(138, 224, 186))
-                    : new MedicalColorPreset(
-                    rgb(36, 142, 108), rgb(34, 120, 156), rgb(112, 78, 158),
-                    rgb(36, 142, 108), rgb(42, 58, 66), rgb(190, 210, 218), rgb(72, 90, 102), rgb(34, 136, 104));
-        };
-    }
-
-    private static String rendererSimpleName(String className) {
-        if (className == null || className.isBlank()) {
-            return "";
-        }
-        int idx = className.lastIndexOf('.');
-        return idx >= 0 ? className.substring(idx + 1) : className;
-    }
-
-    private static com.arbergashi.charts.api.types.ArberColor rgb(int r, int g, int b) {
-        return com.arbergashi.charts.util.ColorRegistry.of(r, g, b, 255);
-    }
-
-    private enum MedicalSignalKind {
-        ECG,
-        EEG,
-        EMG,
-        VENTILATION,
-        CAPNOGRAPHY,
-        PERFUSION,
-        ULTRASOUND,
-        CALIBRATION,
-        GENERIC
-    }
-
-    private record MedicalAnimProfile(MedicalSignalKind kind, double baseRate, double modulation, double gain) {
-    }
-
-    private record MedicalColorPreset(
-            com.arbergashi.charts.api.types.ArberColor s0,
-            com.arbergashi.charts.api.types.ArberColor s1,
-            com.arbergashi.charts.api.types.ArberColor s2,
-            com.arbergashi.charts.api.types.ArberColor primary,
-            com.arbergashi.charts.api.types.ArberColor foreground,
-            com.arbergashi.charts.api.types.ArberColor grid,
-            com.arbergashi.charts.api.types.ArberColor axis,
-            com.arbergashi.charts.api.types.ArberColor accent
-    ) {
-        com.arbergashi.charts.api.types.ArberColor[] series() {
-            return new com.arbergashi.charts.api.types.ArberColor[]{s0, s1, s2};
-        }
     }
 
     /**
