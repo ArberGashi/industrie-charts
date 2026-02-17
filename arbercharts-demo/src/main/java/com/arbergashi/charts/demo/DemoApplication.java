@@ -1455,6 +1455,7 @@ public final class DemoApplication {
 
     private void installMedicalShowcaseAnimation(RendererCatalogEntry entry, CircularFastMedicalModel model, ArberChartPanel panel) {
         String className = entry.className();
+        MedicalAnimProfile profile = medicalAnimProfile(className);
         final double sampleRate = 250.0;
         final double dt = 1.0 / sampleRate;
         final double[] t = {model.getPointCount() > 0 ? model.getX(model.getPointCount() - 1) : 0.0};
@@ -1471,7 +1472,7 @@ public final class DemoApplication {
             carry[0] -= samples;
             for (int i = 0; i < samples; i++) {
                 t[0] += dt;
-                fillMedicalChannels(className, t[0], channels);
+                fillMedicalChannels(className, profile, t[0], channels);
                 model.add(t[0], channels);
             }
             panel.repaint();
@@ -1511,13 +1512,13 @@ public final class DemoApplication {
         return value;
     }
 
-    private static void fillMedicalChannels(String className, double t, double[] out) {
+    private static void fillMedicalChannels(String className, MedicalAnimProfile profile, double t, double[] out) {
         String cn = className == null ? "" : className;
         if (cn.contains("ECG") || cn.contains("EKG") || cn.contains("Rhythm")) {
-            double hr = 74.0 + Math.sin(t * 0.25) * 5.0;
-            double l1 = ecgWave(t, hr, 1.00);
-            double l2 = ecgWave(t + 0.012, hr, 1.12);
-            double wander = Math.sin(t * 2.0 * Math.PI * 0.18) * 0.025;
+            double hr = profile.baseRate + Math.sin(t * 0.25) * (5.0 * profile.modulation);
+            double l1 = ecgWave(t, hr, 1.00 * profile.gain);
+            double l2 = ecgWave(t + 0.012, hr, 1.12 * profile.gain);
+            double wander = Math.sin(t * 2.0 * Math.PI * 0.18) * (0.025 * profile.modulation);
             out[0] = l1 + wander;
             out[1] = l2 + wander * 0.8;
             out[2] = (l2 - l1) * 0.9 + wander * 0.5;
@@ -1527,33 +1528,33 @@ public final class DemoApplication {
             double alpha = Math.sin(t * 2.0 * Math.PI * 10.0);
             double theta = Math.sin(t * 2.0 * Math.PI * 5.5 + 0.4);
             double beta = Math.sin(t * 2.0 * Math.PI * 18.0 + 1.1);
-            out[0] = alpha * 0.22 + theta * 0.14 + beta * 0.08;
-            out[1] = alpha * 0.18 + theta * 0.16 + Math.sin(t * 2.0 * Math.PI * 13.0) * 0.06;
-            out[2] = theta * 0.2 + Math.sin(t * 2.0 * Math.PI * 2.2) * 0.1;
+            out[0] = (alpha * 0.22 + theta * 0.14 + beta * 0.08) * profile.gain;
+            out[1] = (alpha * 0.18 + theta * 0.16 + Math.sin(t * 2.0 * Math.PI * 13.0) * 0.06) * profile.gain;
+            out[2] = (theta * 0.2 + Math.sin(t * 2.0 * Math.PI * 2.2) * 0.1) * profile.gain;
             return;
         }
         if (cn.contains("EMG")) {
-            double burst = Math.max(0.15, 0.35 + 0.65 * Math.sin(t * 2.0 * Math.PI * 0.7));
+            double burst = Math.max(0.15, 0.35 + 0.65 * Math.sin(t * 2.0 * Math.PI * (0.7 * profile.modulation)));
             double hf1 = Math.sin(t * 2.0 * Math.PI * 45.0 + 0.2);
             double hf2 = Math.sin(t * 2.0 * Math.PI * 68.0 + 0.9);
             double hf3 = Math.sin(t * 2.0 * Math.PI * 92.0 + 1.4);
-            out[0] = burst * (hf1 * 0.25 + hf2 * 0.18);
-            out[1] = burst * (hf2 * 0.22 + hf3 * 0.16);
-            out[2] = burst * (hf1 * 0.2 + hf3 * 0.2);
+            out[0] = burst * (hf1 * 0.25 + hf2 * 0.18) * profile.gain;
+            out[1] = burst * (hf2 * 0.22 + hf3 * 0.16) * profile.gain;
+            out[2] = burst * (hf1 * 0.2 + hf3 * 0.2) * profile.gain;
             return;
         }
         if (cn.contains("Ventilator") || cn.contains("Spirometry")) {
-            double f = 0.24;
+            double f = 0.24 * profile.modulation;
             double flow = Math.sin(t * 2.0 * Math.PI * f) + Math.sin(t * 2.0 * Math.PI * f * 2.0) * 0.2;
             double pressure = 0.65 + Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f)) * 0.8;
             double volume = 0.75 + Math.sin(t * 2.0 * Math.PI * f - Math.PI / 2.0) * 0.55;
-            out[0] = flow * 0.85;
-            out[1] = pressure;
-            out[2] = volume;
+            out[0] = flow * 0.85 * profile.gain;
+            out[1] = pressure * profile.gain;
+            out[2] = volume * profile.gain;
             return;
         }
         if (cn.contains("Capnography")) {
-            double f = 0.22;
+            double f = 0.22 * profile.modulation;
             double phase = (t * f) - Math.floor(t * f);
             double capno;
             if (phase < 0.12) {
@@ -1565,26 +1566,26 @@ public final class DemoApplication {
             } else {
                 capno = 0.05 + Math.sin(phase * 24.0) * 0.01;
             }
-            out[0] = capno;
-            out[1] = Math.max(0.0, capno * 0.92 + 0.03);
-            out[2] = Math.max(0.0, capno * 0.82 + 0.05);
+            out[0] = capno * profile.gain;
+            out[1] = Math.max(0.0, (capno * 0.92 + 0.03) * profile.gain);
+            out[2] = Math.max(0.0, (capno * 0.82 + 0.05) * profile.gain);
             return;
         }
         if (cn.contains("PPG") || cn.contains("IBP")) {
-            double f = 1.18;
+            double f = 1.18 * profile.modulation;
             double pulse = Math.max(0.0, Math.sin(t * 2.0 * Math.PI * f));
             pulse = pulse * pulse * (1.0 + 0.25 * Math.sin(t * 2.0 * Math.PI * 0.2));
-            out[0] = 0.15 + pulse * 0.95;
-            out[1] = 0.18 + pulse * 0.88;
-            out[2] = 0.22 + pulse * 0.78;
+            out[0] = 0.15 + pulse * (0.95 * profile.gain);
+            out[1] = 0.18 + pulse * (0.88 * profile.gain);
+            out[2] = 0.22 + pulse * (0.78 * profile.gain);
             return;
         }
 
         double base = Math.sin(t * 2.0 * Math.PI * 1.1);
         double mod = Math.sin(t * 2.0 * Math.PI * 0.23);
-        out[0] = base * 0.5 + mod * 0.08;
-        out[1] = Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06;
-        out[2] = Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05;
+        out[0] = (base * 0.5 + mod * 0.08) * profile.gain;
+        out[1] = (Math.sin(t * 2.0 * Math.PI * 1.05 + 0.35) * 0.46 + mod * 0.06) * profile.gain;
+        out[2] = (Math.sin(t * 2.0 * Math.PI * 1.2 + 0.8) * 0.42 + mod * 0.05) * profile.gain;
     }
 
     private static double ecgWave(double t, double heartRate, double gain) {
@@ -1606,6 +1607,32 @@ public final class DemoApplication {
             y += 0.32 * Math.exp(-tw * tw * 2.0);
         }
         return y * gain;
+    }
+
+    private static MedicalAnimProfile medicalAnimProfile(String className) {
+        String cn = className == null ? "" : className;
+        if (cn.contains("EEG") || cn.contains("NIRS") || cn.contains("EOG")) {
+            return new MedicalAnimProfile(68.0, 0.72, 0.88);
+        }
+        if (cn.contains("EMG")) {
+            return new MedicalAnimProfile(80.0, 1.35, 1.28);
+        }
+        if (cn.contains("Capnography")) {
+            return new MedicalAnimProfile(16.0, 0.95, 1.16);
+        }
+        if (cn.contains("Ventilator") || cn.contains("Spirometry")) {
+            return new MedicalAnimProfile(15.0, 0.9, 1.12);
+        }
+        if (cn.contains("PPG") || cn.contains("IBP")) {
+            return new MedicalAnimProfile(74.0, 1.08, 1.08);
+        }
+        if (cn.contains("ECG") || cn.contains("EKG") || cn.contains("Rhythm")) {
+            return new MedicalAnimProfile(74.0, 1.0, 1.05);
+        }
+        return new MedicalAnimProfile(72.0, 1.0, 1.0);
+    }
+
+    private record MedicalAnimProfile(double baseRate, double modulation, double gain) {
     }
 
     /**
