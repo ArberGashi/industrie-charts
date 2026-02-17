@@ -1304,6 +1304,14 @@ public final class DemoApplication {
         if (renderer instanceof com.arbergashi.charts.render.circular.GaugeRenderer gaugeRenderer) {
             gaugeRenderer.setAnimationProfile(AnimationProfile.ENTERPRISE);
         }
+        if (renderer instanceof com.arbergashi.charts.render.financial.Candlestick3DRenderer candle3d) {
+            // Demo-safe 3D depth profile: avoid huge volume-based Z that collapses projection.
+            candle3d.setZOffset(0.0)
+                    .setZScale(0.0000000025)
+                    .setZDepth(0.09)
+                    .setLodDepthThreshold(2.2)
+                    .setSolid(true);
+        }
 
         if ("com.arbergashi.charts.render.circular.GaugeRenderer".equals(className)
                 || "com.arbergashi.charts.render.circular.GaugeBandsRenderer".equals(className)
