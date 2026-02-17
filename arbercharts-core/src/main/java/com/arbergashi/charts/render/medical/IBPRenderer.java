@@ -18,6 +18,20 @@ public class IBPRenderer extends AbstractMedicalSweepRenderer {
 
     @Override
     public double[] getPreferredYRange(com.arbergashi.charts.model.ChartModel model) {
+        if (model instanceof com.arbergashi.charts.model.CircularFastMedicalModel m && m.getPointCount() > 0) {
+            double min = Double.POSITIVE_INFINITY;
+            double max = Double.NEGATIVE_INFINITY;
+            for (int i = 0; i < m.getPointCount(); i++) {
+                double v = m.getY(i, getChannelIndex());
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+            if (Double.isFinite(min) && Double.isFinite(max)) {
+                double span = Math.max(0.2, max - min);
+                double pad = span * 0.15;
+                return new double[]{min - pad, max + pad};
+            }
+        }
         return new double[]{60.0, 140.0};
     }
 
