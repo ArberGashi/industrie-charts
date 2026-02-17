@@ -2,6 +2,7 @@ package com.arbergashi.charts.demo;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.AnimationProfile;
+import com.arbergashi.charts.api.BasicChartTheme;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.DefaultChartModel;
@@ -1183,6 +1184,7 @@ public final class DemoApplication {
                 chartPanel.setMinimumSize(new Dimension(800, 500));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
+                applyMedicalColorPreset(entry, model, renderer);
                 installShowcaseRendererAnimation(entry, model, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
@@ -1486,6 +1488,33 @@ public final class DemoApplication {
         });
     }
 
+    private void applyMedicalColorPreset(RendererCatalogEntry entry, ChartModel model, ChartRenderer renderer) {
+        if (!"medical".equals(entry.category())) {
+            return;
+        }
+        boolean dark = !"light".equalsIgnoreCase(currentThemeName);
+        MedicalColorPreset preset = medicalColorPreset(entry.className(), dark);
+        if (preset == null) {
+            return;
+        }
+        ChartTheme active = getActiveTheme();
+        ChartTheme themed = new BasicChartTheme(
+                active.getBackground(),
+                preset.foreground() != null ? preset.foreground() : active.getForeground(),
+                preset.grid() != null ? preset.grid() : active.getGridColor(),
+                preset.axis() != null ? preset.axis() : active.getAxisLabelColor(),
+                preset.accent() != null ? preset.accent() : active.getAccentColor(),
+                preset.series() != null ? preset.series() : new com.arbergashi.charts.api.types.ArberColor[]{active.getSeriesColor(0), active.getSeriesColor(1), active.getSeriesColor(2)},
+                active.getBaseFont()
+        );
+        if (renderer instanceof com.arbergashi.charts.render.BaseRenderer baseRenderer) {
+            baseRenderer.setTheme(themed);
+        }
+        if (model instanceof CircularFastMedicalModel medicalModel && preset.primary() != null) {
+            medicalModel.setColor(preset.primary());
+        }
+    }
+
     private static double showcaseAnimationSpeed(String className) {
         if (className == null) return 1.4;
         if (className.contains("Smith") || className.contains("VSWR")) return 1.0;
@@ -1651,12 +1680,92 @@ public final class DemoApplication {
         };
     }
 
+    private static MedicalColorPreset medicalColorPreset(String className, boolean dark) {
+        String simple = rendererSimpleName(className);
+        return switch (simple) {
+            case "ECGRenderer", "ECGRhythmRenderer", "SweepEraseEKGRenderer", "VCGRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(120, 246, 170), rgb(52, 222, 186), rgb(253, 203, 86),
+                    rgb(120, 246, 170), rgb(222, 234, 245), rgb(62, 90, 98), rgb(133, 196, 177), rgb(76, 224, 184))
+                    : new MedicalColorPreset(
+                    rgb(20, 160, 98), rgb(35, 142, 178), rgb(176, 125, 24),
+                    rgb(20, 160, 98), rgb(42, 58, 70), rgb(190, 216, 220), rgb(64, 88, 98), rgb(26, 145, 102));
+            case "EEGRenderer", "NIRSRenderer", "EOGRenderer", "SpectrogramMedicalRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(151, 176, 255), rgb(145, 228, 216), rgb(197, 151, 255),
+                    rgb(145, 228, 216), rgb(224, 232, 242), rgb(64, 78, 98), rgb(150, 176, 208), rgb(149, 176, 255))
+                    : new MedicalColorPreset(
+                    rgb(66, 92, 166), rgb(46, 144, 124), rgb(108, 78, 160),
+                    rgb(46, 144, 124), rgb(40, 52, 64), rgb(196, 205, 220), rgb(74, 94, 112), rgb(66, 92, 166));
+            case "EMGRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(255, 170, 92), rgb(255, 120, 120), rgb(255, 216, 112),
+                    rgb(255, 170, 92), rgb(236, 226, 214), rgb(104, 72, 72), rgb(214, 160, 124), rgb(255, 150, 97))
+                    : new MedicalColorPreset(
+                    rgb(180, 98, 44), rgb(162, 52, 52), rgb(165, 122, 16),
+                    rgb(180, 98, 44), rgb(52, 44, 42), rgb(234, 212, 204), rgb(108, 86, 80), rgb(170, 94, 52));
+            case "VentilatorWaveformRenderer", "SpirometryRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(110, 220, 255), rgb(114, 250, 216), rgb(155, 196, 255),
+                    rgb(110, 220, 255), rgb(220, 235, 242), rgb(52, 80, 92), rgb(136, 182, 200), rgb(100, 206, 246))
+                    : new MedicalColorPreset(
+                    rgb(24, 131, 172), rgb(24, 145, 120), rgb(56, 92, 156),
+                    rgb(24, 131, 172), rgb(36, 54, 62), rgb(186, 214, 224), rgb(70, 96, 106), rgb(20, 123, 158));
+            case "CapnographyRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(255, 208, 100), rgb(255, 176, 92), rgb(255, 232, 153),
+                    rgb(255, 208, 100), rgb(240, 232, 214), rgb(102, 86, 58), rgb(204, 184, 132), rgb(255, 194, 90))
+                    : new MedicalColorPreset(
+                    rgb(186, 126, 20), rgb(174, 94, 20), rgb(194, 162, 72),
+                    rgb(186, 126, 20), rgb(60, 48, 32), rgb(236, 220, 182), rgb(112, 96, 70), rgb(176, 112, 16));
+            case "PPGRenderer", "IBPRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(255, 125, 138), rgb(255, 173, 122), rgb(255, 208, 160),
+                    rgb(255, 125, 138), rgb(244, 226, 228), rgb(96, 66, 72), rgb(206, 148, 154), rgb(248, 110, 128))
+                    : new MedicalColorPreset(
+                    rgb(168, 44, 64), rgb(162, 88, 52), rgb(166, 120, 80),
+                    rgb(168, 44, 64), rgb(62, 38, 42), rgb(236, 204, 208), rgb(108, 80, 84), rgb(160, 44, 60));
+            case "UltrasoundMModeRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(174, 196, 218), rgb(120, 212, 255), rgb(238, 244, 252),
+                    rgb(120, 212, 255), rgb(232, 238, 246), rgb(70, 82, 94), rgb(172, 188, 206), rgb(120, 212, 255))
+                    : new MedicalColorPreset(
+                    rgb(78, 98, 122), rgb(52, 136, 176), rgb(220, 228, 238),
+                    rgb(52, 136, 176), rgb(52, 60, 72), rgb(200, 210, 222), rgb(84, 98, 116), rgb(52, 136, 176));
+            case "CalibrationRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(255, 236, 184), rgb(255, 198, 115), rgb(255, 244, 214),
+                    rgb(255, 198, 115), rgb(236, 232, 224), rgb(92, 84, 72), rgb(194, 180, 152), rgb(255, 198, 115))
+                    : new MedicalColorPreset(
+                    rgb(164, 128, 58), rgb(182, 120, 38), rgb(214, 196, 152),
+                    rgb(182, 120, 38), rgb(58, 52, 44), rgb(224, 214, 190), rgb(106, 94, 76), rgb(176, 112, 24));
+            case "MedicalSweepRenderer" -> dark
+                    ? new MedicalColorPreset(
+                    rgb(140, 236, 196), rgb(112, 210, 236), rgb(196, 160, 255),
+                    rgb(140, 236, 196), rgb(224, 234, 242), rgb(64, 84, 92), rgb(140, 178, 186), rgb(132, 228, 186))
+                    : new MedicalColorPreset(
+                    rgb(30, 148, 112), rgb(34, 122, 156), rgb(108, 76, 156),
+                    rgb(30, 148, 112), rgb(44, 58, 66), rgb(186, 206, 214), rgb(72, 88, 100), rgb(28, 140, 108));
+            default -> dark
+                    ? new MedicalColorPreset(
+                    rgb(138, 224, 186), rgb(112, 198, 232), rgb(190, 156, 252),
+                    rgb(138, 224, 186), rgb(222, 232, 242), rgb(62, 84, 94), rgb(140, 176, 188), rgb(138, 224, 186))
+                    : new MedicalColorPreset(
+                    rgb(36, 142, 108), rgb(34, 120, 156), rgb(112, 78, 158),
+                    rgb(36, 142, 108), rgb(42, 58, 66), rgb(190, 210, 218), rgb(72, 90, 102), rgb(34, 136, 104));
+        };
+    }
+
     private static String rendererSimpleName(String className) {
         if (className == null || className.isBlank()) {
             return "";
         }
         int idx = className.lastIndexOf('.');
         return idx >= 0 ? className.substring(idx + 1) : className;
+    }
+
+    private static com.arbergashi.charts.api.types.ArberColor rgb(int r, int g, int b) {
+        return com.arbergashi.charts.util.ColorRegistry.of(r, g, b, 255);
     }
 
     private enum MedicalSignalKind {
@@ -1672,6 +1781,21 @@ public final class DemoApplication {
     }
 
     private record MedicalAnimProfile(MedicalSignalKind kind, double baseRate, double modulation, double gain) {
+    }
+
+    private record MedicalColorPreset(
+            com.arbergashi.charts.api.types.ArberColor s0,
+            com.arbergashi.charts.api.types.ArberColor s1,
+            com.arbergashi.charts.api.types.ArberColor s2,
+            com.arbergashi.charts.api.types.ArberColor primary,
+            com.arbergashi.charts.api.types.ArberColor foreground,
+            com.arbergashi.charts.api.types.ArberColor grid,
+            com.arbergashi.charts.api.types.ArberColor axis,
+            com.arbergashi.charts.api.types.ArberColor accent
+    ) {
+        com.arbergashi.charts.api.types.ArberColor[] series() {
+            return new com.arbergashi.charts.api.types.ArberColor[]{s0, s1, s2};
+        }
     }
 
     /**
