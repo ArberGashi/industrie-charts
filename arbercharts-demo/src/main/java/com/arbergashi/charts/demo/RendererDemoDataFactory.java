@@ -183,6 +183,14 @@ public final class RendererDemoDataFactory {
     private static final Set<String> DENDROGRAM_RENDERERS = Set.of(
             "DendrogramRenderer"
     );
+    private static final Set<String> PREDICTIVE_RENDERERS = Set.of(
+            "PredictiveShadowRenderer",
+            "AnomalyGapRenderer",
+            "PredictiveCandleRenderer"
+    );
+    private static final Set<String> FORENSIC_RENDERERS = Set.of(
+            "PlaybackStatusRenderer"
+    );
 
     private RendererDemoDataFactory() {
     }
@@ -298,12 +306,19 @@ public final class RendererDemoDataFactory {
         if (DENDROGRAM_RENDERERS.contains(simple)) {
             return dendrogramModel();
         }
+        if (PREDICTIVE_RENDERERS.contains(simple)) {
+            return predictiveModel();
+        }
+        if (FORENSIC_RENDERERS.contains(simple)) {
+            return forensicModel();
+        }
         return switch (category) {
             case "financial" -> financialModel();
             case "statistical" -> statisticalModel();
             case "medical" -> medicalModel();
             case "circular" -> circularModel();
-            case "predictive" -> anomalyModel();
+            case "predictive" -> predictiveModel();
+            case "forensic" -> forensicModel();
             case "analysis" -> trendAnalysisModel();
             default -> standardModel();
         };
@@ -835,6 +850,51 @@ public final class RendererDemoDataFactory {
             double spread = 8.0 + seededRange(seed, -1.2, 1.2, 840 + g);
             model.setPoint(baseX, center + spread, center + spread - 2.0, center + spread + 2.0, 1.0, null);
             model.setPoint(baseX + 1.0, center - spread, center - spread - 2.0, center - spread + 2.0, 1.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel predictiveModel() {
+        DefaultChartModel model = new DefaultChartModel("Predictive Drift");
+        int seed = RENDERER_SEED.get();
+        int points = 260;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double baseline = Math.sin(i * (0.052 + seededRange(seed, 0.0, 0.01, 960))) * 15.0
+                    + Math.cos(i * (0.017 + seededRange(seed, 0.0, 0.01, 961))) * 6.0;
+            double drift = i < 130 ? (i * 0.04) : (5.2 + (i - 130) * 0.085);
+            double y = baseline + drift;
+            if (i == 78 || i == 156 || i == 214) {
+                y += 14.0;
+            }
+            if (i == 187) {
+                y -= 12.0;
+            }
+            double band = 2.0 + Math.abs(Math.sin(i * 0.09)) * 1.6;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.4 + 5.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel forensicModel() {
+        DefaultChartModel model = new DefaultChartModel("Forensic Timeline");
+        int seed = RENDERER_SEED.get();
+        int points = 220;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = Math.sin(i * (0.041 + seededRange(seed, 0.0, 0.01, 970))) * 11.0
+                    + Math.cos(i * (0.015 + seededRange(seed, 0.0, 0.01, 971))) * 4.5;
+            if (i > 62 && i < 78) {
+                y += 9.5;
+            }
+            if (i > 148 && i < 166) {
+                y -= 8.8;
+            }
+            if (i == 98 || i == 176) {
+                y += 12.0;
+            }
+            double band = 1.6 + Math.abs(Math.cos(i * 0.1)) * 1.2;
+            model.setPoint(x, y, y - band, y + band, Math.abs(y) * 0.35 + 4.0, null);
         }
         return model;
     }

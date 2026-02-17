@@ -1237,6 +1237,8 @@ public final class DemoApplication {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
         boolean analysis = "analysis".equals(entry.category());
+        boolean predictive = "predictive".equals(entry.category());
+        boolean forensic = "forensic".equals(entry.category());
 
         panel.setTooltips(true);
         panel.setAnimationsEnabled(true);
@@ -1259,6 +1261,24 @@ public final class DemoApplication {
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
             applyAnalysisRendererAxisPreset(className, panel);
+        }
+        if (predictive) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(10).setShowGrid(true);
+            y.setRequestedTickCount(8).setShowGrid(true);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
+        }
+        if (forensic) {
+            panel.setLegend(false);
+            com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
+            com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
+            x.setRequestedTickCount(9).setShowGrid(true);
+            y.setRequestedTickCount(7).setShowGrid(true);
+            panel.setXAxisConfig(x);
+            panel.setYAxisConfig(y);
         }
 
         if (renderer instanceof com.arbergashi.charts.render.circular.GaugeRenderer gaugeRenderer) {
@@ -1330,8 +1350,10 @@ public final class DemoApplication {
         boolean circular = "circular".equals(entry.category());
         boolean specialized = "specialized".equals(entry.category());
         boolean analysis = "analysis".equals(entry.category());
+        boolean predictive = "predictive".equals(entry.category());
+        boolean forensic = "forensic".equals(entry.category());
         boolean medical = "medical".equals(entry.category());
-        if (!circular && !specialized && !analysis && !medical) {
+        if (!circular && !specialized && !analysis && !predictive && !forensic && !medical) {
             return;
         }
         if (medical) {
@@ -1446,6 +1468,17 @@ public final class DemoApplication {
                         y = y0 * (0.88 + 0.2 * amp * Math.sin(phase * 0.95 + i * 0.33));
                         weight = Math.max(0.05, w0 * (0.9 + 0.16 * amp * Math.cos(phase * 0.7 + i * 0.27)));
                     }
+                } else if (predictive) {
+                    x = x0;
+                    y = y0 + Math.sin(phase * 0.75 + i * 0.24) * (Math.max(0.9, Math.abs(y0) * 0.07) * amp);
+                    if (i % 79 == 0) {
+                        y += (Math.sin(phase * 0.4) > 0 ? 1 : -1) * (2.4 * amp);
+                    }
+                    weight = Math.max(0.05, w0 * (0.93 + 0.12 * amp * Math.cos(phase * 0.6 + i * 0.21)));
+                } else if (forensic) {
+                    x = x0;
+                    y = y0 * (0.96 + 0.08 * amp * Math.sin(phase * 0.55 + i * 0.13));
+                    weight = Math.max(0.05, w0);
                 } else if (specialized) {
                     if (className.endsWith("SankeyRenderer")
                             || className.endsWith("SankeyProRenderer")
@@ -1581,6 +1614,8 @@ public final class DemoApplication {
         if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
         if (className.contains("Slope")) return 0.8;
         if (className.contains("Envelope")) return 0.72;
+        if (className.contains("Predictive") || className.contains("AnomalyGap")) return 0.88;
+        if (className.contains("Playback")) return 0.55;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 1.0;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 1.2;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.95;
@@ -1597,6 +1632,8 @@ public final class DemoApplication {
         if (className.contains("AdaptiveFunction") || className.contains("VectorField") || className.contains("ReferenceLine")) return 0.0;
         if (className.contains("Slope")) return 0.45;
         if (className.contains("Envelope")) return 0.55;
+        if (className.contains("Predictive") || className.contains("AnomalyGap")) return 0.65;
+        if (className.contains("Playback")) return 0.35;
         if (className.contains("Outlier") || className.contains("Peak") || className.contains("Threshold")) return 0.7;
         if (className.contains("FFT") || className.contains("Fourier") || className.contains("Autocorrelation")) return 0.9;
         if (className.contains("Regression") || className.contains("Average") || className.contains("Trend")) return 0.75;
@@ -1686,6 +1723,14 @@ public final class DemoApplication {
                 // Circular charts need less axis clutter
                 xCfg.setRequestedTickCount(4);
                 yCfg.setRequestedTickCount(4);
+            }
+            case "predictive" -> {
+                xCfg.setRequestedTickCount(10);
+                yCfg.setRequestedTickCount(8);
+            }
+            case "forensic" -> {
+                xCfg.setRequestedTickCount(9);
+                yCfg.setRequestedTickCount(7);
             }
             default -> {
                 // Standard configuration
