@@ -605,20 +605,15 @@ public final class DemoApplication {
         long usedMem = totalMem - freeMem;
 
         String info = String.format("""
-            <html>
-            <h3>System Information</h3>
-            <table cellpadding="4">
-            <tr><td><b>Java Version:</b></td><td>%s</td></tr>
-            <tr><td><b>Java Vendor:</b></td><td>%s</td></tr>
-            <tr><td><b>OS:</b></td><td>%s %s</td></tr>
-            <tr><td><b>Architecture:</b></td><td>%s</td></tr>
-            <tr><td><b>Processors:</b></td><td>%d</td></tr>
-            <tr><td><b>Memory Used:</b></td><td>%d MB / %d MB</td></tr>
-            <tr><td><b>Memory Max:</b></td><td>%d MB</td></tr>
-            <tr><td><b>Vector API:</b></td><td>%s</td></tr>
-            <tr><td><b>Renderers:</b></td><td>%d</td></tr>
-            </table>
-            </html>
+            Java Version: %s
+            Java Vendor: %s
+            OS: %s %s
+            Architecture: %s
+            Processors: %d
+            Memory Used: %d MB / %d MB
+            Memory Max: %d MB
+            Vector API: %s
+            Renderers: %d
             """,
             System.getProperty("java.version"),
             System.getProperty("java.vendor"),
