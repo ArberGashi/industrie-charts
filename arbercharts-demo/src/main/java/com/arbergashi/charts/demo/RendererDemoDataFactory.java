@@ -129,6 +129,35 @@ public final class RendererDemoDataFactory {
     private static final Set<String> RADAR_RENDERERS = Set.of(
             "RadarRenderer"
     );
+    private static final Set<String> HEATMAP_RENDERERS = Set.of(
+            "HeatmapRenderer",
+            "HeatmapContourRenderer"
+    );
+    private static final Set<String> SPECTROGRAM_RENDERERS = Set.of(
+            "SpectrogramRenderer"
+    );
+    private static final Set<String> HORIZON_RENDERERS = Set.of(
+            "HorizonRenderer",
+            "HorizonChartRenderer",
+            "SparklineRenderer"
+    );
+    private static final Set<String> PARETO_RENDERERS = Set.of(
+            "ParetoRenderer"
+    );
+    private static final Set<String> LOLLIPOP_RENDERERS = Set.of(
+            "LollipopRenderer"
+    );
+    private static final Set<String> MARIMEKKO_RENDERERS = Set.of(
+            "MarimekkoRenderer"
+    );
+    private static final Set<String> VORONOI_RENDERERS = Set.of(
+            "VoronoiRenderer",
+            "DelaunayRenderer",
+            "HexbinRenderer"
+    );
+    private static final Set<String> DENDROGRAM_RENDERERS = Set.of(
+            "DendrogramRenderer"
+    );
 
     private RendererDemoDataFactory() {
     }
@@ -204,6 +233,30 @@ public final class RendererDemoDataFactory {
         }
         if (RADAR_RENDERERS.contains(simple)) {
             return radarModel();
+        }
+        if (HEATMAP_RENDERERS.contains(simple)) {
+            return heatmapModel();
+        }
+        if (SPECTROGRAM_RENDERERS.contains(simple)) {
+            return spectrogramModel();
+        }
+        if (HORIZON_RENDERERS.contains(simple)) {
+            return horizonModel();
+        }
+        if (PARETO_RENDERERS.contains(simple)) {
+            return paretoModel();
+        }
+        if (LOLLIPOP_RENDERERS.contains(simple)) {
+            return lollipopModel();
+        }
+        if (MARIMEKKO_RENDERERS.contains(simple)) {
+            return marimekkoModel();
+        }
+        if (VORONOI_RENDERERS.contains(simple)) {
+            return voronoiModel();
+        }
+        if (DENDROGRAM_RENDERERS.contains(simple)) {
+            return dendrogramModel();
         }
         return switch (category) {
             case "financial" -> financialModel();
@@ -514,6 +567,142 @@ public final class RendererDemoDataFactory {
             double y = targets[i] + seededRange(seed, -4.0, 4.0, 230 + i);
             y = Math.max(40.0, Math.min(98.0, y));
             model.setPoint(i, y, y - 5.0, y + 5.0, y, axes[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel heatmapModel() {
+        DefaultChartModel model = new DefaultChartModel("Traffic Density");
+        int seed = RENDERER_SEED.get();
+        int points = 640;
+        for (int i = 0; i < points; i++) {
+            double t = i / (double) points;
+            double c1x = 2.2 * Math.cos(2.0 * Math.PI * t);
+            double c1y = 1.6 * Math.sin(2.0 * Math.PI * t);
+            double c2x = -1.4 + 1.8 * Math.cos(6.0 * Math.PI * t);
+            double c2y = 0.9 * Math.sin(4.0 * Math.PI * t);
+            double x = 0.62 * c1x + 0.38 * c2x + seededRange(seed, -0.16, 0.16, 520 + i);
+            double y = 0.62 * c1y + 0.38 * c2y + seededRange(seed, -0.14, 0.14, 2200 + i);
+            double r2 = x * x + y * y;
+            double hotA = Math.exp(-r2 * 0.82);
+            double hotB = Math.exp(-((x - 1.25) * (x - 1.25) + (y + 0.55) * (y + 0.55)) * 1.4);
+            double weight = 40.0 + (hotA * 68.0) + (hotB * 52.0);
+            model.setPoint(x, y, y - 0.08, y + 0.08, weight, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel spectrogramModel() {
+        DefaultChartModel model = new DefaultChartModel("Spectral Signature");
+        int seed = RENDERER_SEED.get();
+        int points = 720;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = 0.42
+                    + 0.26 * Math.sin(i * 0.035 + seededRange(seed, -0.2, 0.2, 540))
+                    + 0.21 * Math.sin(i * 0.092 + seededRange(seed, -0.3, 0.3, 541))
+                    + 0.11 * Math.cos(i * 0.16 + seededRange(seed, -0.4, 0.4, 542));
+            y = Math.max(0.02, Math.min(0.98, y));
+            model.setPoint(x, y, y - 0.02, y + 0.02, y * 100.0, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel horizonModel() {
+        DefaultChartModel model = new DefaultChartModel("Demand Volatility");
+        int seed = RENDERER_SEED.get();
+        int points = 300;
+        for (int i = 0; i < points; i++) {
+            double x = i;
+            double y = Math.sin(i * 0.08 + seededRange(seed, -0.2, 0.2, 560)) * 36.0
+                    + Math.sin(i * 0.025 + seededRange(seed, -0.2, 0.2, 561)) * 18.0
+                    + Math.cos(i * 0.15 + seededRange(seed, -0.2, 0.2, 562)) * 9.0;
+            if (i > 95 && i < 140) {
+                y += 18.0;
+            }
+            if (i > 205 && i < 240) {
+                y -= 22.0;
+            }
+            model.setPoint(x, y, y - 4.0, y + 4.0, Math.abs(y), null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel paretoModel() {
+        DefaultChartModel model = new DefaultChartModel("Incident Pareto");
+        int seed = RENDERER_SEED.get();
+        String[] causes = {
+                "Input Validation", "Dependency Drift", "Timeout", "Memory Pressure", "Config Drift",
+                "I/O Saturation", "Retry Storm", "TLS Handshake", "Network Jitter", "Disk IOPS",
+                "Serialization", "Unknown"
+        };
+        double[] base = {44, 33, 28, 24, 21, 18, 14, 12, 10, 9, 7, 5};
+        for (int i = 0; i < causes.length; i++) {
+            double y = Math.max(2.0, base[i] + seededRange(seed, -3.0, 2.2, 580 + i));
+            model.setPoint(i + 1, y, 0.0, y, y, causes[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel lollipopModel() {
+        DefaultChartModel model = new DefaultChartModel("Segment Lift");
+        int seed = RENDERER_SEED.get();
+        String[] segments = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"};
+        for (int i = 0; i < segments.length; i++) {
+            double wave = Math.sin(i * 0.72 + seededRange(seed, -0.25, 0.25, 610));
+            double y = 38.0 + wave * 22.0 + seededRange(seed, -6.0, 6.0, 611 + i);
+            y = Math.max(4.0, y);
+            model.setPoint(i + 1, y, 0.0, y, y, segments[i]);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel marimekkoModel() {
+        DefaultChartModel model = new DefaultChartModel("Market Mix");
+        int seed = RENDERER_SEED.get();
+        String[][] groups = {
+                {"Cloud", "On-Prem", "Hybrid"},
+                {"Retail", "Enterprise", "Public"},
+                {"North", "EMEA", "APAC"},
+                {"Core", "Add-ons", "Support"}
+        };
+        double[] widths = {34, 26, 22, 18};
+        for (int g = 0; g < groups.length; g++) {
+            double total = 96.0 + seededRange(seed, -6.0, 6.0, 640 + g);
+            for (int s = 0; s < groups[g].length; s++) {
+                double share = (s == 0 ? 0.48 : (s == 1 ? 0.33 : 0.19));
+                double y = Math.max(2.0, total * share + seededRange(seed, -3.0, 3.0, 660 + g * 10 + s));
+                double width = s == 0 ? widths[g] : 0.0;
+                model.setPoint(g, y, 0.0, y, width, groups[g][s]);
+            }
+        }
+        return model;
+    }
+
+    private static DefaultChartModel voronoiModel() {
+        DefaultChartModel model = new DefaultChartModel("Territory Seeds");
+        int seed = RENDERER_SEED.get();
+        int points = 42;
+        for (int i = 0; i < points; i++) {
+            double angle = (2.0 * Math.PI * i) / points;
+            double radius = 12.0 + (i % 7) * 9.0 + seededRange(seed, -3.0, 3.0, 700 + i);
+            double x = Math.cos(angle) * radius + seededRange(seed, -6.0, 6.0, 740 + i);
+            double y = Math.sin(angle) * radius + seededRange(seed, -6.0, 6.0, 780 + i);
+            model.setPoint(x, y, y - 1.0, y + 1.0, 1.0, "Cell " + (i + 1));
+        }
+        return model;
+    }
+
+    private static DefaultChartModel dendrogramModel() {
+        DefaultChartModel model = new DefaultChartModel("Cluster Hierarchy");
+        int seed = RENDERER_SEED.get();
+        int groups = 16;
+        for (int g = 0; g < groups; g++) {
+            double baseX = g * 2.0;
+            double center = 72.0 - g * 2.4 + seededRange(seed, -1.5, 1.5, 820 + g);
+            double spread = 8.0 + seededRange(seed, -1.2, 1.2, 840 + g);
+            model.setPoint(baseX, center + spread, center + spread - 2.0, center + spread + 2.0, 1.0, null);
+            model.setPoint(baseX + 1.0, center - spread, center - spread - 2.0, center - spread + 2.0, 1.0, null);
         }
         return model;
     }
