@@ -14,37 +14,18 @@
             <p class="hero-subtitle">
                 Professional-grade rendering engine with 157 production renderers
             </p>
-            <div class="hero-stats">
-                <div class="hero-stat">
-                    <div class="hero-stat-value" th:text="${totalCount}">157</div>
-                    <div class="hero-stat-label">Renderers</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value" th:text="${#maps.size(groups)}">11</div>
-                    <div class="hero-stat-label">Categories</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value" th:text="${vectorAvailable ? '✓' : '✗'}">✓</div>
-                    <div class="hero-stat-label">Vector API</div>
-                </div>
-                <div class="hero-stat">
-                    <div class="hero-stat-value">⚡</div>
-                    <div class="hero-stat-label">ZERO-GC</div>
-                </div>
-            </div>
         </div>
     </div>
 
     <!-- Category Navigation -->
     <div class="category-nav">
         <button class="category-nav-btn active" data-category="all">
-            🎨 All Renderers
+            All Renderers
         </button>
         <button th:each="entry : ${groups}"
                 class="category-nav-btn"
                 th:attr="data-category=${entry.key},data-color=${categoryColors.get(entry.key)}"
                 th:style="'--category-color: ' + ${categoryColors.get(entry.key)}">
-            <span th:text="${categoryIcons.get(entry.key)}"></span>
             <span th:text="${entry.key}"></span>
             <span class="badge" th:text="${#lists.size(entry.value)}"></span>
         </button>
@@ -54,9 +35,6 @@
     <div th:each="entry : ${groups}" class="category-section" th:attr="data-category=${entry.key}">
         <div class="category-header-modern">
             <div class="category-header-left">
-                <span class="category-icon"
-                      th:text="${categoryIcons.get(entry.key)}"
-                      th:style="'color: ' + ${categoryColors.get(entry.key)}"></span>
                 <h2 class="category-title" th:text="${entry.key}">Category</h2>
                 <span class="category-count" th:text="${#lists.size(entry.value)} + ' renderers'"></span>
             </div>
@@ -110,8 +88,8 @@
                     <!-- Interactive Controls (shown on hover) -->
                     <div class="card-controls">
                         <div class="theme-switch">
-                            <button data-theme="light" class="active">☀️</button>
-                            <button data-theme="dark">🌙</button>
+                            <button data-theme="light" class="active">Light</button>
+                            <button data-theme="dark">Dark</button>
                         </div>
                         <div class="size-controls">
                             <button data-size="sm">S</button>
@@ -141,16 +119,6 @@
         </div>
     </div>
 
-    <!-- Animation Showcase Banner -->
-    <div class="showcase-banner">
-        <div class="showcase-content">
-            <h3>🎬 Animation Capabilities</h3>
-            <p>ArberCharts supports real-time animations for financial tickers, medical waveforms, predictive forecasts, and more</p>
-            <button class="btn-primary" data-action="demo-animations">
-                View Animation Demos
-            </button>
-        </div>
-    </div>
 </main>
 
 <footer th:replace="~{fragments/layout :: footer}"></footer>

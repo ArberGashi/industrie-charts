@@ -292,42 +292,31 @@ public final class RendererDemoDataFactory {
 
     private static DefaultFinancialChartModel financialModel() {
         DefaultFinancialChartModel model = new DefaultFinancialChartModel("AAPL - Daily");
-        double price = 185.50; // Realistic starting price
-        int points = 120; // ~6 months of trading days
-
-        // Simulate realistic stock movement with trend and volatility
-        double trend = 0.0008; // Slight upward drift
-        double volatility = 0.012;
+        double price = 185.50;
+        int points = 160;
 
         for (int i = 0; i < points; i++) {
-            // Random walk with drift
-            double change = (Math.random() - 0.48) * volatility * price;
-            change += trend * price;
-
-            // Add some momentum
-            if (i > 0 && i % 5 == 0) {
-                change *= 1.5; // Occasional larger moves
-            }
+            double regime = i < 52 ? 0.08 : (i < 104 ? -0.05 : 0.11);
+            double cyclical = Math.sin(i * 0.16) * 1.45 + Math.cos(i * 0.07) * 0.95;
+            double event = (i == 33) ? 5.8 : (i == 87 ? -7.2 : (i == 129 ? 6.3 : 0.0));
+            double change = regime + cyclical + event;
 
             double open = price;
             double close = price + change;
-
-            // Body size varies
             double bodySize = Math.abs(close - open);
-
-            // Wicks proportional to body
-            double wickUp = bodySize * (0.3 + Math.random() * 0.7);
-            double wickDown = bodySize * (0.3 + Math.random() * 0.7);
+            double wickUp = bodySize * (0.45 + Math.abs(Math.sin(i * 0.21)) * 0.55);
+            double wickDown = bodySize * (0.4 + Math.abs(Math.cos(i * 0.19)) * 0.6);
 
             double high = Math.max(open, close) + wickUp;
             double low = Math.min(open, close) - wickDown;
-
-            // Volume correlates with price movement
             double baseVolume = 45_000_000;
-            double volumeMultiplier = 1.0 + Math.abs(change / price) * 8;
-            double volume = baseVolume * volumeMultiplier * (0.7 + Math.random() * 0.6);
+            double volumeMultiplier = 1.0 + Math.abs(change / Math.max(1.0, price)) * 9;
+            double cycleVolume = 0.82 + Math.abs(Math.sin(i * 0.11)) * 0.52;
+            double eventVolume = Math.abs(event) * 2_100_000;
+            double volume = baseVolume * volumeMultiplier * cycleVolume + eventVolume;
 
-            model.setOHLC(i, open, high, low, close, volume, null);
+            String label = (i == 33) ? "Earnings +" : (i == 87) ? "Guidance -" : (i == 129) ? "Upgrade" : null;
+            model.setOHLC(i, open, high, low, close, volume, label);
             price = close;
         }
         return model;
@@ -378,10 +367,10 @@ public final class RendererDemoDataFactory {
             // Lead III - computed as Lead II - Lead I (Einthoven)
             double lead3 = lead2 - lead1;
 
-            // Add small noise
-            lead1 += (Math.random() - 0.5) * 0.02;
-            lead2 += (Math.random() - 0.5) * 0.02;
-            lead3 += (Math.random() - 0.5) * 0.015;
+            // Deterministic baseline/noise for reproducible demos.
+            lead1 += Math.sin(i * 0.31) * 0.008 + Math.cos(i * 0.07) * 0.004;
+            lead2 += Math.sin(i * 0.27 + 0.4) * 0.007 + Math.cos(i * 0.09) * 0.004;
+            lead3 += Math.sin(i * 0.29 + 0.2) * 0.006 + Math.cos(i * 0.08) * 0.003;
 
             model.add(t, new double[]{lead1, lead2, lead3});
         }

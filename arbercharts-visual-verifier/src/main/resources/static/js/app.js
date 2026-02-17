@@ -176,11 +176,6 @@
                 onCardAction(actionButton);
                 return;
             }
-
-            var demoButton = event.target.closest('[data-action="demo-animations"]');
-            if (demoButton) {
-                startAnimationDemo();
-            }
         });
     }
 
@@ -401,34 +396,6 @@
 
         animationTimers.set(card, intervalId);
         notify('Animation started', 'success');
-    }
-
-    function startAnimationDemo() {
-        var cards = document.querySelectorAll('.renderer-card-modern');
-        var started = 0;
-
-        cards.forEach(function(card) {
-            var canvas = card.querySelector('.preview-canvas');
-            var rendererClass = canvas && canvas.dataset.rendererClass;
-            if (!canvas || !rendererClass) {
-                return;
-            }
-
-            var simpleName = rendererClass.split('.').pop();
-            var isAnimated = Array.isArray(window.ANIMATED_RENDERERS) && window.ANIMATED_RENDERERS.indexOf(simpleName) !== -1;
-            if (!isAnimated || animationTimers.has(card)) {
-                return;
-            }
-
-            toggleAnimation(card, canvas);
-            started += 1;
-        });
-
-        if (started === 0) {
-            notify('No animation-capable renderers found', 'info');
-        } else {
-            notify('Started animation demo for ' + started + ' renderers', 'success');
-        }
     }
 
     function openFullscreen(card, canvas) {
