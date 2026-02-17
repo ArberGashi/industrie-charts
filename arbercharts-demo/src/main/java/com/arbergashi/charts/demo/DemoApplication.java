@@ -524,38 +524,11 @@ public final class DemoApplication {
         Color muted = palette.muted();
 
         JDialog dialog = new JDialog(frame, "About " + APP_NAME, true);
-        dialog.setUndecorated(true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         dialog.setLayout(new BorderLayout());
         dialog.setResizable(false);
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border(), 1));
-
-        JPanel titlebar = new JPanel(new BorderLayout());
-        titlebar.setBackground(palette.windowBackground());
-        titlebar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
-        titlebar.setPreferredSize(new Dimension(640, 42));
-
-        JPanel titleLeft = new JPanel();
-        titleLeft.setOpaque(false);
-        titleLeft.setLayout(new BoxLayout(titleLeft, BoxLayout.X_AXIS));
-        titleLeft.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 8));
-        JLabel title = new JLabel("About " + APP_NAME);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
-        titleLeft.add(title);
-
-        JPanel titleRight = new JPanel();
-        titleRight.setOpaque(false);
-        titleRight.setLayout(new BoxLayout(titleRight, BoxLayout.X_AXIS));
-        titleRight.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 8));
-        JButton closeButton = createTitlebarIconButton(
-                loadTablerOutlineIcon("x.svg", 16, UIManager.getIcon("InternalFrame.closeIcon"), palette.muted()));
-        closeButton.setToolTipText("Close");
-        closeButton.addActionListener(evt -> dialog.dispose());
-        titleRight.add(closeButton);
-
-        titlebar.add(titleLeft, BorderLayout.WEST);
-        titlebar.add(titleRight, BorderLayout.EAST);
-        installDialogWindowGestures(dialog, titlebar);
+        configurePlatformDialog(dialog);
 
         JPanel root = new JPanel();
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
@@ -629,41 +602,10 @@ public final class DemoApplication {
         root.add(details);
         root.add(footer);
 
-        dialog.add(titlebar, BorderLayout.NORTH);
         dialog.add(root, BorderLayout.CENTER);
         dialog.setSize(640, 340);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
-    }
-
-    private static void installDialogWindowGestures(JDialog dialog, JPanel header) {
-        MouseAdapter handler = new MouseAdapter() {
-            private Point dragOffset;
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (!SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-                dragOffset = e.getPoint();
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                dragOffset = null;
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (dragOffset == null || !SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-                Point screen = e.getLocationOnScreen();
-                dialog.setLocation(screen.x - dragOffset.x, screen.y - dragOffset.y);
-            }
-        };
-        header.addMouseListener(handler);
-        header.addMouseMotionListener(handler);
     }
 
     private static JPanel createAboutRow(String key, String value, Color muted) {
@@ -2236,6 +2178,25 @@ public final class DemoApplication {
         frame.getRootPane().putClientProperty("JRootPane.titleBarBackground",
                 DemoThemeSupport.uiColor("TitlePane.background", "Panel.background"));
         frame.getRootPane().putClientProperty("JRootPane.titleBarForeground",
+                DemoThemeSupport.uiColor("TitlePane.foreground", "Label.foreground"));
+    }
+
+    private static void configurePlatformDialog(JDialog dialog) {
+        if (SystemInfo.isMacOS) {
+            if (SystemInfo.isMacFullWindowContentSupported) {
+                dialog.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
+                dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
+            }
+            return;
+        }
+
+        dialog.getRootPane().putClientProperty("JRootPane.useWindowDecorations", Boolean.TRUE);
+        dialog.getRootPane().putClientProperty("JRootPane.menuBarEmbedded", Boolean.FALSE);
+        dialog.getRootPane().putClientProperty("JRootPane.titleBarShowIcon", Boolean.TRUE);
+        dialog.getRootPane().putClientProperty("JRootPane.titleBarShowTitle", Boolean.TRUE);
+        dialog.getRootPane().putClientProperty("JRootPane.titleBarBackground",
+                DemoThemeSupport.uiColor("TitlePane.background", "Panel.background"));
+        dialog.getRootPane().putClientProperty("JRootPane.titleBarForeground",
                 DemoThemeSupport.uiColor("TitlePane.foreground", "Label.foreground"));
     }
 
