@@ -55,7 +55,6 @@
         <module>arbercharts-starter</module>
 
         <!-- Tools -->
-        <module>arbercharts-visual-verifier</module>
         <module>arbercharts-demo</module>
     </modules>
 

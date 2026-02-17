@@ -12,7 +12,7 @@ It delivers deterministic rendering, lock-free streaming models, and a zero-GC r
 - Swing desktop bridge
 - Spring Boot starter
 - Headless server rendering
-- Visual Verifier for catalog and regression workflows
+- Demo application for catalog walkthroughs and customer presentations
 
 ## Maven
 

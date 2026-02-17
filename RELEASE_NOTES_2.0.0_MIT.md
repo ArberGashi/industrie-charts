@@ -30,7 +30,7 @@ See [LICENSE](LICENSE) and [BINARY-LICENSE.md](BINARY-LICENSE.md) for full detai
 ### Streamlined Architecture
 - **Focus on Swing + Spring Boot** - Removed Compose, Qt, and Swift bridges
 - **157 Production Renderers** - All verified and documented
-- **Visual Verifier** - Professional server-side testing platform
+- **Demo Application** - Professional renderer showcase for customer delivery
 - **Zero-GC Guarantee** - No allocations in hot render paths
 
 ### Module Structure
@@ -39,7 +39,6 @@ arbercharts-core                  // Core rendering engine
 arbercharts-swing-bridge          // Swing/Desktop integration
 arbercharts-server-bridge         // Server-side rendering
 arbercharts-spring-boot-starter   // Spring Boot auto-configuration
-arbercharts-visual-verifier       // Testing and verification platform
 arbercharts-demo                  // Interactive demo application
 ```
 
@@ -150,11 +149,10 @@ Contact: gashi@pro-business.ch
 - **Website:** https://www.arbergashi.com
 - **Downloads:** https://www.arbergashi.com/downloads
 - **JavaDoc:** https://www.arbergashi.com/javadoc
-- **Visual Verifier:** http://localhost:8080 (when running)
+- **Demo:** bundled in `arbercharts-demo` release artifact
 
 ---
 
 **Copyright (c) 2024-2026 Arber Gashi. All rights reserved.**
 
 MIT License for binaries. Source code proprietary.
-

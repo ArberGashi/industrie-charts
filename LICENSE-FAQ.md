@@ -75,7 +75,6 @@ For standard binary delivery, use extensions and wrappers around the public APIs
 - `arbercharts-swing-bridge` - Swing/Desktop integration
 - `arbercharts-server-bridge` - Server-side rendering
 - `arbercharts-spring-boot-starter` - Spring Boot auto-configuration
-- `arbercharts-visual-verifier` - Testing and verification platform
 
 All modules are delivered for runtime use under the MIT License.
 
