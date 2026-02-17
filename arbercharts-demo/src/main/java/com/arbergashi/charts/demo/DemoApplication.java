@@ -123,7 +123,7 @@ public final class DemoApplication {
      */
     public static void main(String[] args) {
         configureMacOSDefaults();
-        DemoThemeSupport.verifyThemeResources();
+        DemoThemeSupport.bootstrapThemeResources();
         SwingUtilities.invokeLater(() -> {
             String theme = DemoThemeSupport.setupLookAndFeel();
             DemoApplication app = new DemoApplication(theme);

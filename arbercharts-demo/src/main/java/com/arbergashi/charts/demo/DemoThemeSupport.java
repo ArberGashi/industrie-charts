@@ -20,8 +20,17 @@ final class DemoThemeSupport {
     private DemoThemeSupport() {
     }
 
-    static String setupLookAndFeel() {
+    static void bootstrapThemeResources() {
         verifyThemeResources();
+        FlatLaf.registerCustomDefaultsSource("themes");
+        ChartAssets.clearCache();
+        // Fail fast if chart palette keys are missing in resources/themes/charts.properties.
+        requireColor("Demo.chart.dark.background");
+        requireColor("Demo.chart.light.background");
+    }
+
+    static String setupLookAndFeel() {
+        bootstrapThemeResources();
         try {
             Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
             java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");
@@ -29,8 +38,6 @@ final class DemoThemeSupport {
         } catch (Exception e) {
             // Inter font not available - will use system fonts
         }
-
-        FlatLaf.registerCustomDefaultsSource("themes");
 
         String theme = normalizeTheme(System.getProperty("demo.theme", "dark").toLowerCase(Locale.US));
         if ("light".equals(theme)) {
@@ -43,7 +50,6 @@ final class DemoThemeSupport {
         UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, 11f));
         UIManager.put("defaultFont", interFont);
 
-        ChartAssets.clearCache();
         return theme;
     }
 
