@@ -87,3 +87,11 @@ test_compile_errors.txt
 # Backup files
 backup/
 *.backup
+
+# Allow shipping selected public binaries in repo
+!binaries/
+!binaries/*.jar
+!binaries/*.sh
+!binaries/*.bat
+!binaries/*.txt
+!binaries/*.md
