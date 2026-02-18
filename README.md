@@ -3,17 +3,33 @@
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 
-This repository contains the public binary release package for ArberCharts 2.0.0.
+ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisierung auf dem JVM-Stack.
+Dieses Repository enthaelt das oeffentliche Binary-Release (JARs), Startskripte und Vorschau-Assets fuer GitHub.
+
+## Kurzbeschreibung
+
+- Fokus auf High-Performance Rendering fuer Charts und technische Visualisierungen
+- Bereitstellung als Binary-Artefakte (kein Source-Release in diesem Repository)
+- Demo-App zum direkten Starten und Testen der Visualisierungen
+
+## Bildvorschau (Renderer)
+
+![Candlestick Chart](site/images/candlestick.png)
+![Heatmap Chart](site/images/heatmap.png)
+![Sankey Chart](site/images/sankey.png)
+![Voronoi Chart](site/images/voronoi.png)
+![Parallel Coordinates Chart](site/images/parallelcoordinates.png)
+![Sunburst Chart](site/images/sunburst.png)
 
 ## Included Files
 
-- `dist/releases/jvm/arbercharts-demo-2.0.0.jar`
-- `dist/releases/jvm/arbercharts-starter-2.0.0.jar`
-- `dist/releases/jvm/run-demo.sh`
-- `dist/releases/jvm/run-demo.command`
-- `dist/releases/jvm/run-demo.bat`
-- `dist/releases/jvm/README.txt`
-- `images/` preview images
+- `binaries/arbercharts-demo-2.0.0.jar`
+- `binaries/arbercharts-core-2.0.0.jar`
+- `binaries/arbercharts-starter-2.0.0.jar`
+- `binaries/run-demo.sh`
+- `binaries/run-demo.bat`
+- `binaries/SHA256SUMS.txt`
+- `site/images/` preview images
 - `LICENSE`
 - `NOTICE`
 - `BINARY-LICENSE.md`
@@ -21,7 +37,7 @@ This repository contains the public binary release package for ArberCharts 2.0.0
 ## Run Demo
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar dist/releases/jvm/arbercharts-demo-2.0.0.jar
+java --enable-native-access=ALL-UNNAMED --add-modules jdk.incubator.vector -jar binaries/arbercharts-demo-2.0.0.jar
 ```
 
 ## Licensing
