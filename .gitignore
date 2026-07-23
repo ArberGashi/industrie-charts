@@ -96,3 +96,5 @@ backup/
 !binaries/*.txt
 !binaries/*.md
 site/
+binaries/
+dist/
