@@ -52,17 +52,12 @@ class RendererSmokeTest {
 
     /**
      * Known blank in the plain headless path. Tracked 2.1 backlog:
-     * - Spatial server pipeline emits no path batch for these yet:
-     *   LineSpatial, SmithChart, TernaryPlot.
      * - Need attached prediction/animation state:
      *   PredictivePath, PredictiveShadow.
      * - Config-gated overlays, disabled by default (documented behavior):
      *   Calibration, PhysicalScale.
      */
     private static final Set<String> KNOWN_BLANK_HEADLESS = Set.of(
-            "com.arbergashi.charts.render.standard.LineSpatialRenderer",
-            "com.arbergashi.charts.render.specialized.SmithChartRenderer",
-            "com.arbergashi.charts.render.specialized.TernaryPlotRenderer",
             "com.arbergashi.charts.render.standard.PredictivePathRenderer",
             "com.arbergashi.charts.render.predictive.PredictiveShadowRenderer",
             "com.arbergashi.charts.render.medical.CalibrationRenderer",
