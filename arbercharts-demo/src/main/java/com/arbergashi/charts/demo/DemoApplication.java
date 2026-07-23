@@ -81,6 +81,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -148,6 +150,9 @@ public final class DemoApplication {
      * @param args command line arguments (unused)
      */
     public static void main(String[] args) {
+        if (ensureRuntimeFlags(args)) {
+            return;
+        }
         configurePlatformDefaults();
         DemoThemeSupport.bootstrapThemeResources();
         SwingUtilities.invokeLater(() -> {
@@ -155,6 +160,51 @@ public final class DemoApplication {
             DemoApplication app = new DemoApplication(theme);
             app.show();
         });
+    }
+
+    /**
+     * Ensures that required runtime flags are active when started as executable JAR.
+     * If flags are missing, the process is re-launched once with proper arguments.
+     *
+     * @return true if current process should exit because a re-launch was started
+     */
+    private static boolean ensureRuntimeFlags(String[] args) {
+        if (isVectorAvailable()) {
+            return false;
+        }
+
+        RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
+        List<String> inputArgs = runtime.getInputArguments();
+        boolean hasVectorModule = inputArgs.stream()
+                .anyMatch(arg -> arg.contains("jdk.incubator.vector"));
+        if (hasVectorModule) {
+            return false;
+        }
+
+        String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+        String classPath = System.getProperty("java.class.path", "");
+        if (!classPath.endsWith(".jar")) {
+            return false;
+        }
+
+        List<String> command = new ArrayList<>();
+        command.add(javaBin);
+        command.addAll(inputArgs);
+        command.add("--enable-native-access=ALL-UNNAMED");
+        command.add("--add-modules");
+        command.add("jdk.incubator.vector");
+        command.add("-jar");
+        command.add(classPath);
+        for (String arg : args) {
+            command.add(arg);
+        }
+
+        try {
+            new ProcessBuilder(command).inheritIO().start();
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     private final RendererCatalog catalog = RendererCatalog.load();
