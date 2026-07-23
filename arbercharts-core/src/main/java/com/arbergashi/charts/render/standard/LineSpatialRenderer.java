@@ -61,6 +61,16 @@ public final class LineSpatialRenderer extends AbstractSpatialLayer {
                 .setCenterY(bounds.centerY())
                 .setScale(scale)
                 .setZBias(4.0);
+        // Normalize data into [-1, 1] around the view center so the projector
+        // operates in unit space regardless of the model's value ranges.
+        double rangeX = context.getMaxX() - context.getMinX();
+        double rangeY = context.getMaxY() - context.getMinY();
+        if (Double.isFinite(rangeX) && rangeX > 0.0 && Double.isFinite(rangeY) && rangeY > 0.0) {
+            transform.setIdentity()
+                    .setScale(2.0 / rangeX, 2.0 / rangeY, 1.0)
+                    .setTranslation(-(context.getMinX() + context.getMaxX()) / rangeX,
+                            -(context.getMinY() + context.getMaxY()) / rangeY, 0.0);
+        }
         getSpatialPathBatchBuilder().setZMin(-2.0);
         ChartTheme theme = getResolvedTheme(context);
         int argb = (theme != null && theme.getAccentColor() != null)

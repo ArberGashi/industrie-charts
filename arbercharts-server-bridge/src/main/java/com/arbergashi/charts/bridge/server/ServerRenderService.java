@@ -244,6 +244,7 @@ public final class ServerRenderService {
         } else {
             builder.reset();
         }
+        applyDefaultSpatialStyle(session.canvas, context);
 
         SpatialServerConsumer consumer = new SpatialServerConsumer(session.canvas, builder, session);
         renderer.renderSpatial(model, context, consumer);
@@ -274,7 +275,13 @@ public final class ServerRenderService {
             long style = batch.getStyleKey(i);
             if (style != currentStyle) {
                 outCount = flushSpatial(session.canvas, outX, outY, outCount);
-                applySpatialStyle(session.canvas, style);
+                if (style == 0L) {
+                    // No style emitted by the renderer: keep the theme default
+                    // instead of unpacking key 0 into a fully transparent color.
+                    applyDefaultSpatialStyle(session.canvas, context);
+                } else {
+                    applySpatialStyle(session.canvas, style);
+                }
                 currentStyle = style;
             }
             outX[outCount] = (float) xs[i];
@@ -282,6 +289,18 @@ public final class ServerRenderService {
             outCount++;
         }
         flushSpatial(session.canvas, outX, outY, outCount);
+    }
+
+    private static void applyDefaultSpatialStyle(ImageBufferCanvas canvas, DefaultPlotContext context) {
+        ChartTheme theme = (context != null) ? context.getTheme() : null;
+        ArberColor color = (theme != null && theme.getAccentColor() != null)
+                ? theme.getAccentColor()
+                : (theme != null ? theme.getSeriesColor(0) : null);
+        if (color == null) {
+            color = new ArberColor(0xFF6AA9FF);
+        }
+        canvas.setColor(color);
+        canvas.setStroke(1.5f);
     }
 
     private static void applySpatialStyle(ImageBufferCanvas canvas, long styleKey) {
