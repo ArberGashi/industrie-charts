@@ -17,7 +17,6 @@ import java.util.Optional;
  * Base class for all chart renderers, providing common functionality and utility methods.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public abstract class BaseRenderer implements com.arbergashi.charts.render.ChartRenderer {
@@ -54,6 +53,9 @@ public abstract class BaseRenderer implements com.arbergashi.charts.render.Chart
      */
     public void render(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (canvas == null) return;
+        if (context != null) {
+            this.activeContext = context;
+        }
         drawData(canvas, model, context);
     }
 

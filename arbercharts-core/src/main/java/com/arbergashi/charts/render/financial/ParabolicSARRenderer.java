@@ -19,7 +19,6 @@ import com.arbergashi.charts.util.ChartScale;
  * No per-point allocations occur inside {@link #drawData(Graphics2D, ChartModel, PlotContext)}.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
@@ -65,7 +64,7 @@ public final class ParabolicSARRenderer extends BaseRenderer {
         final double leftX = vp.getX();
         final double rightX = vp.getMaxX();
 
-        final ChartTheme theme = getTheme();
+        final ChartTheme theme = getResolvedTheme(context);
         final ArberColor uptrendColor = theme.getBullishColor();
         final ArberColor downtrendColor = theme.getBearishColor();
         final ArberColor borderColor = theme.getForeground();
