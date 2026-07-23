@@ -31,7 +31,6 @@ import java.awt.GraphicsEnvironment;
  * </ol>
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2.0.0
  */
 public final class ChartFonts {

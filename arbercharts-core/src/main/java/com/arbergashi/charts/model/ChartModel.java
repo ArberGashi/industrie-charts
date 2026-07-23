@@ -7,7 +7,6 @@ package com.arbergashi.charts.model;
  * iterations and avoids boxing overhead.</p>
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2.0.0
  */
 public interface ChartModel {

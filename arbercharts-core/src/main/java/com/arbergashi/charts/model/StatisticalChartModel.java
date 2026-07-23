@@ -6,8 +6,7 @@ package com.arbergashi.charts.model;
  * the {@link ChartModel} contract for renderers.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public interface StatisticalChartModel extends ChartModel {
 

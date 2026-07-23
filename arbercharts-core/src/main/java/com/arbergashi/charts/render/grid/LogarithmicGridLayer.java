@@ -9,8 +9,7 @@ import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
  * <p>Part of the Zero-Allocation Render Path. High-frequency execution safe.</p>
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class LogarithmicGridLayer extends DefaultGridLayer {
     private static final double LOG_EPS = Double.MIN_NORMAL;

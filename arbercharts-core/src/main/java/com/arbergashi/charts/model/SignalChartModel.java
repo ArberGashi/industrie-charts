@@ -7,8 +7,7 @@ package com.arbergashi.charts.model;
  * render path.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public interface SignalChartModel extends ChartModel {
 

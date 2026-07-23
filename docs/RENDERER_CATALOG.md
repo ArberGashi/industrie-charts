@@ -1,12 +1,15 @@
-# Renderer Catalog (2.0.0)
+# Renderer Catalog (2.1.0)
 
-ArberCharts ships with **157 concrete renderer classes** across standard, financial, statistical,
+ArberCharts ships with **156 concrete renderer classes** across standard, financial, statistical,
 analysis, specialized, medical, and infrastructure overlays.
 
 Note on duplicate class names:
 - `SunburstRenderer` exists in `render.circular` and `render.specialized` (different models).
-- `CandlestickHollowRenderer` exists in `render.financial` and `render.specialized`.
-- `VectorFieldRenderer` exists in `render.analysis` and `render.specialized`.
+- `CandlestickHollowRenderer`: `render.financial` is canonical (registry id
+  `candlestick_hollow`); the `render.specialized` variant is deprecated since 2.1.0
+  and no longer self-registers (removal planned for 3.0).
+- `VectorFieldRenderer`: only `render.analysis` remains; the `render.specialized`
+  tombstone was removed in 2.1.0.
 
 ## RendererAffinity Matrix (spatial and transform capability)
 

@@ -17,8 +17,7 @@ import jdk.incubator.vector.VectorSpecies;
  * <p>Platform-independent and headless-certified. No AWT/Swing dependencies.</p>
  *
  * @since 2.0.1
-  * @author Arber Gashi
-  * @version 2.0.1
+ * @author Arber Gashi
  */
 final class SpatialSimdKernels {
     private static final VectorSpecies<Double> SPECIES = DoubleVector.SPECIES_PREFERRED;

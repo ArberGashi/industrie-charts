@@ -15,7 +15,6 @@ import com.arbergashi.charts.util.ChartScale;
  * <p><b>Performance:</b> O(n) per render.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

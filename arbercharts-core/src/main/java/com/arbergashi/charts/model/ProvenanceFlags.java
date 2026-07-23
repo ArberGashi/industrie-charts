@@ -1,9 +1,8 @@
 package com.arbergashi.charts.model;
 /**
  * Provenance flags for per-point audit metadata.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class ProvenanceFlags {
     private ProvenanceFlags() {

@@ -23,8 +23,7 @@ import com.arbergashi.charts.util.ColorRegistry;
  * <p>Part of the Zero-Allocation Render Path. High-frequency execution safe.</p>
  *
  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class SmithChartGridLayer extends DefaultGridLayer {
     private static final String KEY_MINOR_ALPHA = "Chart.smithGrid.minorAlpha";

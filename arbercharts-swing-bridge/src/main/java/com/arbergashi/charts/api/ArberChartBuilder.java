@@ -44,7 +44,6 @@ import java.util.function.ToDoubleFunction;
  * Fluent builder for quick chart panel configuration.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ArberChartBuilder {

@@ -15,7 +15,6 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * The implementation is intentionally conservative to keep the hot path zero-allocation.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

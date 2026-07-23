@@ -26,9 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>Handle-based, primitive-only API for native callers (Qt/Swift).
  * Rendering requires a canvas handle registered by the host bridge.</p>
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class ArberNativeExport {
     public static final int TYPE_LINE = 0;

@@ -9,8 +9,7 @@ import com.arbergashi.charts.engine.spatial.SpatialDepthPolicy;
  * <p>Platform-independent and headless-certified. No AWT/Swing dependencies.</p>
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class GridBatchConfig {
     private double zMin;

@@ -5,7 +5,6 @@ package com.arbergashi.charts.model;
  * <p>Outliers are expected to be raw values in the same Y-units as the box plot.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public interface BoxPlotOutlierModel extends ChartModel {

@@ -6,7 +6,6 @@ package com.arbergashi.charts.api;
  * <p>Focus updates are emitted whenever the crosshair (or touch long-press) changes the
  * active data position. Implementations should be fast; handlers may run on the EDT.</p>
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2.0.0
  */
 @FunctionalInterface/**

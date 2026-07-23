@@ -4,7 +4,6 @@ package com.arbergashi.charts.api;
  * Used by grids and renderers to suppress ticks inside gaps.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public interface AxisGapModel {

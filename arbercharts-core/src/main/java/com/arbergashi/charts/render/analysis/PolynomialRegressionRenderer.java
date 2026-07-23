@@ -16,7 +16,6 @@ import com.arbergashi.charts.util.ChartScale;
  * <p><b>Performance:</b> Fitting is O(n) with a fixed-size 3x3 solve; rendering is O(m) where m is the number of segments.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

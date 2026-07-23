@@ -4,8 +4,7 @@ package com.arbergashi.charts.engine.spatial;
  * Perspective projector: scales by depth (z).
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class PerspectiveProjector implements SpatialProjector {
     private double scale = 1.0;

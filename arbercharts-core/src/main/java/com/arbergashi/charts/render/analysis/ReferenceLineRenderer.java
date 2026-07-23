@@ -22,7 +22,6 @@ import com.arbergashi.charts.util.ChartScale;
  * </ul>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ReferenceLineRenderer extends BaseRenderer {

@@ -17,9 +17,8 @@ import com.arbergashi.charts.util.MathUtils;
  * <p>Uses X as time/index, Y as price level, and weight as depth.</p>
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class LiquidityHeatmapRenderer extends BaseRenderer {
     static {

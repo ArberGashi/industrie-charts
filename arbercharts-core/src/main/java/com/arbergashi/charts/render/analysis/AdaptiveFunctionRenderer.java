@@ -22,7 +22,6 @@ import java.util.function.DoubleUnaryOperator;
  * Optimized for zero-allocation rendering and FlatLaf integration.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

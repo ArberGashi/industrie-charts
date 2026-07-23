@@ -6,8 +6,7 @@ package com.arbergashi.charts.model;
  * optimized for zero-allocation rendering in financial renderers.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public interface FinancialChartModel extends ChartModel {
 

@@ -15,7 +15,6 @@ import com.arbergashi.charts.util.MathUtils;
  * Optimized to reuse Path2D and avoid allocations in the draw loop.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

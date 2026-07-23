@@ -15,7 +15,6 @@ import com.arbergashi.charts.util.ColorUtils;
  * A triangle plot for mixtures of three components (A, B, C). Uses barycentric coordinates.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

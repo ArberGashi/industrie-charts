@@ -11,9 +11,8 @@ import java.util.Objects;
 
 /**
  * Represents the current focus state of a chart interaction.
-  * @author Arber Gashi
-  * @version 2.0.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class ChartFocus {
     public static final ChartFocus EMPTY = new ChartFocus(null, Double.NaN, Double.NaN, -1, null, null, Map.of());

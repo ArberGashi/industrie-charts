@@ -9,9 +9,8 @@ import java.util.logging.Logger;
 
 /**
  * Discovers the best available ArberCanvasProvider via ServiceLoader.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class ArberBridgeFactory {
     private static final Logger LOGGER = Logger.getLogger(ArberBridgeFactory.class.getName());

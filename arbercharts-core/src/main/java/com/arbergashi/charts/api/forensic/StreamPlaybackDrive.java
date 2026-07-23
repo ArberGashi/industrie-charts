@@ -1,9 +1,8 @@
 package com.arbergashi.charts.api.forensic;
 /**
  * Interface for live stream playback drives (TCP/UDP/WebSocket ingestion).
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface StreamPlaybackDrive extends AutoCloseable {
     void connect(String source);

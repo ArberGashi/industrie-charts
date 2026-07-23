@@ -9,8 +9,7 @@ import java.util.Objects;
  * Renderer affinity information for capability and default policies.
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public final class RendererAffinity {
     private EnumSet<RendererCapability> capabilities;

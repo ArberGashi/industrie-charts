@@ -14,7 +14,6 @@ import com.arbergashi.charts.util.ChartScale;
  * (Seasonal + residuals are outside the scope of this lightweight renderer.)</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

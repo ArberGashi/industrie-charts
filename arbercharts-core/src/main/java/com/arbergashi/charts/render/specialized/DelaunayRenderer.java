@@ -22,9 +22,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Delaunay-like renderer (approximation): connects each point to nearby neighbors using a spatial grid
  * or a KD-tree for large datasets. Headless implementation using ArberCanvas only.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class DelaunayRenderer extends BaseRenderer {
 

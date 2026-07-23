@@ -2,9 +2,8 @@ package com.arbergashi.charts.api;
 
 /**
  * Vital signs event (e.g., BPM threshold breach).
-  * @author Arber Gashi
-  * @version 2.0.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class VitalSignsEvent {
     private double bpm;

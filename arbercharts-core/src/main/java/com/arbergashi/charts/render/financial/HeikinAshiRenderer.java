@@ -18,7 +18,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * <p>Data requirements: OHLC data in ChartPoint (min=low, max=high, weight=open, y=close).</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

@@ -20,8 +20,7 @@ import com.arbergashi.charts.util.ChartAssets;
  * into the Z axis via {@link #setZScale(double)}.</p>
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class LineSpatialRenderer extends AbstractSpatialLayer {
     private final PerspectiveProjector projector = new PerspectiveProjector();

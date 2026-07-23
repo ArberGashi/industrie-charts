@@ -7,7 +7,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Panels register as listeners and are notified when the crosshair position changes.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *

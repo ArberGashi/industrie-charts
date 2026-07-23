@@ -20,7 +20,6 @@ import java.awt.*;
  * so the legend can live outside the chart canvas.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public final class DockedLegendPanel extends JPanel {

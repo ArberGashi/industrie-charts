@@ -3,9 +3,8 @@ package com.arbergashi.charts.api;
  * Mercator projection transformer for geographic charts.
  *
  * <p>Uses PlotContext min/max as longitude/latitude bounds in degrees.</p>
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class MercatorTransform implements CoordinateTransformer {
     private static final double MAX_LAT = 85.0;

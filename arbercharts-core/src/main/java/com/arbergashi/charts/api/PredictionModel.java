@@ -3,9 +3,8 @@ package com.arbergashi.charts.api;
 import com.arbergashi.charts.model.ChartModel;
 /**
  * Strategy interface for generating predicted points.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface PredictionModel {
 

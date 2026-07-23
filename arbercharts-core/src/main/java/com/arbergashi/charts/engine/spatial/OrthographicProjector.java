@@ -4,8 +4,7 @@ package com.arbergashi.charts.engine.spatial;
  * Orthographic projector: depth does not affect scale.
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class OrthographicProjector implements SpatialProjector {
     private double scale = 1.0;

@@ -6,9 +6,8 @@ import com.arbergashi.charts.util.AnimationUtils;
  *
  * <p>Policy: data truth is never sacrificed for motion. Profiles define how much
  * animation is allowed for data transitions vs. UI overlays.</p>
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public enum AnimationProfile {
     /**

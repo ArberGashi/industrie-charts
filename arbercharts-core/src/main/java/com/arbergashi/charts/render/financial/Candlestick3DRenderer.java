@@ -17,8 +17,7 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  * 3D candlestick renderer using spatial batch pipeline.
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class Candlestick3DRenderer extends AbstractSpatialLayer {
     private final PerspectiveProjector projector = new PerspectiveProjector();

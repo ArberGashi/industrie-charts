@@ -8,7 +8,6 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  * so {@link #mapToPixel(double, double, double[])} and {@link #mapToData(double, double, double[])}
  * run in constant time with no intermediate allocations.</p>
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2.0.0
  */
 public class CartesianPlotContext implements PlotContext {

@@ -14,7 +14,6 @@ import java.util.function.Function;
  * Eliminates redundancy and encapsulates sweep-erase logic.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts.render.BaseRenderer {

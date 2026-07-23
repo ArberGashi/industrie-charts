@@ -5,9 +5,8 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 
 /**
  * Core rendering abstraction. No UI framework dependencies.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public interface ArberCanvas {
     void setColor(ArberColor color);

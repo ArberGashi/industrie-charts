@@ -41,7 +41,6 @@ import com.arbergashi.charts.util.ChartScale;
  * </ul>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

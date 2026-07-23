@@ -12,8 +12,7 @@ import com.arbergashi.charts.util.ChartAssets;
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class PhysicalScaleRenderer extends BaseRenderer {
     private static final String KEY_ENABLED = "Chart.scale.physical.enabled";

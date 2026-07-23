@@ -3,7 +3,6 @@ package com.arbergashi.charts.domain.legend;
  * Callbacks for interactive legend actions.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *

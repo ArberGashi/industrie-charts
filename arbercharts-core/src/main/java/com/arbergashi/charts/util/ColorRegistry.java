@@ -7,8 +7,7 @@ import com.arbergashi.charts.api.types.ArberColor;
  * <p>Returned colors are cached and must be treated as immutable. Use this registry
  * to avoid per-frame allocations in render loops.</p>
  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class ColorRegistry {
 

@@ -5,9 +5,8 @@ import java.io.Serializable;
 
 /**
  * Data point with error bars or uncertainty range.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class ErrorBarPoint implements Serializable {
     @Serial

@@ -1,9 +1,8 @@
 package com.arbergashi.charts.api;
 /**
  * Allocation-conscious buffer for predicted points.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface PredictionBuffer {
 

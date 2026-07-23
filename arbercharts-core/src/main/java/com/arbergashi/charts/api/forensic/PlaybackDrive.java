@@ -1,9 +1,8 @@
 package com.arbergashi.charts.api.forensic;
 /**
  * Public playback drive interface for deterministic replays.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface PlaybackDrive extends AutoCloseable {
     void load(double[] x, double[] y, double[] min, double[] max, double[] weight,

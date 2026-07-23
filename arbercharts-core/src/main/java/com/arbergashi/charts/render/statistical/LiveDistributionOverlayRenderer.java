@@ -13,9 +13,8 @@ import com.arbergashi.charts.util.ColorUtils;
 
 /**
  * Renders a live distribution histogram along the Y-axis as a pre-data overlay (headless).
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class LiveDistributionOverlayRenderer extends BaseRenderer {
     private static final String KEY_ENABLED = "Chart.statistical.histogram.enabled";

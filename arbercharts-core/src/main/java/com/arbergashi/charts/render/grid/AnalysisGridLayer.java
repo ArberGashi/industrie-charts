@@ -23,7 +23,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * renderer layer free from hard-coded aesthetics.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

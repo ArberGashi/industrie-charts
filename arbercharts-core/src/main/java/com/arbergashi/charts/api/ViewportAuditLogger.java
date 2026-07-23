@@ -4,9 +4,8 @@ import java.time.Instant;
 import java.util.Map;
 /**
  * Append-only audit sink for viewport and filter changes.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface ViewportAuditLogger {
 

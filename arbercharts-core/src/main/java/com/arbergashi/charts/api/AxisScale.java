@@ -3,7 +3,6 @@ package com.arbergashi.charts.api;
  * Convenience helpers for common axis scale presets.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class AxisScale {

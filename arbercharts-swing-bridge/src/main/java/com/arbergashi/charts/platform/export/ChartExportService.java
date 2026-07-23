@@ -30,7 +30,6 @@ import java.nio.file.Files;
  * The host application decides which export formats are available by adding dependencies.
  *
  * @author Arber Gashi
- * @version 0.9.0
  * @since 0.9.0
  */
 public final class ChartExportService {

@@ -16,7 +16,6 @@ import com.arbergashi.charts.util.MathUtils;
  * Key: {@code chart.render.baseline.value} (default 0.0).
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-15
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

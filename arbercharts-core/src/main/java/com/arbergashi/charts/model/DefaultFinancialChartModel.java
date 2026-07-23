@@ -15,8 +15,7 @@ import java.util.logging.Logger;
  * {@link #getPointCount()}.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public class DefaultFinancialChartModel implements FinancialChartModel {
     private static final Logger LOGGER = Logger.getLogger(DefaultFinancialChartModel.class.getName());

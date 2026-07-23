@@ -13,7 +13,6 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  * </ul>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 final class IndicatorRendererSupport {

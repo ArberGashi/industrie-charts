@@ -14,9 +14,8 @@ import com.arbergashi.charts.util.ColorUtils;
  * Professional, zero-allocation histogram renderer (headless).
  *
  * <p>Draws simple filled bars; gradients and labels are bridge concerns.</p>
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class HistogramRenderer extends BaseRenderer {
 

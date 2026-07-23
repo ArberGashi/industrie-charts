@@ -14,7 +14,6 @@ import com.arbergashi.charts.render.BaseRenderer;
  * This renderer assumes the input data is already grouped/sorted by x.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

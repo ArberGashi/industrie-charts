@@ -8,7 +8,6 @@
  * documents its own guarantees and limits. See docs/CONCURRENCY_MODEL.md for core semantics.</p>
  *
  * @author Arber Gashi
- * @version 1.7.0
  * @since 2026-01-30
  */
 package com.arbergashi.charts.model;

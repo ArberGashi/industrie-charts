@@ -21,7 +21,6 @@ import java.util.logging.Logger;
  * {@link #getY(int)}, {@link #getValue(int, int)}) and avoid repeatedly requesting full arrays.</p>
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2.0.0
  */
 public class DefaultChartModel implements ChartModel {

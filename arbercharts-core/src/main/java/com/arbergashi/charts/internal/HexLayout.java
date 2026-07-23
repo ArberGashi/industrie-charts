@@ -4,7 +4,6 @@ package com.arbergashi.charts.internal;
  * of a given radius. This class is immutable and safe to reuse between frames.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class HexLayout {

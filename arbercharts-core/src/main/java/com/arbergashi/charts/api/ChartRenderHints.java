@@ -6,7 +6,6 @@ package com.arbergashi.charts.api;
  * <p>Provides a minimal API for anti-aliasing and stroke width control.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ChartRenderHints {

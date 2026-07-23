@@ -7,7 +7,6 @@ import com.arbergashi.charts.api.PlotContext;
  * Helper methods for coordinate transformations.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ChartUtils {

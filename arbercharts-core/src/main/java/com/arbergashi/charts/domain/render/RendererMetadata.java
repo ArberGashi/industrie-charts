@@ -4,9 +4,8 @@ import java.util.Objects;
 
 /**
  * Stable public renderer metadata.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class RendererMetadata {
     private String id;

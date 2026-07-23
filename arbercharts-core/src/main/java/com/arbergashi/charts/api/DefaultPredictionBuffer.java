@@ -3,9 +3,8 @@ package com.arbergashi.charts.api;
 import java.util.Arrays;
 /**
  * Default reusable prediction buffer.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class DefaultPredictionBuffer implements PredictionBuffer {
     private double[] xs = new double[0];

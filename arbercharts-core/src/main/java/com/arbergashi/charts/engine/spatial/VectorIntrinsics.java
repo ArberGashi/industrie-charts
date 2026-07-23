@@ -13,8 +13,7 @@ package com.arbergashi.charts.engine.spatial;
  * system property {@code arbercharts.simd.disabled=true}.</p>
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 2.0.1
+ * @author Arber Gashi
  */
 public final class VectorIntrinsics {
     private static final boolean AVAILABLE;

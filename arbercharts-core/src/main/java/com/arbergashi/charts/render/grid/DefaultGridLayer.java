@@ -22,7 +22,6 @@ import com.arbergashi.charts.util.NiceScale;
  * This enables Bloomberg/SciChart-grade grid quality without code changes.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

@@ -10,7 +10,6 @@ import com.arbergashi.charts.render.BaseRenderer;
  * VCG renderer: visualizes a vectorcardiogram (VCG) as a 2D loop (X-Y projection).
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

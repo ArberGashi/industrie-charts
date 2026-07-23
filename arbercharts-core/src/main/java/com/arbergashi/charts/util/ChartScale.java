@@ -7,7 +7,6 @@ import java.util.function.Supplier;
  * Ensures that lines and fonts look correct on high-DPI (e.g., 4K / Retina) monitors.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ChartScale {

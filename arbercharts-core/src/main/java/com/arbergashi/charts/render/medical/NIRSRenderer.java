@@ -6,7 +6,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * Slow, smoothed curves suitable for long time spans.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

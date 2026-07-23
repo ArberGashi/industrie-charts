@@ -17,7 +17,6 @@ import com.arbergashi.charts.util.ChartScale;
  * <p><b>Performance:</b> O(n * L) where L is limited to {@code &lt;= 128} by default.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

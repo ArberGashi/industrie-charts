@@ -11,9 +11,8 @@ import com.arbergashi.charts.util.ColorUtils;
 
 /**
  * Statistical Error Bar Renderer (headless).
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public class StatisticalErrorBarRenderer extends BaseRenderer {
 

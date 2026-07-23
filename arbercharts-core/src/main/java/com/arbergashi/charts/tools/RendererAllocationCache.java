@@ -13,7 +13,6 @@ import java.util.WeakHashMap;
  * caches must live in bridge modules.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public final class RendererAllocationCache {

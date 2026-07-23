@@ -5,9 +5,8 @@ package com.arbergashi.charts.core.geometry;
  *
  * <p>Rendering backends decide how to translate these anchors into pixel offsets
  * based on font metrics and platform-specific alignment rules.</p>
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public enum TextAnchor {
     TOP_LEFT,

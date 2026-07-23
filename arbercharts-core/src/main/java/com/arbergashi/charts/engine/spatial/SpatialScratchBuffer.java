@@ -4,8 +4,7 @@ package com.arbergashi.charts.engine.spatial;
  * Scratch buffers for SIMD paths (no allocations in hot loops).
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class SpatialScratchBuffer {
     private final int laneCount;

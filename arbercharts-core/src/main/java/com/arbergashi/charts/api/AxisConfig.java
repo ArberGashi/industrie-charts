@@ -12,7 +12,6 @@ import com.arbergashi.charts.core.geometry.TextAnchor;
  * Provides formatting and behavior flags for axis rendering.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class AxisConfig {

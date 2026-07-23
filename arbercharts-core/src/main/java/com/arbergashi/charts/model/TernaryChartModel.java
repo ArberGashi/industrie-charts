@@ -6,7 +6,6 @@ import java.util.List;
  * Each data point represents a composition of three parts that sum to a constant.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * @see ChartModel
  */

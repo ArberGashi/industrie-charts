@@ -4,9 +4,8 @@ package com.arbergashi.charts.core.rendering;
  * Simple voxel data holder for bulk rendering.
  *
  * <p>Intended for SIMD-friendly traversal; no UI dependencies.</p>
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class VoxelBuffer {
     private final float[] x;

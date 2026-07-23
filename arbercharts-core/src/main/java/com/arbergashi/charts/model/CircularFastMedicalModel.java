@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * <b>Important for Renderers:</b> For sweep-erase/monitor visualization, use getSweepIndex() to identify the current write position and avoid drawing a line across the buffer start.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-12-30
  */
 public class CircularFastMedicalModel extends FastMedicalModel {

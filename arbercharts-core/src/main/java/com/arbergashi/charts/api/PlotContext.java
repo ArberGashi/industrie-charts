@@ -10,7 +10,6 @@ import com.arbergashi.charts.core.geometry.ArberRect;
  * Code should prefer {@link #getTheme()} over any global/static theme access.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2.0.0
  */
 public interface PlotContext {

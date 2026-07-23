@@ -14,7 +14,6 @@ import com.arbergashi.charts.util.ColorUtils;
  * {@link com.arbergashi.charts.model.ChartPoint#getMax()}.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-15
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

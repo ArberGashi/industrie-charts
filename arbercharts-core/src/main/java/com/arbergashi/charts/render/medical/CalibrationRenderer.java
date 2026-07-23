@@ -14,9 +14,8 @@ import com.arbergashi.charts.util.ColorRegistry;
  * Draws a clinical calibration pulse (e.g., 1 mV / 200 ms).
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class CalibrationRenderer extends BaseRenderer {
     private static final String KEY_ENABLED = "Chart.calibration.enabled";

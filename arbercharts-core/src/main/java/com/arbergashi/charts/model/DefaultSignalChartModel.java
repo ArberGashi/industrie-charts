@@ -13,8 +13,7 @@ import java.util.logging.Logger;
  * <p>Designed for high-frequency signal streams with multiple channels.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public class DefaultSignalChartModel implements SignalChartModel {
     private static final Logger LOGGER = Logger.getLogger(DefaultSignalChartModel.class.getName());

@@ -6,7 +6,6 @@ package com.arbergashi.charts.model;
  * @param <T> The type of the node used in the hierarchy.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
  */
 public interface HierarchicalChartModel<T> extends ChartModel {

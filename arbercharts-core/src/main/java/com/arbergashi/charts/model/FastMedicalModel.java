@@ -10,7 +10,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Thread-safe for append operations (single-writer, multiple-reader scenario).</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * @see ChartModel
  */

@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Default implementation for a ternary chart model.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * @see TernaryChartModel
  */

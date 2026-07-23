@@ -9,7 +9,6 @@
  * unless explicitly documented. Per-instance caches should remain thread-confined.</p>
  *
  * @author Arber Gashi
- * @version 1.7.0
  * @since 2026-01-30
  */
 package com.arbergashi.charts.render;

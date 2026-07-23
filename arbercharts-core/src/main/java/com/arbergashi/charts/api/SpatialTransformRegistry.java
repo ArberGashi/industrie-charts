@@ -9,8 +9,7 @@ import com.arbergashi.charts.render.specialized.SmithChartTransform;
  * <p>Platform-independent and headless-certified. No AWT/Swing dependencies.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public final class SpatialTransformRegistry {
     private static final CoordinateTransformer LINEAR = new LinearTransform();

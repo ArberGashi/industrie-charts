@@ -11,9 +11,8 @@ import com.arbergashi.charts.util.ColorUtils;
 
 /**
  * Professional, zero-allocation confidence interval renderer (headless).
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public class ConfidenceIntervalRenderer extends BaseRenderer {
 

@@ -8,7 +8,6 @@
  * lock-free coordination. See docs/CONCURRENCY_MODEL.md for ordering guarantees.</p>
  *
  * @author Arber Gashi
- * @version 1.7.0
  * @since 2026-01-30
  */
 package com.arbergashi.charts.engine;

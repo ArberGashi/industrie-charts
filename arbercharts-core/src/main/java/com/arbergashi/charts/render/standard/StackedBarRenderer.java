@@ -13,7 +13,6 @@ import com.arbergashi.charts.render.BaseRenderer;
  * <p>Single-model stacked bar renderer: expects points to represent bar segments for the same x.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

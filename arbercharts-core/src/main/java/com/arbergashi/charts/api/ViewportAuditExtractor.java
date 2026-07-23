@@ -11,9 +11,8 @@ import java.lang.reflect.Method;
 import java.util.Iterator;
 /**
  * Extracts embedded audit metadata from PNG/PDF exports.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class ViewportAuditExtractor {
     private ViewportAuditExtractor() {

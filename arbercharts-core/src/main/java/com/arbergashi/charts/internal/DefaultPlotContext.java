@@ -14,7 +14,6 @@ import java.util.Objects;
  * The allocation-free {@link #mapToPixel(double, double, double[])} method is the hot-path.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public final class DefaultPlotContext implements PlotContext {

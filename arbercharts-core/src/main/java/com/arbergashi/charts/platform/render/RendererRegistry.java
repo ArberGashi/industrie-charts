@@ -18,7 +18,6 @@ import java.util.function.Supplier;
  * This class exists as the stable public entry point for framework consumers.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-17
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

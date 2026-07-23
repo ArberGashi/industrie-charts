@@ -13,7 +13,6 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * Ideal for acoustics, vibration analysis, and signal processing.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

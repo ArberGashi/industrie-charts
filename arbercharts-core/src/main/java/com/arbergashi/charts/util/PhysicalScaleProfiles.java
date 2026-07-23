@@ -1,9 +1,8 @@
 package com.arbergashi.charts.util;
 /**
  * Preset profiles for physical (mm-based) chart scaling.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class PhysicalScaleProfiles {
 

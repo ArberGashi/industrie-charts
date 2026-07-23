@@ -13,7 +13,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * It expects a FlowChartModel.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  * @see FlowChartModel
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.

@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * It uses a generic Node class to build the tree structure.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
  */
 public class DefaultHierarchicalChartModel implements HierarchicalChartModel<DefaultHierarchicalChartModel.DefaultNode> {

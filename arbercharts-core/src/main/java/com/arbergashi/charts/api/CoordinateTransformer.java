@@ -3,9 +3,8 @@ package com.arbergashi.charts.api;
  * Non-linear coordinate transform for specialized renderers (e.g. Smith, Geo).
  *
  * <p>Implementations must be allocation-free and write into the provided arrays.</p>
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface CoordinateTransformer {
     /**

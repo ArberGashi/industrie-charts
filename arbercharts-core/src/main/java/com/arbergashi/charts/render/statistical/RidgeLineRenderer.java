@@ -15,7 +15,6 @@ import com.arbergashi.charts.util.ColorUtils;
  * Utilizes a vertical offset based on the x-value to create overlapping ridges.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

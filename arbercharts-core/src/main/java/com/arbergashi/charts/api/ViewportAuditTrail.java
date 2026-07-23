@@ -9,9 +9,8 @@ import java.util.List;
 import java.util.Map;
 /**
  * In-memory append-only audit trail.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class ViewportAuditTrail implements ViewportAuditLogger {
     private static final int DEFAULT_CAPACITY = 10_000;

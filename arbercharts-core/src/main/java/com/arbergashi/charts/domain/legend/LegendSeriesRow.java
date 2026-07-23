@@ -4,9 +4,8 @@ import java.util.Map;
 
 /**
  * A single row in the interactive legend.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class LegendSeriesRow {
     private String id;

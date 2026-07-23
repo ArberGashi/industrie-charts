@@ -14,9 +14,8 @@ import com.arbergashi.charts.util.ColorRegistry;
  * Overlay renderer that marks non-original ticks for audit/provenance tracking.
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class AuditTrailRenderer extends BaseRenderer implements TooltipContentProvider {
     public AuditTrailRenderer() {

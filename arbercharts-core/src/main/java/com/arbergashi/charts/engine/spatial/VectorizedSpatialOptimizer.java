@@ -24,8 +24,7 @@ import com.arbergashi.charts.api.PlotContext;
  * </ul>
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class VectorizedSpatialOptimizer {
     public enum DepthDampingMode {

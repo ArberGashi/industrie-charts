@@ -6,7 +6,6 @@ import java.util.Objects;
  * Metadata descriptor for renderers to be used by RendererRegistry and the UI.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class RendererDescriptor {

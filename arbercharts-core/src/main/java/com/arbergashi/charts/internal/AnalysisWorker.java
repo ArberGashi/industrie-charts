@@ -4,7 +4,6 @@ package com.arbergashi.charts.internal;
  * This class is designed to be allocation-free in its core methods.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-01-01
  */
 public final class AnalysisWorker {

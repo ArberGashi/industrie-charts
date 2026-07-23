@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * Series ids usually come from {@code BaseRenderer#getId()}.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *

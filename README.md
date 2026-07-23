@@ -1,16 +1,18 @@
-# ArberCharts 2.0.0 (Binary Release)
+# ArberCharts
 
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
+![Maven Central](https://img.shields.io/maven-central/v/com.arbergashi/arbercharts-core)
 
-ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisierung auf dem JVM-Stack.
-Dieses Repository enthaelt das oeffentliche Binary-Release (JARs), Startskripte und Vorschau-Assets fuer GitHub.
+ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisierung auf dem JVM-Stack:
+156 Renderer, Zero-GC-Renderpfade, SIMD-beschleunigt wo verfuegbar - und ohne spezielle JVM-Flags lauffaehig.
 
 ## Kurzbeschreibung
 
 - Fokus auf High-Performance Rendering fuer Charts und technische Visualisierungen
-- Bereitstellung als Binary-Artefakte (kein Source-Release in diesem Repository)
-- Demo-App zum direkten Starten und Testen der Visualisierungen
+- Serverseitiges Headless-Rendering (Spring Boot) und Swing-Desktop-Integration
+- Vector API (SIMD) wird zur Laufzeit erkannt; ohne `--add-modules jdk.incubator.vector`
+  greift transparent der skalare Fallback mit identischen Ergebnissen
 
 ## Bildvorschau (Renderer)
 
@@ -21,29 +23,22 @@ Dieses Repository enthaelt das oeffentliche Binary-Release (JARs), Startskripte 
 ![Parallel Coordinates Chart](docs/images/parallelcoordinates.png)
 ![Sunburst Chart](docs/images/sunburst.png)
 
-## Included Files
+## Installation (Maven Central)
 
-- `binaries/arbercharts-demo-2.0.0.jar`
-- `binaries/arbercharts-core-2.0.0.jar`
-- `binaries/arbercharts-starter-2.0.0.jar`
-- `binaries/run-demo.sh`
-- `binaries/run-demo.bat`
-- `binaries/SHA256SUMS.txt`
-- `docs/images/` preview images
-- `LICENSE`
-- `NOTICE`
-- `BINARY-LICENSE.md`
-
-## Run Demo
-
-```bash
-java --enable-native-access=ALL-UNNAMED --add-modules jdk.incubator.vector -jar binaries/arbercharts-demo-2.0.0.jar
+```xml
+<dependency>
+    <groupId>com.arbergashi</groupId>
+    <artifactId>arbercharts-core</artifactId>
+    <version>2.0.1</version>
+</dependency>
 ```
 
-## Spring Boot Quick Start (Maven Central)
+Fuer Swing-Anwendungen zusaetzlich `arbercharts-swing-bridge`, fuer Server-Rendering
+`arbercharts-server-bridge` oder direkt der Spring-Boot-Starter (siehe unten).
 
-ArberCharts ist auf Maven Central verfuegbar. Fuer serverseitiges Rendering
-(PNG-Export in REST-APIs, Reports, Batch-Jobs) genuegt der Spring-Boot-Starter:
+## Spring Boot Quick Start
+
+Fuer serverseitiges Rendering (PNG-Export in REST-APIs, Reports, Batch-Jobs) genuegt der Spring-Boot-Starter:
 
 ```xml
 <dependency>
@@ -54,9 +49,7 @@ ArberCharts ist auf Maven Central verfuegbar. Fuer serverseitiges Rendering
 ```
 
 Der Starter konfiguriert automatisch einen headless `ServerRenderService`
-(Session-Pool, optional Micrometer-Metriken). Ab 2.0.1 sind keine JVM-Flags
-noetig: Die Vector API (SIMD) wird zur Laufzeit erkannt; ohne
-`--add-modules jdk.incubator.vector` greift transparent der skalare Fallback.
+(Session-Pool, optional Micrometer-Metriken). Es sind keine JVM-Flags noetig.
 
 ```java
 @RestController
@@ -88,10 +81,28 @@ arbercharts.server.pool-size=4
 arbercharts.server.metrics-enabled=true
 ```
 
+## Demo bauen und starten
+
+```bash
+mvn -pl arbercharts-demo -am package
+java -jar arbercharts-demo/target/arbercharts-demo-*.jar
+```
+
+Die Demo aktiviert benoetigte Laufzeit-Flags selbst (Neustart-Mechanismus im Launcher).
+Fertige Demo-JARs liegen den GitHub Releases bei.
+
+## Dokumentation
+
+- [Quick Start](docs/QUICK_START.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [Renderer-Katalog](docs/RENDERER_CATALOG.md)
+- [Release Notes](RELEASE_NOTES.md)
+
 ## Licensing
 
-ArberCharts binary artifacts are distributed under the MIT License.
-See `LICENSE`, `NOTICE`, and `BINARY-LICENSE.md`.
+ArberCharts-Artefakte stehen unter der MIT-Lizenz.
+Siehe `LICENSE`, `NOTICE` und `BINARY-LICENSE.md`.
+Kommerzieller Support und SLAs: siehe [docs/PRICING.md](docs/PRICING.md).
 
 ## Support
 

@@ -12,7 +12,6 @@ import com.arbergashi.charts.util.ColorUtils;
  * High-performance visualization of frequency spectra over time using a reusable pixel buffer.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

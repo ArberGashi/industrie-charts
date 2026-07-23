@@ -9,7 +9,6 @@ import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
  * Allows for custom grid implementations (e.g. standard, medical, polar, etc.).
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

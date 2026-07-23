@@ -16,7 +16,6 @@ import com.arbergashi.charts.util.ChartAssets;
  * This is intended as an overlay/highlighter rather than a standalone chart.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

@@ -15,7 +15,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * Professional, zero-allocation volume bar renderer.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

@@ -1,9 +1,8 @@
 package com.arbergashi.charts.util;
 /**
  * Lightweight formatter for fixed-point numbers without allocations.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class FastNumberFormatter {
     private static final long[] POW10 = {

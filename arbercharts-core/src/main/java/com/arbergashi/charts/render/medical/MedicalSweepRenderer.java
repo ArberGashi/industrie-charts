@@ -13,7 +13,6 @@ import com.arbergashi.charts.render.BaseRenderer;
  * Strategy: Zero-Allocation rendering using direct array access.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

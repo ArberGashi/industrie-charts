@@ -11,7 +11,6 @@ package com.arbergashi.charts.demo;
  * @param simpleName the simple class name for display
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2026-01-01
  */
 public record RendererCatalogEntry(String category, String className, String simpleName) {

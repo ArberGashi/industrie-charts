@@ -24,7 +24,6 @@ import java.util.logging.Logger;
  * <p>Capacity is rounded to the next power-of-two to enable fast index masking.</p>
  * @since 2.0.0
  * @author Arber Gashi
- * @version 2.0.0
  */
 public final class CircularChartModel implements ChartModel {
     private static final Logger LOGGER = Logger.getLogger(CircularChartModel.class.getName());

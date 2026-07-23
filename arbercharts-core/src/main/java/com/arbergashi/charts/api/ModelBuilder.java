@@ -54,7 +54,6 @@ import java.util.List;
  * }</pre>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-16
  */
 public final class ModelBuilder {

@@ -1,9 +1,8 @@
 package com.arbergashi.charts.api;
 /**
  * Severity level for predictive anomaly detection.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public enum AnomalyLevel {
     INFO,

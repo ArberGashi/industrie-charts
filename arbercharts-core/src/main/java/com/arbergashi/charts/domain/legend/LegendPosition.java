@@ -6,7 +6,6 @@ package com.arbergashi.charts.domain.legend;
  * The default position is typically {@link #TOP_LEFT}.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *

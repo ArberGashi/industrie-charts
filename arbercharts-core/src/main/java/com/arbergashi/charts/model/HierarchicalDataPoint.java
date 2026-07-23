@@ -5,9 +5,8 @@ import java.util.List;
 
 /**
  * Represents a node in a hierarchical data structure, used for charts like Sunburst or Treemaps.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class HierarchicalDataPoint {
     private String name;

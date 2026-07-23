@@ -2,9 +2,8 @@ package com.arbergashi.charts.api;
 
 /**
  * Anomaly event emitted by predictive and gap renderers.
-  * @author Arber Gashi
-  * @version 2.0.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class AnomalyEvent {
     private double x;

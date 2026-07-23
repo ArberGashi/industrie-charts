@@ -16,7 +16,6 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
  * Draws a stick from the baseline to the value and a circular head at the end.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

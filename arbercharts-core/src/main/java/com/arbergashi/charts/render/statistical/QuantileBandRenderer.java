@@ -16,9 +16,8 @@ import java.util.Arrays;
  * Renders a statistical quantile band (e.g., 25-75%) as a pre-data overlay.
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class QuantileBandRenderer extends BaseRenderer {
     private static final String KEY_ENABLED = "Chart.statistical.quantileBand.enabled";

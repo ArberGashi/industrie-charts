@@ -6,9 +6,8 @@ package com.arbergashi.charts.render;
  * main data layers without changing the default painter's algorithm.</p>
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public enum LayerBand {
     /** Standard data layers. */

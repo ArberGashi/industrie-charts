@@ -1,9 +1,8 @@
 package com.arbergashi.charts.util;
 /**
  * Small predictive helpers kept allocation-free for render-time use.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class PredictiveMath {
 

@@ -10,9 +10,8 @@ import java.util.List;
  * <p>This keeps legend UI independent from any specific panel implementation.</p>
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface LegendChartContext {
 

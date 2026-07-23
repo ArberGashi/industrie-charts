@@ -3,9 +3,8 @@ package com.arbergashi.charts.api.forensic;
 import com.arbergashi.charts.util.LatencyTracker;
 /**
  * Public playback controller interface for deterministic forensic replays.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public interface PlaybackController {
     PlaybackController setDeterministic(boolean enabled);

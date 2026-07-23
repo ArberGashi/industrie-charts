@@ -3,9 +3,8 @@ package com.arbergashi.charts.domain.medical;
  * DICOM Standard Color Palettes for Medical Imaging.
   * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class DicomPalettes {
 

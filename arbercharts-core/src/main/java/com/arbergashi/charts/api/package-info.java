@@ -10,7 +10,6 @@
  * <p>Zero-allocation: APIs are optimized for hot-path usage and avoid allocations in render loops.</p>
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2026-01-30
  */
 package com.arbergashi.charts.api;

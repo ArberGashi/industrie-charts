@@ -5,8 +5,7 @@ package com.arbergashi.charts.engine.spatial;
  * Internal validation utility for spatial projection consistency.
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class SpatialValidator {
     public static final double SIMD_PRECISION_THRESHOLD = 1e-9;

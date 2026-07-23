@@ -4,9 +4,8 @@ package com.arbergashi.charts.domain.render;
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  * Platform-independent and headless-certified. No AWT/Swing dependencies.
  *
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public enum AxisRole {
     PRIMARY,

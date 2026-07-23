@@ -4,8 +4,7 @@ package com.arbergashi.charts.engine.spatial;
  * Reusable coordinate buffers for spatial projections.
  *
  * @since 1.7.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @author Arber Gashi
  */
 public final class SpatialBuffer {
     private final double[] inputCoords;

@@ -15,7 +15,6 @@ import java.util.Map;
  * Input: label "src:dst" and weight in y.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

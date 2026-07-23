@@ -86,7 +86,6 @@ import java.lang.reflect.Method;
  * </ul>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2024-06-01
  */
 public class ArberChartPanel extends JPanel {

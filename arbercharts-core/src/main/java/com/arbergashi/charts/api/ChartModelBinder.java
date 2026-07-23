@@ -14,7 +14,6 @@ import java.util.function.ToDoubleFunction;
  * decimation, filtering) before binding to avoid unnecessary allocations and to keep rendering
  * responsive.</p>
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  */
 public final class ChartModelBinder {

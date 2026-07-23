@@ -13,8 +13,7 @@ import java.util.logging.Logger;
  * <p>Designed for zero-allocation rendering of statistical series and box plots.</p>
  *
  * @since 2.0.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @author Arber Gashi
  */
 public class DefaultStatisticalChartModel implements StatisticalChartModel {
     private static final Logger LOGGER = Logger.getLogger(DefaultStatisticalChartModel.class.getName());

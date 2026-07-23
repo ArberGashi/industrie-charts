@@ -15,7 +15,6 @@ import java.util.Objects;
  * {@link #mapToData(double, double, double[])} methods are designed for the render hot-path.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2.0.0
  */
 public final class DefaultPlotContext implements PlotContext {

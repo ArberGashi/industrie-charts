@@ -27,7 +27,6 @@ import com.arbergashi.charts.util.ColorRegistry;
  * <p>Requires OHLC data with min (low) and max (high) fields.</p>
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

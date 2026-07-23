@@ -12,7 +12,6 @@ import com.arbergashi.charts.util.ChartScale;
  * Overlays dominant frequencies or an approximated Fourier series on a line chart.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

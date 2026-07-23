@@ -1,9 +1,8 @@
 package com.arbergashi.charts.util;
 /**
  * Rolling latency tracker for render timings (zero-allocation).
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 1.7.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class LatencyTracker {
     private static final long BIN_NS = 100_000L; // 0.1ms

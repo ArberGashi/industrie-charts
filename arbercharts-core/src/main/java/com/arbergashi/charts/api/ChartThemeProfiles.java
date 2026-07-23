@@ -5,9 +5,8 @@ import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberFont;
 /**
  * Applies global theme profiles via ChartAssets and returns a ChartTheme.
-  * @since 1.5.0
-  * @author Arber Gashi
-  * @version 2.0.0
+ * @since 1.5.0
+ * @author Arber Gashi
  */
 public final class ChartThemeProfiles {
     private ChartThemeProfiles() {

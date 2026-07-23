@@ -9,7 +9,6 @@ import com.arbergashi.charts.render.BaseRenderer;
  * Sweep-erase EKG renderer: clinically authentic oscilloscope-style display with a moving erase bar.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2025-06-01
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *

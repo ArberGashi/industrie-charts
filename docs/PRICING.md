@@ -1,43 +1,45 @@
-# ArberCharts Pricing (Commercial)
+# ArberCharts Support & Services
 
-All prices are per product line and per year.
+ArberCharts artifacts are MIT-licensed: usage, distribution, and commercial
+deployment are free for everyone. See `LICENSE` and `docs/LICENSING.md`.
 
-ArberCharts ships with **158 renderer families** across standard, financial, statistical,
+The plans below cover **support, maintenance commitments, and SLAs** — not
+usage rights. All prices are per product line and per year.
+
+ArberCharts ships with **156 renderers** across standard, financial, statistical,
 specialized, medical, and analysis domains.
 
 ---
 
-## 1) Developer License (Free)
+## 1) Community (Free)
 
 - CHF 0
-- Unlimited development and internal evaluation
-- No external distribution
+- MIT-licensed usage without restrictions
+- GitHub issues, best effort
 
----
-
-## 2) Distribution/Runtime Licenses
+## 2) Support Plans
 
 **Standard**
 - CHF 6,000 / year
-- Updates + minor version upgrades included
-- Email support (best effort)
+- Email support (business days)
+- Priority bug fixes
 
 **Startup Tier**
 - CHF 2,000 / year
 - Eligibility: annual gross revenue up to CHF 250,000
-- Updates + minor version upgrades included
+- Email support (best effort)
 
-**Enterprise/OEM**
+**Enterprise**
 - CHF 25,000 / year
-- Unlimited distribution within a product family
-- Priority support + SLA
+- Priority support + SLA (see `docs/SLA.md`)
 - Security patch commitments
+- Consulting on integration and custom renderers
 
 ---
 
 ## 3) Notes
 
-- One license per product line.
+- One plan per product line.
 - Prices exclude VAT and local taxes.
 - Custom terms available for large deployments.
 
@@ -46,5 +48,4 @@ specialized, medical, and analysis domains.
 ## 4) Contact
 
 - Enterprise inquiries: Arber Gashi, gashi@pro-business.ch
-- gashi@pro-business.ch
-- https://arbergashi.com
+- https://www.arbergashi.com

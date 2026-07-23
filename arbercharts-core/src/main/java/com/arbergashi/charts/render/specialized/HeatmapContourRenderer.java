@@ -14,7 +14,6 @@ import com.arbergashi.charts.util.ColorUtils;
  * Displays temperature or concentration distributions using a grid of colored rectangles.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */

@@ -14,9 +14,8 @@ import com.arbergashi.charts.util.ChartScale;
 /**
  * ControlChartRenderer (Shewhart Chart / SPC).
  * Headless implementation using ArberCanvas primitives only.
-  * @author Arber Gashi
-  * @version 1.7.0
-  * @since 2026-01-30
+ * @author Arber Gashi
+ * @since 2026-01-30
  */
 public final class ControlChartRenderer extends BaseRenderer {
 
