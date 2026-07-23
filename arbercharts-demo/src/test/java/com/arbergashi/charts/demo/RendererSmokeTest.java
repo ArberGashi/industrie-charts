@@ -85,25 +85,26 @@ class RendererSmokeTest {
             "com.arbergashi.charts.render.financial.StochasticRenderer", new double[]{0, 100});
 
     /**
-     * Known blank in the plain single-frame headless path. All of these are
-     * exercised (construction + render run exception-free); they draw nothing
-     * without additional runtime state:
-     * - Prediction state required: PredictivePath, PredictiveShadow,
-     *   PredictiveCandle.
-     * - Live runtime state required: CircularLatencyOverlay (latency window),
-     *   PlaybackStatus (active playback).
-     * - Async first frame: AdaptiveFunction computes in the background and
-     *   draws from the second frame on (sync fallback is tracked backlog).
-     * - Config-gated overlays, disabled by default: Calibration,
-     *   PhysicalScale.
+     * Predictive renderers draw beyond the last data point; the X window is
+     * extended so their forward-looking output is inside the view.
      */
-    private static final Set<String> KNOWN_BLANK_HEADLESS = Set.of(
+    private static final Set<String> PREDICTIVE_X_EXTEND = Set.of(
             "com.arbergashi.charts.render.standard.PredictivePathRenderer",
             "com.arbergashi.charts.render.predictive.PredictiveShadowRenderer",
-            "com.arbergashi.charts.render.financial.PredictiveCandleRenderer",
+            "com.arbergashi.charts.render.financial.PredictiveCandleRenderer");
+
+    /**
+     * Known blank in the plain single-frame headless path. All of these are
+     * exercised (construction + render run exception-free); they draw nothing
+     * without live runtime state:
+     * - CircularLatencyOverlay needs an active latency window,
+     *   PlaybackStatus an active playback session.
+     * - Calibration and PhysicalScale are config-gated overlays,
+     *   disabled by default.
+     */
+    private static final Set<String> KNOWN_BLANK_HEADLESS = Set.of(
             "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer",
             "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer",
-            "com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer",
             "com.arbergashi.charts.render.medical.CalibrationRenderer",
             "com.arbergashi.charts.render.common.PhysicalScaleRenderer");
 
@@ -129,9 +130,16 @@ class RendererSmokeTest {
         assertNotNull(model, "no demo model for " + entry.className());
 
         double[] range = INDICATOR_Y_RANGES.get(entry.className());
-        BufferedImage image = (range == null)
-                ? service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer)
-                : service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer, range[0], range[1]);
+        BufferedImage image;
+        if (PREDICTIVE_X_EXTEND.contains(entry.className())) {
+            double lastX = model.getX(Math.max(0, model.getPointCount() - 1));
+            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer,
+                    Double.NaN, lastX + 40.0, Double.NaN, Double.NaN);
+        } else if (range == null) {
+            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer);
+        } else {
+            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer, range[0], range[1]);
+        }
         assertNotNull(image, "renderer produced no image: " + entry.className());
         if (!KNOWN_BLANK_HEADLESS.contains(entry.className())) {
             assertTrue(hasContent(image), "renderer produced a blank image: " + entry.className());

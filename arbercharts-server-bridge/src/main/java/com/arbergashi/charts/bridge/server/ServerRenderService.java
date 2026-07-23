@@ -131,6 +131,25 @@ public final class ServerRenderService {
      */
     public BufferedImage renderToImage(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer,
                                        double viewMinY, double viewMaxY) {
+        return renderToImage(model, size, theme, renderer, Double.NaN, Double.NaN, viewMinY, viewMaxY);
+    }
+
+    /**
+     * Renders with an explicit view window on both axes.
+     *
+     * <p>Use an extended X window to make forward-looking overlays visible
+     * (e.g. predictive renderers that draw beyond the last data point), or to
+     * render a fixed time window of a larger series. Any NaN bound is derived
+     * from the model.</p>
+     *
+     * @param viewMinX lower bound of the visible X range (NaN = derive from model)
+     * @param viewMaxX upper bound of the visible X range (NaN = derive from model)
+     * @param viewMinY lower bound of the visible Y range (NaN = derive from model)
+     * @param viewMaxY upper bound of the visible Y range (NaN = derive from model)
+     */
+    public BufferedImage renderToImage(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer,
+                                       double viewMinX, double viewMaxX,
+                                       double viewMinY, double viewMaxY) {
         if (model == null || size == null) {
             throw new IllegalArgumentException("model and size are required");
         }
@@ -174,8 +193,8 @@ public final class ServerRenderService {
             DefaultPlotContext context = new DefaultPlotContext(
                     bounds,
                     model,
-                    Double.NaN,
-                    Double.NaN,
+                    viewMinX,
+                    viewMaxX,
                     viewMinY,
                     viewMaxY,
                     theme != null ? theme : ChartThemes.getDarkTheme(),
