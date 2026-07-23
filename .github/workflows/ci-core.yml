@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  core-swing-server:
+  build-and-test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -22,11 +22,8 @@ jobs:
           java-version: '25'
           cache: 'maven'
 
-      - name: Core tests
-        run: mvn -pl arbercharts-core test
+      - name: Build and test (SIMD)
+        run: mvn -B verify
 
-      - name: Swing bridge tests
-        run: mvn -pl arbercharts-swing-bridge test
-
-      - name: Server bridge tests
-        run: mvn -pl arbercharts-server-bridge test
+      - name: Core tests without Vector API (scalar fallback)
+        run: mvn -B -pl arbercharts-core test -Darbercharts.test.jvmargs=
