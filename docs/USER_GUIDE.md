@@ -40,7 +40,7 @@ mvn -pl arbercharts-core -Pquality-gate validate
 Run demo:
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-2.0.0.jar
+java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-2.0.1.jar
 ```
 
 ## Data Model Contract
