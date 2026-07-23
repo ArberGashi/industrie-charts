@@ -55,6 +55,14 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
             lastContext = context;
         }
 
+        // Cold start: no frame has ever been produced. Wait briefly for the
+        // running calculation so the first frame (and single-frame headless
+        // rendering) shows the curve. Later recalculations keep the previous
+        // buffer on screen and stay fully asynchronous.
+        if (renderBuffer.count < 2) {
+            awaitInitialCalculation();
+        }
+
         // If no points are available yet, skip drawing.
         if (renderBuffer.count < 2) {
             return;
@@ -97,6 +105,23 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
     public AdaptiveFunctionRenderer setRepaintCallback(Runnable callback) {
         this.repaintCallback = callback;
         return this;
+    }
+
+    private void awaitInitialCalculation() {
+        CompletableFuture<Void> task;
+        synchronized (this) {
+            task = calculationTask;
+        }
+        if (task == null) {
+            return;
+        }
+        try {
+            task.get(2, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception ignored) {
+            // Timeout, cancellation, or calculation failure: draw nothing this frame.
+        }
     }
 
     private boolean isContextChanged(PlotContext context) {
