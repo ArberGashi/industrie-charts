@@ -128,7 +128,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * See {@code META-INF/LICENSE} for full license text.
  *
  * @author Arber Gashi
- * @version 2.0.0
  * @since 2.0.0
  */
 public final class DemoApplication {
@@ -1207,10 +1206,6 @@ public final class DemoApplication {
             ((Timer) evt.getSource()).stop();
             long startTime = System.nanoTime();
             try {
-                if (!vectorAvailable) {
-                    status.setText("<html>Vector API missing.<br/>Run with --add-modules jdk.incubator.vector</html>");
-                    return;
-                }
                 String className = entry.className();
                 ChartModel model = RendererDemoDataFactory.build(entry.category(), className);
                 ChartModel animatedModel = model;

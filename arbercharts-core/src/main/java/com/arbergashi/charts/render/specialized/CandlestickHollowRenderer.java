@@ -6,9 +6,7 @@ import com.arbergashi.charts.api.types.ArberPoint;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.HitTestUtils;
-import com.arbergashi.charts.internal.RendererDescriptor;
 import com.arbergashi.charts.model.ChartModel;
-import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import java.util.Optional;
@@ -18,16 +16,17 @@ import java.util.Optional;
  * it aggregates points into pixel-bins to drastically reduce draw operations and GC pressure.
  *
  * @author Arber Gashi
- * @version 1.0.0
  * @since 2026-01-01
-  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
+ * @deprecated Use {@link com.arbergashi.charts.render.financial.CandlestickHollowRenderer}, the
+ *     canonical implementation behind registry id {@code candlestick_hollow}. Both classes
+ *     previously self-registered under the same id, which failed with an
+ *     {@code IllegalStateException} as soon as both were loaded. This class no longer
+ *     self-registers and will be removed in 3.0.
  */
+@Deprecated(since = "2.1.0", forRemoval = true)
 public class CandlestickHollowRenderer extends BaseRenderer {
-
-    static {
-        RendererRegistry.register("candlestick_hollow", new RendererDescriptor("candlestick_hollow", "renderer.candlestick_hollow", "/icons/candlestick_hollow.svg"), CandlestickHollowRenderer::new);
-    }
 
     private final double[] pBuffer = new double[2];
     // aggregation buffers when dataset is dense

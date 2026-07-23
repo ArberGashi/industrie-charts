@@ -131,7 +131,6 @@ specialized|com.arbergashi.charts.render.specialized.TernaryContourRenderer
 specialized|com.arbergashi.charts.render.specialized.TernaryPhasediagramRenderer
 specialized|com.arbergashi.charts.render.specialized.TernaryPlotRenderer
 specialized|com.arbergashi.charts.render.specialized.VSWRCircleRenderer
-specialized|com.arbergashi.charts.render.specialized.VectorFieldRenderer
 specialized|com.arbergashi.charts.render.specialized.VoronoiRenderer
 specialized|com.arbergashi.charts.render.specialized.WindRoseRenderer
 circular|com.arbergashi.charts.render.circular.ChordDiagramRenderer
