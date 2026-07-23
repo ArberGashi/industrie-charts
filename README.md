@@ -14,12 +14,12 @@ Dieses Repository enthaelt das oeffentliche Binary-Release (JARs), Startskripte 
 
 ## Bildvorschau (Renderer)
 
-![Candlestick Chart](site/images/candlestick.png)
-![Heatmap Chart](site/images/heatmap.png)
-![Sankey Chart](site/images/sankey.png)
-![Voronoi Chart](site/images/voronoi.png)
-![Parallel Coordinates Chart](site/images/parallelcoordinates.png)
-![Sunburst Chart](site/images/sunburst.png)
+![Candlestick Chart](docs/images/candlestick.png)
+![Heatmap Chart](docs/images/heatmap.png)
+![Sankey Chart](docs/images/sankey.png)
+![Voronoi Chart](docs/images/voronoi.png)
+![Parallel Coordinates Chart](docs/images/parallelcoordinates.png)
+![Sunburst Chart](docs/images/sunburst.png)
 
 ## Included Files
 
@@ -29,7 +29,7 @@ Dieses Repository enthaelt das oeffentliche Binary-Release (JARs), Startskripte 
 - `binaries/run-demo.sh`
 - `binaries/run-demo.bat`
 - `binaries/SHA256SUMS.txt`
-- `site/images/` preview images
+- `docs/images/` preview images
 - `LICENSE`
 - `NOTICE`
 - `BINARY-LICENSE.md`
