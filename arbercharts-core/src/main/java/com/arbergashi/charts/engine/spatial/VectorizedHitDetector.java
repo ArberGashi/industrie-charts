@@ -1,10 +1,5 @@
 package com.arbergashi.charts.engine.spatial;
 
-import jdk.incubator.vector.DoubleVector;
-import jdk.incubator.vector.VectorMask;
-import jdk.incubator.vector.VectorOperators;
-import jdk.incubator.vector.VectorSpecies;
-
 /**
  * SIMD-aware hit detector for spatial buffers.
  *
@@ -58,50 +53,14 @@ public final class VectorizedHitDetector {
         int required = count * 3;
         if (coords.length < required) return -1;
 
-        SpatialScratchBuffer scratch = buffer.getScratch();
-        int laneCount = scratch.getLaneCount();
-        if (laneCount <= 0) laneCount = 1;
-        VectorSpecies<Double> species = VectorIntrinsics.getPreferredSpecies();
-
         double radiusSq = radius * radius;
-        double bestDist = Double.MAX_VALUE;
-        int bestIndex = -1;
-
-        double[] bufX = scratch.getScratchX();
-        double[] bufY = scratch.getScratchY();
-
-        int i = 0;
-        int j = 0;
-        int limit = count - (count % laneCount);
-
-        var vTargetX = DoubleVector.broadcast(species, x);
-        var vTargetY = DoubleVector.broadcast(species, y);
-        var vRadius = DoubleVector.broadcast(species, radiusSq);
-
-        for (; i < limit; i += laneCount, j += laneCount * 3) {
-            for (int k = 0; k < laneCount; k++) {
-                int idx = j + k * 3;
-                bufX[k] = coords[idx];
-                bufY[k] = coords[idx + 1];
-            }
-            var vx = DoubleVector.fromArray(species, bufX, 0);
-            var vy = DoubleVector.fromArray(species, bufY, 0);
-            var dx = vx.sub(vTargetX);
-            var dy = vy.sub(vTargetY);
-            var dist = dx.mul(dx).add(dy.mul(dy));
-            VectorMask<Double> mask = dist.compare(VectorOperators.LE, vRadius);
-
-            for (int k = 0; k < laneCount; k++) {
-                if (!mask.laneIsSet(k)) continue;
-                double d = dist.lane(k);
-                if (d < bestDist) {
-                    bestDist = d;
-                    bestIndex = i + k;
-                }
-            }
+        if (VectorIntrinsics.isAvailable()) {
+            return SpatialSimdKernels.nearestIndex(coords, count, x, y, radiusSq, buffer.getScratch());
         }
 
-        for (; i < count; i++, j += 3) {
+        double bestDist = Double.MAX_VALUE;
+        int bestIndex = -1;
+        for (int i = 0, j = 0; i < count; i++, j += 3) {
             double dx = coords[j] - x;
             double dy = coords[j + 1] - y;
             double d = dx * dx + dy * dy;
@@ -209,60 +168,14 @@ public final class VectorizedHitDetector {
         int required = count * 3;
         if (coords.length < required) return -1;
 
-        SpatialScratchBuffer scratch = buffer.getScratch();
-        int laneCount = scratch.getLaneCount();
-        if (laneCount <= 0) laneCount = 1;
-        VectorSpecies<Double> species = VectorIntrinsics.getPreferredSpecies();
+        if (VectorIntrinsics.isAvailable()) {
+            return SpatialSimdKernels.nearestIndexInBox(coords, count, x, y, z,
+                    halfX, halfY, halfZ, buffer.getScratch());
+        }
 
         double bestDist = Double.MAX_VALUE;
         int bestIndex = -1;
-
-        double[] bufX = scratch.getScratchX();
-        double[] bufY = scratch.getScratchY();
-        double[] bufZ = scratch.getScratchZ();
-
-        int i = 0;
-        int j = 0;
-        int limit = count - (count % laneCount);
-
-        var vTargetX = DoubleVector.broadcast(species, x);
-        var vTargetY = DoubleVector.broadcast(species, y);
-        var vTargetZ = DoubleVector.broadcast(species, z);
-        var vHalfX = DoubleVector.broadcast(species, halfX);
-        var vHalfY = DoubleVector.broadcast(species, halfY);
-        var vHalfZ = DoubleVector.broadcast(species, halfZ);
-
-        for (; i < limit; i += laneCount, j += laneCount * 3) {
-            for (int k = 0; k < laneCount; k++) {
-                int idx = j + k * 3;
-                bufX[k] = coords[idx];
-                bufY[k] = coords[idx + 1];
-                bufZ[k] = coords[idx + 2];
-            }
-            var vx = DoubleVector.fromArray(species, bufX, 0);
-            var vy = DoubleVector.fromArray(species, bufY, 0);
-            var vz = DoubleVector.fromArray(species, bufZ, 0);
-            var dx = vx.sub(vTargetX).lanewise(VectorOperators.ABS);
-            var dy = vy.sub(vTargetY).lanewise(VectorOperators.ABS);
-            var dz = vz.sub(vTargetZ).lanewise(VectorOperators.ABS);
-            VectorMask<Double> mask = dx.compare(VectorOperators.LE, vHalfX)
-                    .and(dy.compare(VectorOperators.LE, vHalfY))
-                    .and(dz.compare(VectorOperators.LE, vHalfZ));
-
-            for (int k = 0; k < laneCount; k++) {
-                if (!mask.laneIsSet(k)) continue;
-                double tx = bufX[k] - x;
-                double ty = bufY[k] - y;
-                double tz = bufZ[k] - z;
-                double d = tx * tx + ty * ty + tz * tz;
-                if (d < bestDist) {
-                    bestDist = d;
-                    bestIndex = i + k;
-                }
-            }
-        }
-
-        for (; i < count; i++, j += 3) {
+        for (int i = 0, j = 0; i < count; i++, j += 3) {
             double dx = coords[j] - x;
             double dy = coords[j + 1] - y;
             double dz = coords[j + 2] - z;

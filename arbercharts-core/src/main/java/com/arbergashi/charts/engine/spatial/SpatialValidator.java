@@ -130,7 +130,7 @@ public final class SpatialValidator {
                 "SpatialValidationReport",
                 "scenario=" + scenario,
                 "points=" + pointCount,
-                "species=" + VectorIntrinsics.getPreferredSpecies().length(),
+                "species=" + VectorIntrinsics.getLaneCount(),
                 "maxDeltaX=" + delta[0],
                 "maxDeltaY=" + delta[1],
                 "threshold=" + SIMD_PRECISION_THRESHOLD,

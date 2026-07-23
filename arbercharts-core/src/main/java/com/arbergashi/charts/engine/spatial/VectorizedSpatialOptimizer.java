@@ -1,10 +1,6 @@
 package com.arbergashi.charts.engine.spatial;
 
 import com.arbergashi.charts.api.PlotContext;
-import jdk.incubator.vector.DoubleVector;
-import jdk.incubator.vector.VectorMask;
-import jdk.incubator.vector.VectorOperators;
-import jdk.incubator.vector.VectorSpecies;
 
 /**
  * SIMD-aware optimizer for spatial buffers.
@@ -50,6 +46,7 @@ public final class VectorizedSpatialOptimizer {
     private double lastY;
     private boolean preservePeaks = true;
     private boolean exportPeaks = false;
+    private boolean[] inBoundsMask;
 
     /**
      * Sets the minimum pixel distance between retained points.
@@ -200,7 +197,12 @@ public final class VectorizedSpatialOptimizer {
         double[] sy = scratch.getScratchY();
         double[] sz = scratch.getScratchZ();
 
-        VectorSpecies<Double> species = VectorIntrinsics.getPreferredSpecies();
+        boolean simd = VectorIntrinsics.isAvailable() && laneCount == VectorIntrinsics.getLaneCount();
+        boolean[] inBounds = inBoundsMask;
+        if (inBounds == null || inBounds.length < laneCount) {
+            inBounds = new boolean[laneCount];
+            inBoundsMask = inBounds;
+        }
         int write = 0;
 
         for (int i = 0; i < count; i += laneCount) {
@@ -212,18 +214,16 @@ public final class VectorizedSpatialOptimizer {
                 sz[j] = in[base + 2];
             }
 
-            VectorMask<Double> inRange = species.indexInRange(0, remaining);
-            DoubleVector vx = DoubleVector.fromArray(species, sx, 0);
-            DoubleVector vy = DoubleVector.fromArray(species, sy, 0);
-
-            VectorMask<Double> mask = vx.compare(VectorOperators.GE, minX)
-                    .and(vx.compare(VectorOperators.LE, maxX))
-                    .and(vy.compare(VectorOperators.GE, minY))
-                    .and(vy.compare(VectorOperators.LE, maxY))
-                    .and(inRange);
+            if (simd) {
+                SpatialSimdKernels.boundsMask(sx, sy, remaining, minX, maxX, minY, maxY, inBounds);
+            } else {
+                for (int j = 0; j < remaining; j++) {
+                    inBounds[j] = sx[j] >= minX && sx[j] <= maxX && sy[j] >= minY && sy[j] <= maxY;
+                }
+            }
 
             for (int j = 0; j < remaining; j++) {
-                if (!mask.laneIsSet(j)) continue;
+                if (!inBounds[j]) continue;
                 double x = sx[j];
                 double y = sy[j];
                 double z = sz[j];
