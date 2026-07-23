@@ -11,6 +11,7 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -20,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Headless smoke test over the full renderer catalog: every renderer is
  * instantiated and rendered once into an image with its demo model. Catches
- * registry id collisions, broken static initializers, and render-path
- * exceptions across the whole renderer surface.
+ * registry id collisions, broken static initializers, render-path
+ * exceptions, and blank output.
  */
 class RendererSmokeTest {
     private static final Dimension SIZE = new Dimension(640, 400);
@@ -40,23 +41,31 @@ class RendererSmokeTest {
             "com.arbergashi.charts.render.common.PerformanceAuditRenderer");
 
     /**
-     * Known blank in the plain headless path (need panel/layer context,
-     * multi-series wiring, or spatial batch consumers). Tracked 2.1 backlog:
-     * each entry should either render standalone or document why it cannot.
+     * Oscillator-style indicators draw in their own value domain, not the
+     * price range; they are rendered with an explicit Y view window.
+     */
+    private static final Map<String, double[]> INDICATOR_Y_RANGES = Map.of(
+            "com.arbergashi.charts.render.financial.ADXRenderer", new double[]{0, 100},
+            "com.arbergashi.charts.render.financial.ATRRenderer", new double[]{0, 20},
+            "com.arbergashi.charts.render.financial.MACDRenderer", new double[]{-10, 10},
+            "com.arbergashi.charts.render.financial.StochasticRenderer", new double[]{0, 100});
+
+    /**
+     * Known blank in the plain headless path. Tracked 2.1 backlog:
+     * - Spatial server pipeline emits no path batch for these yet:
+     *   LineSpatial, SmithChart, TernaryPlot.
+     * - Need attached prediction/animation state:
+     *   PredictivePath, PredictiveShadow.
+     * - Config-gated overlays, disabled by default (documented behavior):
+     *   Calibration, PhysicalScale.
      */
     private static final Set<String> KNOWN_BLANK_HEADLESS = Set.of(
             "com.arbergashi.charts.render.standard.LineSpatialRenderer",
-            "com.arbergashi.charts.render.standard.PredictivePathRenderer",
-            "com.arbergashi.charts.render.financial.ADXRenderer",
-            "com.arbergashi.charts.render.financial.ATRRenderer",
-            "com.arbergashi.charts.render.financial.MACDRenderer",
-            "com.arbergashi.charts.render.financial.PointAndFigureAdvancedRenderer",
-            "com.arbergashi.charts.render.financial.StochasticRenderer",
-            "com.arbergashi.charts.render.medical.CalibrationRenderer",
             "com.arbergashi.charts.render.specialized.SmithChartRenderer",
             "com.arbergashi.charts.render.specialized.TernaryPlotRenderer",
-            "com.arbergashi.charts.render.circular.SunburstRenderer",
+            "com.arbergashi.charts.render.standard.PredictivePathRenderer",
             "com.arbergashi.charts.render.predictive.PredictiveShadowRenderer",
+            "com.arbergashi.charts.render.medical.CalibrationRenderer",
             "com.arbergashi.charts.render.common.PhysicalScaleRenderer");
 
     @TestFactory
@@ -78,7 +87,10 @@ class RendererSmokeTest {
         ChartModel model = RendererDemoDataFactory.build(entry.category(), entry.className());
         assertNotNull(model, "no demo model for " + entry.className());
 
-        BufferedImage image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer);
+        double[] range = INDICATOR_Y_RANGES.get(entry.className());
+        BufferedImage image = (range == null)
+                ? service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer)
+                : service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer, range[0], range[1]);
         assertNotNull(image, "renderer produced no image: " + entry.className());
         if (!KNOWN_BLANK_HEADLESS.contains(entry.className())) {
             assertTrue(hasContent(image), "renderer produced a blank image: " + entry.className());
