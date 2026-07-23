@@ -1,7 +1,6 @@
 package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
@@ -39,9 +38,13 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
         int count = model.getPointCount();
         if (count == 0) return;
 
-        double box = 1.0;
+        double box = deriveBoxSize(context);
 
-        List<Integer> columns = RendererAllocationCache.getList(this, "columns");
+        List<Integer> directions = RendererAllocationCache.getList(this, "pnf.directions");
+        List<Double> levels = RendererAllocationCache.getList(this, "pnf.levels");
+        directions.clear();
+        levels.clear();
+
         double currentColBase = model.getY(0);
         int direction = 0; // 1 = up, -1 = down
 
@@ -50,34 +53,75 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
             if (direction >= 0 && price >= currentColBase + box) {
                 int boxes = (int) ((price - currentColBase) / box);
                 for (int i = 0; i < boxes; i++) {
-                    columns.add(1);
+                    directions.add(1);
+                    levels.add(currentColBase + (i + 1) * box);
                 }
                 currentColBase += boxes * box;
                 direction = 1;
             } else if (direction <= 0 && price <= currentColBase - box) {
                 int boxes = (int) ((currentColBase - price) / box);
                 for (int i = 0; i < boxes; i++) {
-                    columns.add(-1);
+                    directions.add(-1);
+                    levels.add(currentColBase - (i + 1) * box);
                 }
                 currentColBase -= boxes * box;
                 direction = -1;
             }
         }
+        int boxCount = directions.size();
+        if (boxCount == 0) return;
+
+        int columnCount = 1;
+        for (int i = 1; i < boxCount; i++) {
+            if (!directions.get(i).equals(directions.get(i - 1))) columnCount++;
+        }
 
         ArberRect bounds = context.getPlotBounds();
-        double w = bounds.width();
-        double colW = Math.max(6.0, w / Math.max(1, columns.size()));
+        double colW = Math.max(6.0, bounds.width() / Math.max(1, columnCount));
 
-        int i = 0;
         double[] buf = pBuffer();
-        for (int v : columns) {
-            double x = bounds.x() + i * colW;
-            context.mapToPixel(0, (v > 0) ? 1 : -1, buf);
-            double y = buf[1];
-            ArberColor color = v > 0 ? themeBullish(context) : themeBearish(context);
-            canvas.setColor(color);
-            canvas.fillRect((float) x, (float) (y - colW / 2.0), (float) colW, (float) colW);
-            i++;
+        context.mapToPixel(0, levels.get(0), buf);
+        double y0 = buf[1];
+        context.mapToPixel(0, levels.get(0) + box, buf);
+        double boxH = Math.max(3.0, Math.abs(y0 - buf[1]));
+        float half = (float) (Math.min(colW, boxH) * 0.4);
+
+        canvas.setStroke(1.2f);
+        int col = 0;
+        int prev = directions.get(0);
+        for (int i = 0; i < boxCount; i++) {
+            int v = directions.get(i);
+            if (v != prev) {
+                col++;
+                prev = v;
+            }
+            float x = (float) (bounds.x() + col * colW + colW * 0.5);
+            context.mapToPixel(0, levels.get(i), buf);
+            float y = (float) buf[1];
+            if (v > 0) {
+                canvas.setColor(themeBullish(context));
+                drawCross(canvas, x, y, half);
+            } else {
+                canvas.setColor(themeBearish(context));
+                canvas.drawRect(x - half, y - half, half * 2f, half * 2f);
+            }
         }
+    }
+
+    private static void drawCross(ArberCanvas canvas, float x, float y, float half) {
+        float[] xs = { x - half, x + half };
+        float[] ys = { y - half, y + half };
+        canvas.drawPolyline(xs, ys, 2);
+        ys[0] = y + half;
+        ys[1] = y - half;
+        canvas.drawPolyline(xs, ys, 2);
+    }
+
+    private double deriveBoxSize(PlotContext context) {
+        double range = context.getMaxY() - context.getMinY();
+        if (Double.isFinite(range) && range > 0.0) {
+            return range / 50.0;
+        }
+        return 1.0;
     }
 }

@@ -86,8 +86,7 @@ public final class RendererDemoDataFactory {
             "StreamgraphRenderer"
     );
     private static final Set<String> PATH_SUNBURST_RENDERERS = Set.of(
-            "com.arbergashi.charts.render.specialized.SunburstRenderer",
-            "com.arbergashi.charts.render.circular.SunburstRenderer"
+            "com.arbergashi.charts.render.specialized.SunburstRenderer"
     );
     private static final Set<String> LINK_LABEL_RENDERERS = Set.of(
             "ChordFlowRenderer",
@@ -385,6 +384,7 @@ public final class RendererDemoDataFactory {
     private static ChartModel circularRendererModel(String simple) {
         return switch (simple) {
             case "CircularLatencyOverlayRenderer" -> gaugeModel();
+            case "SunburstRenderer" -> hierarchicalModel();
             default -> circularModel();
         };
     }
