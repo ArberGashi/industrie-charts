@@ -33,6 +33,10 @@ import java.util.concurrent.ArrayBlockingQueue;
  * Headless render service with a lightweight session pool.
  */
 public final class ServerRenderService {
+    static {
+        com.arbergashi.charts.render.RendererBootstrap.ensureRegistered();
+    }
+
     private static final System.Logger LOGGER = System.getLogger(ServerRenderService.class.getName());
     private final RenderSessionPool pool;
     private final boolean metricsEnabled;
@@ -94,7 +98,39 @@ public final class ServerRenderService {
         }
     }
 
+    /**
+     * Renders with an explicit Y view window instead of the model-derived range.
+     *
+     * <p>Use this for renderers whose value domain differs from the model data,
+     * e.g. oscillator indicators (MACD, Stochastic) that are shown in their own
+     * pane with their own scale inside a chart panel.</p>
+     *
+     * @param viewMinY lower bound of the visible Y range
+     * @param viewMaxY upper bound of the visible Y range
+     */
+    public byte[] renderToPng(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer,
+                              double viewMinY, double viewMaxY) {
+        BufferedImage image = renderToImage(model, size, theme, renderer, viewMinY, viewMaxY);
+        try (java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            javax.imageio.ImageIO.write(image, "png", out);
+            return out.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Failed to encode PNG", e);
+        }
+    }
+
     public BufferedImage renderToImage(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer) {
+        return renderToImage(model, size, theme, renderer, Double.NaN, Double.NaN);
+    }
+
+    /**
+     * Renders with an explicit Y view window instead of the model-derived range.
+     *
+     * @param viewMinY lower bound of the visible Y range (NaN = derive from model)
+     * @param viewMaxY upper bound of the visible Y range (NaN = derive from model)
+     */
+    public BufferedImage renderToImage(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer,
+                                       double viewMinY, double viewMaxY) {
         if (model == null || size == null) {
             throw new IllegalArgumentException("model and size are required");
         }
@@ -108,9 +144,7 @@ public final class ServerRenderService {
             Arrays.fill(session.canvas.pixels(), 0);
 
             ArberRect bounds = new ArberRect(0, 0, width, height);
-            double viewMinY = Double.NaN;
-            double viewMaxY = Double.NaN;
-            if (model instanceof FinancialChartModel fin) {
+            if (Double.isNaN(viewMinY) && Double.isNaN(viewMaxY) && model instanceof FinancialChartModel fin) {
                 double[] lows = fin.getLowData();
                 double[] highs = fin.getHighData();
                 int count = Math.min(fin.getPointCount(), Math.min(lows.length, highs.length));
