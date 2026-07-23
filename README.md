@@ -29,7 +29,7 @@ ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisieru
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-core</artifactId>
-    <version>2.0.1</version>
+    <version>2.1.0</version>
 </dependency>
 ```
 
@@ -44,7 +44,7 @@ Fuer serverseitiges Rendering (PNG-Export in REST-APIs, Reports, Batch-Jobs) gen
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-spring-boot-starter</artifactId>
-    <version>2.0.1</version>
+    <version>2.1.0</version>
 </dependency>
 ```
 
