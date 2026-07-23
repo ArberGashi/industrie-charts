@@ -66,8 +66,8 @@
                  Example: mvn -Darbercharts.buildDirSuffix=-local clean package -->
             <arbercharts.buildDirSuffix></arbercharts.buildDirSuffix>
 
-        <!-- v2.0 baseline: FlatLaf 3.7 (upgrade tracked separately) -->
-        <flatlaf.version>3.7</flatlaf.version>
+        <!-- FlatLaf 3.7.x line; 4.x evaluation tracked separately -->
+        <flatlaf.version>3.7.2</flatlaf.version>
         <!-- TODO: Evaluate FlatLaf 4.x once stable for this codebase -->
         <spring.boot.version>4.0.2</spring.boot.version>
 	        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
