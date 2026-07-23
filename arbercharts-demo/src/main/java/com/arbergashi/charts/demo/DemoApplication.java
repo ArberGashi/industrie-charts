@@ -1370,10 +1370,8 @@ public final class DemoApplication {
             gaugeRenderer.setAnimationProfile(AnimationProfile.ENTERPRISE);
         }
         if (renderer instanceof com.arbergashi.charts.render.financial.Candlestick3DRenderer candle3d) {
-            // Demo-safe 3D depth profile: avoid huge volume-based Z that collapses projection.
-            candle3d.setZOffset(0.0)
-                    .setZScale(0.0000000025)
-                    .setZDepth(0.09)
+            // Volume-based Z is normalized in the renderer since 2.1.0; defaults are safe.
+            candle3d.setZDepth(0.09)
                     .setLodDepthThreshold(2.2)
                     .setSolid(true);
         }

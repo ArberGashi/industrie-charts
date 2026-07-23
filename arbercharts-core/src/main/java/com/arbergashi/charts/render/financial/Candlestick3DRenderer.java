@@ -27,7 +27,7 @@ public final class Candlestick3DRenderer extends AbstractSpatialLayer {
     private final double[] singleIn = new double[3];
     private final double[] singleOut = new double[3];
     private double zOffset = 0.0;
-    private double zScale = 0.002;
+    private double zScale = 0.5;
     private double zDepth = 0.06;
     private double lodDepthThreshold = 1.1;
     private boolean solidEnabled = false;
@@ -47,6 +47,14 @@ public final class Candlestick3DRenderer extends AbstractSpatialLayer {
         return this;
     }
 
+    /**
+     * Scales the normalized per-candle volume into depth units.
+     *
+     * <p>Since 2.1.0 the volume is normalized to {@code [0..1]} over the model
+     * before scaling, so the default works for any volume magnitude. Previously
+     * the raw volume was multiplied directly, which collapsed the perspective
+     * projection for realistic volumes.</p>
+     */
     public Candlestick3DRenderer setZScale(double zScale) {
         this.zScale = zScale;
         return this;
@@ -111,6 +119,17 @@ public final class Candlestick3DRenderer extends AbstractSpatialLayer {
         double[] hitCoords = hitBuffer.getInputCoords();
         double lodThreshold = resolveLodThreshold();
 
+        double volMin = Double.POSITIVE_INFINITY;
+        double volMax = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < count; i++) {
+            double v = (fin != null) ? fin.getVolume(i) : model.getWeight(i);
+            if (Double.isFinite(v)) {
+                volMin = Math.min(volMin, v);
+                volMax = Math.max(volMax, v);
+            }
+        }
+        double volSpan = (volMax > volMin) ? (volMax - volMin) : 0.0;
+
         for (int i = 0; i < count; i++) {
             double xVal = model.getX(i);
             double high = (fin != null) ? fin.getHigh(i) : model.getMax(i);
@@ -125,7 +144,8 @@ public final class Candlestick3DRenderer extends AbstractSpatialLayer {
             double yHigh = ((high - minY) / spanY) * 2.0 - 1.0;
             double yLow = ((low - minY) / spanY) * 2.0 - 1.0;
 
-            double zBase = zOffset + volume * zScale;
+            double volNorm = (volSpan > 0.0 && Double.isFinite(volume)) ? (volume - volMin) / volSpan : 0.0;
+            double zBase = zOffset + volNorm * zScale;
             double zFront = zBase;
             double zBack = zBase + zDepth;
 
