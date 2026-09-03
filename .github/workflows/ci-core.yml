@@ -8,6 +8,11 @@ on:
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
+    # bash on every runner: PowerShell mangles "-Dprop=" with an empty value into a
+    # bogus lifecycle phase (LifecyclePhaseNotFoundException on windows-latest).
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:

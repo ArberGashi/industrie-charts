@@ -4,17 +4,17 @@
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Maven Central](https://img.shields.io/maven-central/v/com.arbergashi/arbercharts-core)
 
-ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisierung auf dem JVM-Stack:
-156 Renderer, Zero-GC-Renderpfade, SIMD-beschleunigt wo verfuegbar - und ohne spezielle JVM-Flags lauffaehig.
+Industrie Charts is a Java 25 charting library for high-performance data visualisation on the JVM:
+156 renderers, zero-GC render paths, SIMD-accelerated where available, and runnable without special JVM flags.
 
-## Kurzbeschreibung
+## In short
 
-- Fokus auf High-Performance Rendering fuer Charts und technische Visualisierungen
-- Serverseitiges Headless-Rendering (Spring Boot) und Swing-Desktop-Integration
-- Vector API (SIMD) wird zur Laufzeit erkannt; ohne `--add-modules jdk.incubator.vector`
-  greift transparent der skalare Fallback mit identischen Ergebnissen
+- Focus on high-performance rendering for charts and technical visualisations
+- Server-side headless rendering (Spring Boot) and Swing desktop integration
+- The Vector API (SIMD) is detected at runtime; without `--add-modules jdk.incubator.vector`
+  the scalar fallback takes over transparently with identical results
 
-## Bildvorschau (Renderer)
+## Preview (renderers)
 
 ![Candlestick Chart](docs/images/candlestick.png)
 ![Heatmap Chart](docs/images/heatmap.png)
@@ -33,12 +33,12 @@ ArberCharts ist eine Java-25 Charting-Library fuer performante Datenvisualisieru
 </dependency>
 ```
 
-Fuer Swing-Anwendungen zusaetzlich `arbercharts-swing-bridge`, fuer Server-Rendering
-`arbercharts-server-bridge` oder direkt der Spring-Boot-Starter (siehe unten).
+For Swing applications add `arbercharts-swing-bridge`; for server rendering use
+`arbercharts-server-bridge` or the Spring Boot starter directly (see below).
 
-## Spring Boot Quick Start
+## Spring Boot quick start
 
-Fuer serverseitiges Rendering (PNG-Export in REST-APIs, Reports, Batch-Jobs) genuegt der Spring-Boot-Starter:
+For server-side rendering (PNG export in REST APIs, reports, batch jobs) the Spring Boot starter is all you need:
 
 ```xml
 <dependency>
@@ -48,8 +48,8 @@ Fuer serverseitiges Rendering (PNG-Export in REST-APIs, Reports, Batch-Jobs) gen
 </dependency>
 ```
 
-Der Starter konfiguriert automatisch einen headless `ServerRenderService`
-(Session-Pool, optional Micrometer-Metriken). Es sind keine JVM-Flags noetig.
+The starter configures a headless `ServerRenderService` automatically
+(session pool, optional Micrometer metrics). No JVM flags are required.
 
 ```java
 @RestController
@@ -74,35 +74,35 @@ public class ChartController {
 }
 ```
 
-Konfiguration ueber `application.properties`:
+Configuration via `application.properties`:
 
 ```properties
 arbercharts.server.pool-size=4
 arbercharts.server.metrics-enabled=true
 ```
 
-## Demo bauen und starten
+## Build and run the demo
 
 ```bash
 mvn -pl arbercharts-demo -am package
 java -jar arbercharts-demo/target/arbercharts-demo-*.jar
 ```
 
-Die Demo aktiviert benoetigte Laufzeit-Flags selbst (Neustart-Mechanismus im Launcher).
-Fertige Demo-JARs liegen den GitHub Releases bei.
+The demo enables the runtime flags it needs by itself (restart mechanism in the launcher).
+Ready-made demo JARs are attached to the GitHub releases.
 
-## Dokumentation
+## Documentation
 
 - [Quick Start](docs/QUICK_START.md)
 - [User Guide](docs/USER_GUIDE.md)
-- [Renderer-Katalog](docs/RENDERER_CATALOG.md)
+- [Renderer Catalog](docs/RENDERER_CATALOG.md)
 - [Release Notes](RELEASE_NOTES.md)
 
 ## Licensing
 
-ArberCharts-Artefakte stehen unter der MIT-Lizenz.
-Siehe `LICENSE`, `NOTICE` und `BINARY-LICENSE.md`.
-Kommerzieller Support und SLAs: siehe [docs/PRICING.md](docs/PRICING.md).
+Industrie Charts artifacts are released under the MIT license.
+See `LICENSE`, `NOTICE` and `BINARY-LICENSE.md`.
+Commercial support and SLAs: see [docs/PRICING.md](docs/PRICING.md).
 
 ## Support
 
