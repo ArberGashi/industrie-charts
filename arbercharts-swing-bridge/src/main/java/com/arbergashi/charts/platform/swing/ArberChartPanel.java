@@ -1603,7 +1603,20 @@ public class ArberChartPanel extends JPanel {
     @Override
     public void setLocale(Locale locale) {
         this.locale = (locale != null ? locale : Locale.getDefault());
+        // Keep the AWT component locale in sync, otherwise Component.getLocale() keeps
+        // answering with the JVM default (CI on Linux: "en" instead of "en_US").
+        super.setLocale(this.locale);
         repaint();
+    }
+
+    /**
+     * Returns the locale used for formatting axis labels and tooltips.
+     *
+     * @return the configured locale, never null
+     */
+    @Override
+    public Locale getLocale() {
+        return locale;
     }
 
     /**
