@@ -95,7 +95,8 @@ class CoreSovereigntyTest {
         List<Path> javaFiles = sourceFiles(resolvePath("src/main/java"));
         Assertions.assertFalse(javaFiles.isEmpty(), "No core source files found for scan.");
         for (Path path : javaFiles) {
-            String pathStr = path.toString();
+            // Normalise separators so the allowlist matches on Windows runners as well.
+            String pathStr = path.toString().replace('\\', '/');
             // Check if path is in allowlist
             boolean isAllowed = AWT_ALLOWLIST_PATHS.stream()
                 .anyMatch(allowed -> pathStr.contains(allowed));
