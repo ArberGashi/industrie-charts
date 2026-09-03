@@ -98,3 +98,7 @@ backup/
 site/
 binaries/
 dist/
+
+# Die Startskripte der Demo gehoeren ins Repository (CI: stage-demo-dist kopiert sie)
+!arbercharts-demo/src/main/dist/
+!arbercharts-demo/src/main/dist/**
