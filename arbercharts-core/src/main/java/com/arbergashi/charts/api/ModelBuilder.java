@@ -10,7 +10,7 @@ import com.arbergashi.charts.api.types.ArberColor;
 import java.util.ArrayList;
 import java.util.List;
 /**
- * <h1>ModelBuilder - Fluent API for Chart Data</h1>
+ * <h2>ModelBuilder - Fluent API for Chart Data</h2>
  *
  * <p>End-user friendly builder for creating chart models with type-safe,
  * self-documenting methods. Follows the builder pattern for maximum clarity.</p>

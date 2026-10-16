@@ -1,5 +1,7 @@
 package com.arbergashi.charts.engine.spatial;
 
+import java.util.Arrays;
+
 /**
  * Reusable coordinate buffers for spatial projections.
  *
@@ -12,6 +14,9 @@ public final class SpatialBuffer {
     private final int pointCapacity;
     private final SpatialScratchBuffer scratch;
     private final SpatialPeakMetadata peakMetadata;
+    private long[] pointStyles;
+    private boolean[] pathStarts;
+    private boolean[] metadataPresent;
     private boolean ringEnabled = false;
     private int ringStart = 0;
     private int ringCount = 0;
@@ -39,6 +44,49 @@ public final class SpatialBuffer {
 
     public double[] getOutputCoords() {
         return outputCoords;
+    }
+
+    /**
+     * Attaches optional drawing metadata to a point in this chunk. Consumers
+     * forwarding a buffer retain these styles and path boundaries automatically.
+     * Storage is allocated on first use and reused for subsequent chunks.
+     * @param index point index within the buffer capacity
+     * @param styleKey packed spatial style
+     * @param pathStart whether this point starts an independent path
+     */
+    public void setPointMetadata(int index, long styleKey, boolean pathStart) {
+        if (pointStyles == null) {
+            pointStyles = new long[pointCapacity];
+            pathStarts = new boolean[pointCapacity];
+            metadataPresent = new boolean[pointCapacity];
+        }
+        pointStyles[index] = styleKey;
+        pathStarts[index] = pathStart;
+        metadataPresent[index] = true;
+    }
+
+    /**
+     * Returns the point style, or the consumer's style when no metadata is set.
+     * @param index point index
+     * @param fallbackStyle consumer style
+     * @return packed style key
+     */
+    public long getPointStyleKey(int index, long fallbackStyle) {
+        return metadataPresent != null && metadataPresent[index] ? pointStyles[index] : fallbackStyle;
+    }
+
+    /**
+     * Indicates an explicit path boundary carried by the point.
+     * @param index point index
+     * @return whether this point must not connect to the previous point
+     */
+    public boolean isPathStart(int index) {
+        return metadataPresent != null && metadataPresent[index] && pathStarts[index];
+    }
+
+    /** Clears optional drawing metadata before reusing this buffer for unstyled data. */
+    public void clearPointMetadata() {
+        if (metadataPresent != null) Arrays.fill(metadataPresent, false);
     }
 
     public SpatialScratchBuffer getScratch() {

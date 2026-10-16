@@ -8,7 +8,6 @@ import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
 import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
-import com.arbergashi.charts.render.analysis.VectorFieldRenderer;
 import com.arbergashi.charts.render.financial.PredictiveCandleRenderer;
 import com.arbergashi.charts.render.forensic.PlaybackStatusRenderer;
 import com.arbergashi.charts.render.grid.MedicalGridLayer;
@@ -45,6 +44,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.ToolTipManager;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -73,12 +73,12 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Taskbar;
-import java.awt.event.InputEvent;
-import java.awt.event.HierarchyEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.management.ManagementFactory;
@@ -90,23 +90,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * ArberCharts Demo Application - Enterprise-grade showcase for all 157 renderers.
+ * Swing workbench for exploring the Industrie Charts renderer catalog.
  *
- * <p>This application demonstrates the full capabilities of the ArberCharts framework,
+ * <p>This application demonstrates the capabilities of the Industrie Charts framework,
  * including all renderer categories, theme switching, export functionality, and
  * real-time data streaming. Built with modern Swing using FlatLaf themes.
  *
  * <p><strong>Features:</strong>
  * <ul>
- *   <li>157 production renderers across 11 categories</li>
+ *   <li>Searchable renderer catalog with category navigation</li>
  *   <li>Modern Dark/Light themes with Inter font</li>
  *   <li>Real-time data streaming and updates</li>
- *   <li>Export to PNG/SVG/PDF/CSV</li>
- *   <li>Zero-GC rendering architecture</li>
+ *   <li>Chart export to PNG and optional SVG/PDF backends</li>
  *   <li>High-DPI/Retina display support</li>
  * </ul>
  *
@@ -131,13 +132,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 2.0.0
  */
 public final class DemoApplication {
-    private static final int SHOWCASE_ANIMATION_DELAY_MS = 33;
 
     /** Application version. */
-    private static final String VERSION = "2.0.0";
+    private static final String VERSION = resolveVersion();
 
     /** Application name for display. */
-    private static final String APP_NAME = "ArberCharts Demo";
+    private static final String APP_NAME = "Industrie Charts";
 
     /** Copyright notice. */
     private static final String COPYRIGHT = "© 2026 Arber Gashi";
@@ -208,6 +208,7 @@ public final class DemoApplication {
 
     private final RendererCatalog catalog = RendererCatalog.load();
     private final Map<String, JPanel> rendererPanels = new HashMap<>();
+    private final Map<String, ArberChartPanel> chartPanels = new HashMap<>();
     private final CardLayout detailLayout = new CardLayout();
     private final JPanel detailHost = new JPanel(detailLayout);
     private final JLabel statusLabel = new JLabel("Ready");
@@ -222,7 +223,18 @@ public final class DemoApplication {
     private JFrame mainFrame;
     private JPanel headerPanel;
     private JPanel footerPanel;
+    private JPanel sidebarPanel;
+    private JPanel editorToolbar;
+    private JLabel activeRendererLabel;
+    private JLabel categoryLabel;
+    private JPanel catalogBody;
+    private JTextField catalogFilter;
+    private JButton themeSwitchButton;
+    private JButton searchEverywhereButton;
+    private JButton reloadButton;
+    private JButton exportButton;
     private JLabel headerTitleLabel;
+    private JLabel headerMarkLabel;
     private JLabel versionLabel;
     private JDialog searchEverywhereDialog;
     private JTextField searchEverywhereField;
@@ -246,7 +258,7 @@ public final class DemoApplication {
     public DemoApplication(String initialTheme) {
         this.currentThemeName = initialTheme;
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Renderers");
-        Map<String, DefaultMutableTreeNode> categories = new HashMap<>();
+        Map<String, DefaultMutableTreeNode> categories = new LinkedHashMap<>();
         for (RendererCatalogEntry entry : catalog.entries()) {
             categories.computeIfAbsent(entry.category(), key -> {
                 DefaultMutableTreeNode node = new DefaultMutableTreeNode(key);
@@ -256,6 +268,10 @@ public final class DemoApplication {
         }
         tree = new JTree(new DefaultTreeModel(root));
         tree.setRootVisible(false);
+        tree.setShowsRootHandles(true);
+        tree.setBorder(BorderFactory.createEmptyBorder(4, 6, 8, 6));
+        tree.getAccessibleContext().setAccessibleName("Renderer catalog");
+        ToolTipManager.sharedInstance().registerComponent(tree);
         tree.setCellRenderer(new RendererTreeCell());
         tree.addTreeSelectionListener(new RendererSelectionListener());
         installSpeedSearch();
@@ -264,26 +280,21 @@ public final class DemoApplication {
     private void show() {
         mainFrame = new JFrame(APP_NAME);
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mainFrame.setMinimumSize(new Dimension(1280, 820));
-        mainFrame.setLayout(new BorderLayout());
+        mainFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent event) {
+                disposeDemoResources();
+            }
+
+            @Override
+            public void windowClosed(WindowEvent event) {
+                disposeDemoResources();
+            }
+        });
+        mainFrame.setMinimumSize(new Dimension(1000, 680));
+        mainFrame.setSize(1360, 880);
         mainFrame.setJMenuBar(buildMenuBar(mainFrame));
-
-        JPanel header = buildHeader();
-        mainFrame.add(header, BorderLayout.NORTH);
-
-        JScrollPane treeScroll = new JScrollPane(tree);
-        treeScroll.setBorder(BorderFactory.createEmptyBorder());
-
-        detailHost.add(buildEmptyDetail(), "empty");
-        detailLayout.show(detailHost, "empty");
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, detailHost);
-        split.setDividerLocation(280);
-        split.setResizeWeight(0.15);
-        split.setDividerSize(1);
-        split.setBorder(BorderFactory.createEmptyBorder());
-        split.setContinuousLayout(true);
-        mainFrame.add(split, BorderLayout.CENTER);
-        mainFrame.add(buildFooter(), BorderLayout.SOUTH);
+        mainFrame.setContentPane(buildWorkspace());
 
         configurePlatformWindow(mainFrame);
         configureMacOSMenuHandlers(mainFrame);
@@ -291,7 +302,6 @@ public final class DemoApplication {
         startMetricsTimer();
         applyApplicationIcons(mainFrame);
 
-        expandAll();
         mainFrame.setLocationRelativeTo(null);
         mainFrame.setVisible(true);
 
@@ -302,8 +312,37 @@ public final class DemoApplication {
             statusLabel.setText("Renderer catalog is empty.");
         }
 
-        updateStatus("Ready - " + catalog.entries().size() + " renderers available");
+    }
+
+    /** Builds the same Swing content for the desktop window and offscreen visual checks. */
+    JPanel buildWorkspace() {
+        JPanel workspace = new JPanel(new BorderLayout());
+        workspace.add(buildHeader(), BorderLayout.NORTH);
+        detailHost.add(buildEmptyDetail(), "empty");
+        detailLayout.show(detailHost, "empty");
+        detailHost.setMinimumSize(new Dimension(420, 320));
+
+        JPanel editor = new JPanel(new BorderLayout());
+        editor.add(buildEditorToolbar(), BorderLayout.NORTH);
+        editor.add(detailHost, BorderLayout.CENTER);
+        editor.setMinimumSize(new Dimension(420, 320));
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildSidebar(), editor);
+        split.setDividerLocation(292);
+        split.setResizeWeight(0.0);
+        split.setDividerSize(1);
+        split.setBorder(BorderFactory.createEmptyBorder());
+        split.setContinuousLayout(true);
+        workspace.add(split, BorderLayout.CENTER);
+        workspace.add(buildFooter(), BorderLayout.SOUTH);
+
+        catalog.entries().stream()
+                .filter(entry -> "LineRenderer".equals(entry.simpleName()))
+                .findFirst()
+                .or(() -> catalog.entries().stream().findFirst())
+                .ifPresent(this::selectRenderer);
+        SwingUtilities.invokeLater(() -> tree.scrollRowToVisible(0));
         applyDemoPalette();
+        return workspace;
     }
 
     /**
@@ -362,47 +401,57 @@ public final class DemoApplication {
     private void updateMetrics() {
         long count = renderCount.get();
         long totalNs = totalRenderTimeNs.get();
-        if (count > 0) {
-            double avgMs = (totalNs / count) / 1_000_000.0;
-            metricsLabel.setText(String.format("Renders: %d | Avg: %.2fms", count, avgMs));
-        }
+        double avgMs = count == 0 ? 0.0 : (totalNs / count) / 1_000_000.0;
+        metricsLabel.setText(String.format(Locale.ROOT, "Charts opened: %d   ·   Setup: %.1f ms", count, avgMs));
+        metricsLabel.setToolTipText("Average chart construction time; excludes frame rendering");
     }
 
     private JPanel buildHeader() {
         DemoPalette palette = currentPalette();
-        JPanel header = new JPanel(new BorderLayout());
+        JPanel header = new JPanel(new BorderLayout(24, 0));
         this.headerPanel = header;
-        header.setBorder(BorderFactory.createEmptyBorder(14, 20, 14, 20));
-        header.setBackground(palette.windowBackground());
+        header.setPreferredSize(new Dimension(0, 48));
 
-        JPanel left = new JPanel();
-        left.setLayout(new BoxLayout(left, BoxLayout.X_AXIS));
-        left.setBackground(palette.windowBackground());
+        JPanel identity = new JPanel();
+        identity.setLayout(new BoxLayout(identity, BoxLayout.X_AXIS));
+        identity.setOpaque(false);
         if (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) {
-            left.add(Box.createHorizontalStrut(70));
+            identity.add(Box.createHorizontalStrut(76));
         }
-        this.headerTitleLabel = null;
+        JLabel mark = new JLabel(loadTablerOutlineIcon("chart-line.svg", 20,
+                UIManager.getIcon("FileView.fileIcon"), palette.accent()));
+        headerMarkLabel = mark;
+        mark.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        headerTitleLabel = new JLabel(APP_NAME);
+        headerTitleLabel.setFont(headerTitleLabel.getFont().deriveFont(Font.BOLD, 13f));
+        identity.add(mark);
+        identity.add(headerTitleLabel);
+        JLabel context = new JLabel("  /  Swing demo");
+        context.putClientProperty("demo.muted", true);
+        identity.add(context);
 
-        JPanel right = new JPanel();
-        right.setLayout(new BoxLayout(right, BoxLayout.X_AXIS));
-        right.setBackground(palette.windowBackground());
-        JButton searchEverywhereButton = createTitlebarIconButton(
-                loadTablerOutlineIcon("search.svg", 18, UIManager.getIcon("FileView.fileIcon"), palette.muted()));
-        searchEverywhereButton.setToolTipText("Search renderer by name (⌘F)");
+        JPanel actions = new JPanel();
+        actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
+        actions.setOpaque(false);
+        searchEverywhereButton = new JButton("Find renderer");
+        searchEverywhereButton.putClientProperty("JButton.buttonType", "toolBarButton");
+        searchEverywhereButton.setToolTipText("Find renderer (" + shortcutLabel("F") + ")");
         searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
+        searchEverywhereButton.getAccessibleContext().setAccessibleName("Find renderer");
+        actions.add(searchEverywhereButton);
+        JLabel shortcut = new JLabel(shortcutLabel("F"));
+        shortcut.putClientProperty("demo.muted", true);
+        shortcut.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 16));
+        shortcut.setFont(shortcut.getFont().deriveFont(11f));
+        actions.add(shortcut);
 
-        JButton themeSwitchButton = createTitlebarIconButton(
-                loadTablerOutlineIcon("sun-moon.svg", 18, UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
-        themeSwitchButton.setToolTipText("Toggle dark/light theme (⌘T)");
+        themeSwitchButton = createTitlebarIconButton(null);
+        themeSwitchButton.setToolTipText("Toggle light or dark theme (" + shortcutLabel("T") + ")");
+        themeSwitchButton.getAccessibleContext().setAccessibleName("Toggle light or dark theme");
         themeSwitchButton.addActionListener(evt -> toggleTheme());
-
-        right.add(searchEverywhereButton);
-        right.add(Box.createHorizontalStrut(10));
-        right.add(themeSwitchButton);
-
-        header.add(left, BorderLayout.WEST);
-        header.add(right, BorderLayout.EAST);
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
+        actions.add(themeSwitchButton);
+        header.add(identity, BorderLayout.WEST);
+        header.add(actions, BorderLayout.EAST);
         installHeaderWindowGestures(header);
         return header;
     }
@@ -410,48 +459,191 @@ public final class DemoApplication {
     private JButton createTitlebarIconButton(Icon icon) {
         JButton button = new JButton(icon);
         button.putClientProperty("JButton.buttonType", "toolBarButton");
-        button.putClientProperty("JComponent.minimumWidth", 34);
-        button.setFocusable(false);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-        button.setMargin(new java.awt.Insets(6, 8, 6, 8));
-        button.setPreferredSize(new Dimension(36, 30));
-        button.setMinimumSize(new Dimension(36, 30));
-        button.setMaximumSize(new Dimension(36, 30));
+        button.putClientProperty("JComponent.minimumWidth", 30);
+        button.setPreferredSize(new Dimension(32, 30));
+        button.setMinimumSize(new Dimension(32, 30));
+        button.setMaximumSize(new Dimension(32, 30));
         return button;
     }
 
+    private JPanel buildSidebar() {
+        sidebarPanel = new JPanel(new BorderLayout());
+        sidebarPanel.setMinimumSize(new Dimension(200, 200));
+        JPanel heading = new JPanel(new BorderLayout());
+        heading.setOpaque(false);
+        heading.setBorder(BorderFactory.createEmptyBorder(13, 16, 10, 14));
+        JLabel title = new JLabel("Renderer catalog");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
+        countLabel.setText(Integer.toString(catalog.entries().size()));
+        countLabel.setFont(countLabel.getFont().deriveFont(12f));
+        heading.add(title, BorderLayout.WEST);
+        heading.add(countLabel, BorderLayout.EAST);
+
+        catalogFilter = new JTextField();
+        catalogFilter.putClientProperty("JTextField.placeholderText", "Filter by name or category");
+        catalogFilter.putClientProperty("JTextField.showClearButton", true);
+        catalogFilter.getAccessibleContext().setAccessibleName("Filter renderer catalog");
+        catalogFilter.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent event) {
+                filterCatalog();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent event) {
+                filterCatalog();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent event) {
+                filterCatalog();
+            }
+        });
+        catalogFilter.addActionListener(event -> selectFirstVisibleRenderer());
+        catalogFilter.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent event) {
+                if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    catalogFilter.setText("");
+                } else if (event.getKeyCode() == KeyEvent.VK_DOWN) {
+                    selectFirstVisibleRenderer();
+                    tree.requestFocusInWindow();
+                }
+            }
+        });
+        JPanel search = new JPanel(new BorderLayout());
+        search.setOpaque(false);
+        search.setBorder(BorderFactory.createEmptyBorder(0, 12, 10, 12));
+        search.add(catalogFilter);
+        JPanel top = new JPanel(new BorderLayout());
+        top.setOpaque(false);
+        top.add(heading, BorderLayout.NORTH);
+        top.add(search, BorderLayout.SOUTH);
+        sidebarPanel.add(top, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(tree);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        catalogBody = new JPanel(new CardLayout());
+        catalogBody.setOpaque(false);
+        catalogBody.add(scroll, "catalog");
+        JLabel empty = new JLabel("No matching renderers", SwingConstants.CENTER);
+        empty.putClientProperty("demo.muted", true);
+        empty.setVerticalAlignment(SwingConstants.TOP);
+        empty.setBorder(BorderFactory.createEmptyBorder(20, 8, 0, 8));
+        catalogBody.add(empty, "empty");
+        sidebarPanel.add(catalogBody, BorderLayout.CENTER);
+
+        JLabel hint = new JLabel("Type to filter. Enter to open.");
+        hint.putClientProperty("demo.muted", true);
+        hint.setBorder(BorderFactory.createEmptyBorder(9, 16, 10, 12));
+        hint.setFont(hint.getFont().deriveFont(11f));
+        sidebarPanel.add(hint, BorderLayout.SOUTH);
+        return sidebarPanel;
+    }
+
+    private void filterCatalog() {
+        String query = catalogFilter.getText().strip().toLowerCase(Locale.ROOT);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Renderers");
+        Map<String, DefaultMutableTreeNode> categories = new LinkedHashMap<>();
+        int matches = 0;
+        for (RendererCatalogEntry entry : catalog.entries()) {
+            if (!matchesQuery(entry, query)) {
+                continue;
+            }
+            categories.computeIfAbsent(entry.category(), category -> {
+                DefaultMutableTreeNode node = new DefaultMutableTreeNode(category);
+                root.add(node);
+                return node;
+            }).add(new DefaultMutableTreeNode(entry));
+            matches++;
+        }
+        tree.setModel(new DefaultTreeModel(root));
+        countLabel.setText(query.isEmpty() ? Integer.toString(matches) : matches + " / " + catalog.entries().size());
+        ((CardLayout) catalogBody.getLayout()).show(catalogBody, matches == 0 ? "empty" : "catalog");
+        if (!query.isEmpty()) {
+            expandAll();
+        }
+        if (currentRendererKey != null) {
+            TreePath selected = findTreePath(catalog.getRequired(currentRendererKey));
+            if (selected != null) {
+                tree.setSelectionPath(selected);
+                tree.scrollPathToVisible(selected);
+            }
+        }
+    }
+
+    private static boolean matchesQuery(RendererCatalogEntry entry, String query) {
+        return query.isBlank()
+                || entry.simpleName().toLowerCase(Locale.ROOT).contains(query)
+                || entry.className().toLowerCase(Locale.ROOT).contains(query)
+                || entry.category().toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private void selectFirstVisibleRenderer() {
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+        if (root.getChildCount() > 0) {
+            DefaultMutableTreeNode category = (DefaultMutableTreeNode) root.getFirstChild();
+            DefaultMutableTreeNode first = (DefaultMutableTreeNode) category.getFirstChild();
+            tree.setSelectionPath(new TreePath(first.getPath()));
+        }
+    }
+
+    private void selectRenderer(RendererCatalogEntry entry) {
+        TreePath path = findTreePath(entry);
+        if (path == null && catalogFilter != null) {
+            catalogFilter.setText("");
+            path = findTreePath(entry);
+        }
+        if (path != null) {
+            tree.setSelectionPath(path);
+            tree.scrollPathToVisible(path);
+        }
+    }
+
     private JPanel buildFooter() {
-        DemoPalette palette = currentPalette();
         JPanel footer = new JPanel(new BorderLayout());
         this.footerPanel = footer;
-        footer.setBackground(palette.windowBackground());
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, palette.border()));
-
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        statusLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        statusLabel.setForeground(palette.muted());
-        statusLabel.setFont(statusLabel.getFont().deriveFont(12f));
-
-        metricsLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
+        statusLabel.setFont(statusLabel.getFont().deriveFont(11f));
+        metricsLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 14));
         metricsLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        metricsLabel.setForeground(palette.muted());
-        metricsLabel.setFont(metricsLabel.getFont().deriveFont(12f));
-        metricsLabel.setText("Renders: 0 | Avg: 0.00ms");
-
-        JLabel versionLabel = new JLabel("v" + VERSION);
-        this.versionLabel = versionLabel;
-        versionLabel.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        versionLabel.setForeground(palette.softMuted());
+        metricsLabel.setFont(metricsLabel.getFont().deriveFont(11f));
+        updateMetrics();
+        versionLabel = new JLabel(VERSION);
+        versionLabel.setToolTipText("Demo artifact version");
+        versionLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 14));
         versionLabel.setFont(versionLabel.getFont().deriveFont(11f));
-
-        JPanel leftPanel = new JPanel(new BorderLayout());
-        leftPanel.setOpaque(false);
-        leftPanel.add(statusLabel, BorderLayout.WEST);
-        leftPanel.add(versionLabel, BorderLayout.EAST);
-
-        footer.add(leftPanel, BorderLayout.WEST);
-        footer.add(metricsLabel, BorderLayout.EAST);
+        JPanel details = new JPanel(new BorderLayout());
+        details.setOpaque(false);
+        details.add(metricsLabel, BorderLayout.WEST);
+        details.add(versionLabel, BorderLayout.EAST);
+        footer.add(statusLabel, BorderLayout.CENTER);
+        footer.add(details, BorderLayout.EAST);
         return footer;
+    }
+
+    private static String shortcutLabel(String key) {
+        return (SystemInfo.isMacOS ? "⌘" : "Ctrl+") + key;
+    }
+
+    private static String resolveVersion() {
+        try (var input = DemoApplication.class.getResourceAsStream(
+                "/META-INF/maven/com.arbergashi/arbercharts-demo/pom.properties")) {
+            if (input != null) {
+                Properties properties = new Properties();
+                properties.load(input);
+                String version = properties.getProperty("version");
+                if (version != null && !version.isBlank()) {
+                    return version;
+                }
+            }
+        } catch (java.io.IOException exception) {
+            System.getLogger(DemoApplication.class.getName()).log(System.Logger.Level.WARNING,
+                    "Cannot read demo artifact version", exception);
+        }
+        String version = DemoApplication.class.getPackage().getImplementationVersion();
+        return version == null || version.isBlank() ? "development" : version;
     }
 
     private JMenuBar buildMenuBar(JFrame frame) {
@@ -944,10 +1136,7 @@ public final class DemoApplication {
         searchEverywhereModel.clear();
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.US);
         List<RendererCatalogEntry> matches = catalog.entries().stream()
-                .filter(entry -> normalized.isBlank()
-                        || entry.simpleName().toLowerCase(Locale.US).contains(normalized)
-                        || entry.className().toLowerCase(Locale.US).contains(normalized)
-                        || entry.category().toLowerCase(Locale.US).contains(normalized))
+                .filter(entry -> matchesQuery(entry, normalized))
                 .sorted((left, right) -> left.simpleName().compareToIgnoreCase(right.simpleName()))
                 .limit(120)
                 .toList();
@@ -967,12 +1156,8 @@ public final class DemoApplication {
         if (entry == null) {
             return;
         }
-        TreePath path = findTreePath(entry);
-        if (path != null) {
-            tree.setSelectionPath(path);
-            tree.scrollPathToVisible(path);
-            updateStatus("Selected " + entry.simpleName());
-        }
+        selectRenderer(entry);
+        updateStatus("Selected " + entry.simpleName());
         if (searchEverywhereDialog != null) {
             searchEverywhereDialog.setVisible(false);
         }
@@ -1145,9 +1330,44 @@ public final class DemoApplication {
         }
     }
 
+    private JPanel buildEditorToolbar() {
+        editorToolbar = new JPanel(new BorderLayout(16, 0));
+        editorToolbar.setPreferredSize(new Dimension(0, 48));
+        JPanel identity = new JPanel();
+        identity.setLayout(new BoxLayout(identity, BoxLayout.X_AXIS));
+        identity.setOpaque(false);
+        activeRendererLabel = new JLabel("Chart workspace");
+        activeRendererLabel.setFont(activeRendererLabel.getFont().deriveFont(Font.BOLD, 13f));
+        categoryLabel = new JLabel();
+        categoryLabel.setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 0));
+        categoryLabel.setFont(categoryLabel.getFont().deriveFont(12f));
+        identity.add(activeRendererLabel);
+        identity.add(categoryLabel);
+        JPanel actions = new JPanel();
+        actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
+        actions.setOpaque(false);
+        reloadButton = new JButton("Reload");
+        reloadButton.putClientProperty("JButton.buttonType", "toolBarButton");
+        reloadButton.setToolTipText("Reload the selected chart (" + shortcutLabel("R") + ")");
+        reloadButton.addActionListener(event -> refreshCurrent());
+        exportButton = new JButton("Export PNG");
+        exportButton.putClientProperty("JButton.buttonType", "toolBarButton");
+        exportButton.setToolTipText("Export the selected chart (" + shortcutLabel("E") + ")");
+        exportButton.addActionListener(event -> exportCurrentChart());
+        actions.add(reloadButton);
+        actions.add(Box.createHorizontalStrut(6));
+        actions.add(exportButton);
+        editorToolbar.add(identity, BorderLayout.CENTER);
+        editorToolbar.add(actions, BorderLayout.EAST);
+        updateChartActions();
+        return editorToolbar;
+    }
+
     private void openRenderer(RendererCatalogEntry entry) {
         if (entry == null) return;
         String key = entry.className();
+        currentRendererKey = key;
+        currentChartPanel = chartPanels.get(key);
         JPanel panel = rendererPanels.get(key);
         if (panel == null) {
             panel = buildRendererPanel(entry);
@@ -1155,48 +1375,45 @@ public final class DemoApplication {
             detailHost.add(panel, key);
         }
         detailLayout.show(detailHost, key);
-        currentRendererKey = key;
+        if (activeRendererLabel != null) {
+            activeRendererLabel.setText(entry.simpleName());
+            activeRendererLabel.setToolTipText(entry.className());
+            activeRendererLabel.setIcon(rendererIconForCategory(entry.category(), currentPalette().accent()));
+            activeRendererLabel.setIconTextGap(8);
+            categoryLabel.setText(capitalize(entry.category()));
+        }
+        updateChartActions();
+        updateStatus(currentChartPanel == null ? "Opening " + entry.simpleName() + "…" : "Ready — " + entry.simpleName());
+    }
+
+    private void updateChartActions() {
+        if (reloadButton != null) {
+            reloadButton.setEnabled(currentRendererKey != null);
+        }
+        if (exportButton != null) {
+            exportButton.setEnabled(currentChartPanel != null);
+        }
+        if (exportMenuItem != null) {
+            exportMenuItem.setEnabled(currentChartPanel != null);
+        }
+        if (benchmarkMenuItem != null) {
+            benchmarkMenuItem.setEnabled(currentChartPanel != null);
+        }
     }
 
     private JPanel buildRendererPanel(RendererCatalogEntry entry) {
-        DemoPalette palette = currentPalette();
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(palette.contentBackground());
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
-
-        // Header with renderer name and class
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
-        JLabel title = new JLabel(entry.simpleName());
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
-        title.setForeground(palette.foreground());
-        JLabel subtitle = new JLabel(entry.className());
-        subtitle.setForeground(palette.muted());
-        subtitle.setFont(subtitle.getFont().deriveFont(12f));
-        header.add(title, BorderLayout.NORTH);
-        header.add(subtitle, BorderLayout.SOUTH);
-
-        // Chart container with proper spacing
-        JPanel chartHost = new JPanel(new BorderLayout());
-        chartHost.setBackground(palette.contentBackground());
-        chartHost.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-
-        chartHost.add(buildChart(entry), BorderLayout.CENTER);
-
-        panel.add(header, BorderLayout.NORTH);
-        panel.add(chartHost, BorderLayout.CENTER);
+        panel.setBackground(currentPalette().contentBackground());
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.add(buildChart(entry), BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildChart(RendererCatalogEntry entry) {
         DemoPalette palette = currentPalette();
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(palette.surfaceBackground());
-        wrapper.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(palette.border(), 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12))
-        );
+        wrapper.setBackground(palette.contentBackground());
+        wrapper.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         JLabel status = new JLabel("Rendering...", SwingConstants.CENTER);
         status.setForeground(palette.muted());
         status.setFont(status.getFont().deriveFont(13f));
@@ -1204,12 +1421,21 @@ public final class DemoApplication {
 
         Timer timer = new Timer(80, evt -> {
             ((Timer) evt.getSource()).stop();
+            // A theme switch or reload may remove this view before construction starts.
+            if (!SwingUtilities.isDescendingFrom(wrapper, detailHost)) {
+                return;
+            }
             long startTime = System.nanoTime();
+            ChartRenderer renderer = null;
+            boolean installed = false;
             try {
                 String className = entry.className();
                 ChartModel model = RendererDemoDataFactory.build(entry.category(), className);
+                if (model instanceof com.arbergashi.charts.model.DefaultFinancialChartModel financial) {
+                    model = new ShowcaseFinancialModel(financial);
+                }
                 ChartModel animatedModel = model;
-                ChartRenderer renderer = instantiateRenderer(className);
+                renderer = instantiateRenderer(className);
                 ArberChartPanel chartPanel = new ArberChartPanel(model, renderer);
                 if ("standard".equals(entry.category())) {
                     java.util.List<ChartModel> series = RendererDemoDataFactory.standardSeries(3);
@@ -1221,12 +1447,13 @@ public final class DemoApplication {
                             chartPanel.setLayer(series.get(i), instantiateRenderer(className, false));
                         }
                         chartPanel.setMultiColorEnabled(true);
+                        chartPanel.resetZoom();
                         animatedModel = series.getFirst();
                     }
                 }
                 chartPanel.setTheme(getActiveTheme());
                 chartPanel.setPreferredSize(new Dimension(1100, 680));
-                chartPanel.setMinimumSize(new Dimension(800, 500));
+                chartPanel.setMinimumSize(new Dimension(360, 260));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
                 installShowcaseRendererAnimation(entry, animatedModel, chartPanel);
@@ -1240,16 +1467,24 @@ public final class DemoApplication {
                 totalRenderTimeNs.addAndGet(elapsed);
                 renderCount.incrementAndGet();
 
-                // Store current chart panel for export
-                currentChartPanel = chartPanel;
-
-                updateStatus(String.format("Rendered %s in %.2fms",
-                        entry.simpleName(), elapsed / 1_000_000.0));
+                chartPanels.put(entry.className(), chartPanel);
+                installed = true;
+                if (entry.className().equals(currentRendererKey)) {
+                    currentChartPanel = chartPanel;
+                    updateChartActions();
+                    updateStatus("Ready — " + entry.simpleName());
+                }
+                updateMetrics();
             } catch (RuntimeException ex) {
                 String message = buildErrorMessage(ex);
                 status.setText("<html>" + message.replace("\n", "<br/>") + "</html>");
-                updateStatus("Failed to render " + entry.simpleName());
-                currentChartPanel = null;
+                if (entry.className().equals(currentRendererKey)) {
+                    updateStatus("Could not open " + entry.simpleName());
+                    currentChartPanel = null;
+                    updateChartActions();
+                }
+            } finally {
+                if (!installed) closeDemoRenderer(renderer);
             }
         });
         timer.setRepeats(false);
@@ -1290,8 +1525,6 @@ public final class DemoApplication {
         // Configure axis for optimal presentation
         configureAxisForCategory(entry.category(), panel);
 
-        // Enable crosshair and animations for optimal user experience
-        panel.setAnimationsEnabled(true);
     }
 
     private void applyShowcasePreset(RendererCatalogEntry entry, ArberChartPanel panel, ChartRenderer renderer) {
@@ -1308,7 +1541,6 @@ public final class DemoApplication {
         boolean common = "common".equals(entry.category());
 
         panel.setTooltips(true);
-        panel.setAnimationsEnabled(true);
 
         if (circular) {
             panel.setLegend(true);
@@ -1460,6 +1692,13 @@ public final class DemoApplication {
     }
 
     private void installShowcaseRendererAnimation(RendererCatalogEntry entry, ChartModel model, ArberChartPanel panel) {
+        if (panel.getPrimaryRenderer() instanceof ShowcaseVectorFieldRenderer vectorField) {
+            ShowcaseAnimation.install(panel, (elapsedSeconds, deltaSeconds) -> {
+                vectorField.setElapsedSeconds(elapsedSeconds);
+                panel.repaint();
+            });
+            return;
+        }
         boolean standard = "standard".equals(entry.category());
         boolean financial = "financial".equals(entry.category());
         boolean statistical = "statistical".equals(entry.category());
@@ -1481,7 +1720,7 @@ public final class DemoApplication {
             }
             return;
         }
-        if (model instanceof com.arbergashi.charts.model.DefaultFinancialChartModel financialModel) {
+        if (model instanceof ShowcaseFinancialModel financialModel) {
             installFinancialShowcaseAnimation(financialModel, panel, entry.className());
             return;
         }
@@ -1500,6 +1739,7 @@ public final class DemoApplication {
 
         double[] baseX = defaultModel.getXData();
         double[] baseY = defaultModel.getYData();
+        double[] baseMin = defaultModel.getMinData();
         double[] baseMax = defaultModel.getMaxData();
         double[] baseW = defaultModel.getWeightData();
         String[] labels = new String[count];
@@ -1512,12 +1752,9 @@ public final class DemoApplication {
         if (speed <= 0.0 || amp <= 0.0) {
             return;
         }
-        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
-            if (!panel.isDisplayable()) {
-                ((Timer) evt.getSource()).stop();
-                return;
-            }
-            double phase = (System.nanoTime() * 1.0e-9) * speed;
+        ShowcaseAnimation.install(panel, (elapsedSeconds, deltaSeconds) -> {
+            double phase = elapsedSeconds * speed;
+            double blend = com.arbergashi.charts.util.AnimationUtils.easeInOut(Math.min(1.0, elapsedSeconds / 0.25));
             defaultModel.clear();
             for (int i = 0; i < count; i++) {
                 double x0 = i < baseX.length ? baseX[i] : i;
@@ -1681,14 +1918,16 @@ public final class DemoApplication {
                     min = y - Math.max(1.0, y * 0.08);
                     max = y + Math.max(1.0, y * 0.08);
                 }
-                defaultModel.setPoint(x, y, min, max, weight, label);
-            }
-        });
-        animation.start();
-
-        panel.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
-                animation.stop();
+                // Start from the displayed baseline instead of jumping to the oscillator's offset.
+                x = Math.fma(blend, x - x0, x0);
+                y = Math.fma(blend, y - y0, y0);
+                weight = Math.fma(blend, weight - w0, w0);
+                double min0 = i < baseMin.length ? baseMin[i] : y0;
+                double max0 = i < baseMax.length ? baseMax[i] : y0;
+                min = Math.fma(blend, min - min0, min0);
+                max = Math.fma(blend, max - max0, max0);
+                defaultModel.setPoint(x, y, min, max, weight, label,
+                        com.arbergashi.charts.model.ProvenanceFlags.ORIGINAL, (short) 0, 0L);
             }
         });
     }
@@ -1698,7 +1937,7 @@ public final class DemoApplication {
         if (count <= 0) {
             return;
         }
-        final int channels = detectMedicalChannels(model, 8);
+        final int channels = model.getChannelCount();
         if (channels <= 0) {
             return;
         }
@@ -1717,13 +1956,9 @@ public final class DemoApplication {
         final double[] carry = {0.0};
         final double[] channelsBuffer = new double[channels];
 
-        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
-            if (!panel.isDisplayable()) {
-                ((Timer) evt.getSource()).stop();
-                return;
-            }
-            carry[0] += sampleRate * (SHOWCASE_ANIMATION_DELAY_MS / 1000.0);
-            int samples = Math.max(1, (int) carry[0]);
+        ShowcaseAnimation.install(panel, (elapsedSeconds, deltaSeconds) -> {
+            carry[0] += sampleRate * deltaSeconds;
+            int samples = (int) carry[0];
             carry[0] -= samples;
 
             for (int s = 0; s < samples; s++) {
@@ -1740,78 +1975,31 @@ public final class DemoApplication {
             }
             panel.repaint();
         });
-        animation.start();
-
-        panel.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
-                animation.stop();
-            }
-        });
     }
 
-    private void installFinancialShowcaseAnimation(com.arbergashi.charts.model.DefaultFinancialChartModel model,
+    private void installFinancialShowcaseAnimation(ShowcaseFinancialModel model,
                                                    ArberChartPanel panel,
                                                    String className) {
-        final int count = model.getPointCount();
-        if (count <= 1) {
-            return;
-        }
+        int last = model.getPointCount() - 1;
+        if (last < 0) return;
+        double baselineOpen = model.getOpen(last);
+        double baselineClose = model.getClose(last);
+        double baselineHigh = model.getHigh(last);
+        double baselineLow = model.getLow(last);
+        double baselineVolume = model.getVolume(last);
+        double speed = showcaseAnimationSpeed(className);
+        double amplitude = showcaseAnimationAmplitude(className);
+        if (speed <= 0.0 || amplitude <= 0.0) return;
 
-        final double[] x = {model.getX(count - 1)};
-        final double[] lastClose = {model.getClose(count - 1)};
-        final long[] tick = {0L};
-        final double speed = showcaseAnimationSpeed(className);
-        final double amp = showcaseAnimationAmplitude(className);
-        if (speed <= 0.0 || amp <= 0.0) {
-            return;
-        }
-
-        Timer animation = new Timer(SHOWCASE_ANIMATION_DELAY_MS, evt -> {
-            if (!panel.isDisplayable()) {
-                ((Timer) evt.getSource()).stop();
-                return;
-            }
-            tick[0]++;
-            x[0] += 1.0;
-            double phase = (System.nanoTime() * 1.0e-9) * speed;
-            double trend = Math.sin(phase * 0.2) * 0.08;
-            double cycle = Math.sin(phase * 0.9 + tick[0] * 0.07) * (0.9 * amp);
-            double micro = Math.cos(phase * 1.6 + tick[0] * 0.11) * (0.35 * amp);
-            double delta = trend + cycle + micro;
-
-            double open = lastClose[0];
-            double close = Math.max(1.0, open + delta);
-            double body = Math.abs(close - open);
-            double wickUp = Math.max(0.15, body * (0.55 + Math.abs(Math.sin(phase * 0.7)) * 0.45));
-            double wickDown = Math.max(0.15, body * (0.52 + Math.abs(Math.cos(phase * 0.6)) * 0.48));
-            double high = Math.max(open, close) + wickUp;
-            double low = Math.min(open, close) - wickDown;
-            double volume = 30_000_000 + (Math.abs(delta) * 12_000_000) + Math.abs(Math.sin(phase * 0.4)) * 8_000_000;
-
-            model.setOHLC(x[0], open, high, low, close, volume, null);
-            lastClose[0] = close;
-            panel.repaint();
+        ShowcaseAnimation.install(panel, (elapsedSeconds, deltaSeconds) -> {
+            double phase = elapsedSeconds * speed;
+            double delta = amplitude * (Math.sin(phase * 0.9) * 0.9 + Math.sin(phase * 1.6) * 0.35);
+            double close = Math.max(1.0, baselineClose + delta);
+            double high = Math.max(baselineHigh, Math.max(baselineOpen, close) + Math.abs(delta) * 0.25);
+            double low = Math.min(baselineLow, Math.min(baselineOpen, close) - Math.abs(delta) * 0.25);
+            double volume = baselineVolume + Math.abs(delta) * 12_000_000;
+            model.updateLiveBar(baselineOpen, high, low, close, volume);
         });
-        animation.start();
-
-        panel.addHierarchyListener(e -> {
-            if ((e.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0 && !panel.isDisplayable()) {
-                animation.stop();
-            }
-        });
-    }
-
-    private static int detectMedicalChannels(CircularFastMedicalModel model, int maxProbe) {
-        int channels = 0;
-        for (int c = 0; c < maxProbe; c++) {
-            try {
-                model.getY(0, c);
-                channels++;
-            } catch (RuntimeException ex) {
-                break;
-            }
-        }
-        return channels;
     }
 
     private static double showcaseAnimationSpeed(String className) {
@@ -1992,6 +2180,13 @@ public final class DemoApplication {
             return;
         }
         RendererCatalogEntry entry = catalog.getRequired(currentRendererKey);
+        ArberChartPanel discarded = chartPanels.remove(currentRendererKey);
+        if (discarded != null) {
+            ShowcaseAnimation.close(discarded);
+            closeDemoRenderer(discarded.getPrimaryRenderer());
+        }
+        currentChartPanel = null;
+        updateChartActions();
         JPanel existing = rendererPanels.remove(currentRendererKey);
         if (existing != null) {
             detailHost.remove(existing);
@@ -2022,39 +2217,11 @@ public final class DemoApplication {
     }
 
     private JPanel buildEmptyDetail() {
-        DemoPalette palette = currentPalette();
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(palette.contentBackground());
-        panel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
-
-        JPanel center = new JPanel();
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-        center.setOpaque(false);
-
-        JLabel icon = new JLabel("📊");
-        icon.setFont(icon.getFont().deriveFont(48f));
-        icon.setForeground(palette.softMuted());
-        icon.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel label = new JLabel("Select a renderer from the left panel");
-        label.setForeground(palette.muted());
-        label.setFont(label.getFont().deriveFont(16f));
-        label.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel hint = new JLabel("Or use ⌘F to search by name");
-        hint.setForeground(palette.softMuted());
-        hint.setFont(hint.getFont().deriveFont(13f));
-        hint.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        center.add(Box.createVerticalGlue());
-        center.add(icon);
-        center.add(Box.createVerticalStrut(16));
-        center.add(label);
-        center.add(Box.createVerticalStrut(8));
-        center.add(hint);
-        center.add(Box.createVerticalGlue());
-
-        panel.add(center, BorderLayout.CENTER);
+        panel.setBackground(currentPalette().contentBackground());
+        JLabel hint = new JLabel("Select a renderer in the catalog to open its chart.", SwingConstants.CENTER);
+        hint.setForeground(currentPalette().muted());
+        panel.add(hint, BorderLayout.CENTER);
         return panel;
     }
 
@@ -2107,26 +2274,19 @@ public final class DemoApplication {
             case "com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer" ->
                     new AdaptiveFunctionRenderer(x -> Math.sin(x * 0.12) * 32 + Math.cos(x * 0.05) * 18);
             case "com.arbergashi.charts.render.analysis.VectorFieldRenderer" ->
-                    new VectorFieldRenderer((x, y, out) -> {
-                        double t = System.nanoTime() * 1.0e-9;
-                        double pulse = 0.75 + 0.25 * Math.sin(t * 0.9);
-                        // Time-varying swirl field for a clearly animated demo presentation.
-                        out[0] = (Math.cos(y * 0.24 + t * 1.1) + Math.sin(x * 0.13 - t * 0.7)) * pulse;
-                        out[1] = (Math.sin(x * 0.24 - t * 0.95) - Math.cos(y * 0.13 + t * 0.8)) * pulse;
-                        return true;
-                    }).setGridResolution(16);
+                    new ShowcaseVectorFieldRenderer();
             case "com.arbergashi.charts.render.standard.LineSpatialRenderer" ->
                     new com.arbergashi.charts.render.standard.LineSpatialRenderer()
                             .setZScale(0.012)
                             .setZOffset(0.0);
             case "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer" ->
-                    new CircularLatencyOverlayRendererAdapter(sampleLatencyTracker());
+                    new com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer(sampleLatencyTracker());
             case "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer" ->
                     new PlaybackStatusRenderer(new DemoPlaybackController());
             case "com.arbergashi.charts.render.common.PerformanceAuditRenderer" ->
                     new PerformanceAuditRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.common.PhysicalScaleRenderer" ->
-                    new PhysicalScaleRendererAdapter();
+                    new com.arbergashi.charts.render.common.PhysicalScaleRenderer().setEnabled(true);
             case "com.arbergashi.charts.render.specialized.SunburstRenderer" ->
                     new com.arbergashi.charts.render.specialized.SunburstRenderer();
             case "com.arbergashi.charts.render.circular.SunburstRenderer" ->
@@ -2164,7 +2324,7 @@ public final class DemoApplication {
         }
         if (SystemInfo.isMacOS) {
             System.setProperty("apple.laf.useScreenMenuBar", "true");
-            System.setProperty("apple.awt.application.name", "ArberCharts Demo");
+            System.setProperty("apple.awt.application.name", APP_NAME);
             System.setProperty("apple.awt.application.appearance", "system");
         }
     }
@@ -2218,8 +2378,8 @@ public final class DemoApplication {
 
     private void rebuildRendererPanelsForTheme() {
         String selectedKey = currentRendererKey;
-        detailHost.removeAll();
-        rendererPanels.clear();
+        disposeRendererPanels();
+        updateChartActions();
         detailHost.add(buildEmptyDetail(), "empty");
         detailLayout.show(detailHost, "empty");
         if (selectedKey != null && !selectedKey.isBlank()) {
@@ -2230,21 +2390,79 @@ public final class DemoApplication {
         detailHost.repaint();
     }
 
+    private void disposeRendererPanels() {
+        for (ArberChartPanel panel : chartPanels.values()) {
+            ShowcaseAnimation.close(panel);
+            closeDemoRenderer(panel.getPrimaryRenderer());
+        }
+        detailHost.removeAll();
+        rendererPanels.clear();
+        chartPanels.clear();
+        currentChartPanel = null;
+    }
+
+    private void disposeDemoResources() {
+        disposeRendererPanels();
+        if (metricsTimer != null) metricsTimer.stop();
+        if (speedSearchTimer != null) speedSearchTimer.stop();
+        if (searchEverywhereDialog != null) searchEverywhereDialog.dispose();
+    }
+
+    private static void closeDemoRenderer(ChartRenderer renderer) {
+        // The demo constructs adaptive renderers as primary layers and owns their workers.
+        if (renderer instanceof AdaptiveFunctionRenderer adaptive) adaptive.close();
+    }
+
     private void applyDemoPalette() {
         DemoPalette palette = currentPalette();
         if (headerPanel != null) {
             headerPanel.setBackground(palette.windowBackground());
-            headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()));
+            headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()),
+                    BorderFactory.createEmptyBorder(0, 14, 0, 12)));
+            applyMutedLabels(headerPanel, palette.muted());
         }
         if (footerPanel != null) {
             footerPanel.setBackground(palette.windowBackground());
             footerPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, palette.border()));
         }
+        if (sidebarPanel != null) {
+            sidebarPanel.setBackground(palette.sidebarBackground());
+            applyMutedLabels(sidebarPanel, palette.muted());
+        }
+        if (editorToolbar != null) {
+            editorToolbar.setBackground(palette.contentBackground());
+            editorToolbar.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()),
+                    BorderFactory.createEmptyBorder(0, 16, 0, 12)));
+            categoryLabel.setForeground(palette.muted());
+            activeRendererLabel.setForeground(palette.foreground());
+            if (currentRendererKey != null) {
+                activeRendererLabel.setIcon(rendererIconForCategory(
+                        catalog.getRequired(currentRendererKey).category(), palette.accent()));
+            }
+        }
         if (headerTitleLabel != null) {
             headerTitleLabel.setForeground(palette.foreground());
         }
+        if (headerMarkLabel != null) {
+            headerMarkLabel.setIcon(loadTablerOutlineIcon("chart-line.svg", 20,
+                    UIManager.getIcon("FileView.fileIcon"), palette.accent()));
+        }
         if (versionLabel != null) {
             versionLabel.setForeground(palette.softMuted());
+        }
+        if (themeSwitchButton != null) {
+            themeSwitchButton.setIcon(loadTablerOutlineIcon("sun-moon.svg", 18,
+                    UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
+        }
+        if (searchEverywhereButton != null) {
+            searchEverywhereButton.setIcon(loadTablerOutlineIcon("search.svg", 16,
+                    UIManager.getIcon("FileView.fileIcon"), palette.muted()));
+        }
+        if (catalogFilter != null) {
+            catalogFilter.putClientProperty("JTextField.leadingIcon", loadTablerOutlineIcon("search.svg", 15,
+                    UIManager.getIcon("FileView.fileIcon"), palette.muted()));
         }
         countLabel.setForeground(palette.muted());
         statusLabel.setForeground(palette.muted());
@@ -2252,6 +2470,20 @@ public final class DemoApplication {
         tree.setBackground(palette.sidebarBackground());
         tree.setForeground(palette.foreground());
         detailHost.setBackground(palette.contentBackground());
+        if (searchEverywhereDialog != null) {
+            searchEverywhereDialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border()));
+            searchEverywhereDialog.getContentPane().getComponent(0).setBackground(palette.surfaceBackground());
+        }
+    }
+
+    private static void applyMutedLabels(Container container, Color muted) {
+        for (Component child : container.getComponents()) {
+            if (child instanceof JLabel label && Boolean.TRUE.equals(label.getClientProperty("demo.muted"))) {
+                label.setForeground(muted);
+            } else if (child instanceof Container nested) {
+                applyMutedLabels(nested, muted);
+            }
+        }
     }
 
     private DemoPalette currentPalette() {
@@ -2340,9 +2572,9 @@ public final class DemoApplication {
                 Color iconColor = sel ? tree.getForeground() : DemoThemeSupport.uiColor("Label.foreground", "textText");
                 setIcon(rendererIconForCategory(entry.category(), iconColor));
             } else if (user instanceof String label) {
-                setText(capitalize(label) + " (" + node.getChildCount() + ")");
+                setText(capitalize(label) + "  " + node.getChildCount());
                 setToolTipText(null);
-                setFont(baseFont.deriveFont(Font.BOLD, 13f));
+                setFont(baseFont.deriveFont(Font.PLAIN, 13f));
                 Color categoryColor = UIManager.getColor("Component.grayForeground");
                 if (categoryColor == null) {
                     categoryColor = tree.getForeground();

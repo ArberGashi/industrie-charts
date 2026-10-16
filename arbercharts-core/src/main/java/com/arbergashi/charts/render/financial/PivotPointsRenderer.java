@@ -10,7 +10,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>PivotPointsRenderer - Support/Resistance Pivot Points</h1>
+ * <h2>PivotPointsRenderer - Support/Resistance Pivot Points</h2>
  *
  * <p>Professional pivot points renderer for intraday trading levels.
  * Displays pivot point (PP) with support (S1, S2, S3) and resistance (R1, R2, R3) levels.</p>
@@ -61,6 +61,7 @@ public final class PivotPointsRenderer extends BaseRenderer {
     private PivotMethod method = PivotMethod.STANDARD;
     // Cached pivot levels
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient PivotLevels cachedPivots;
     public PivotPointsRenderer() {
@@ -139,19 +140,22 @@ public final class PivotPointsRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n < 2) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             cachedPivots = null;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && cachedPivots != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && cachedPivots != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         cachedPivots = getCalculatedPivotPoints(model, n);
     }
@@ -246,6 +250,7 @@ public final class PivotPointsRenderer extends BaseRenderer {
     @SuppressWarnings("unused")
     public PivotPointsRenderer setPivotMethod(PivotMethod method) {
         this.method = method;
+        cachedPivots = null;
         return this;
     }
 

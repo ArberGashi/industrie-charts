@@ -7,7 +7,6 @@ import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.SpatialBuffer;
 import com.arbergashi.charts.engine.spatial.SpatialChunkConsumer;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
@@ -47,15 +46,15 @@ public final class SmithChartRenderer extends BaseRenderer implements Coordinate
         double[] x = model.getXData();
         double[] y = model.getYData();
         if (x == null || y == null) return;
-        int n = Math.min(x.length, y.length);
+        int n = Math.min(model.getPointCount(), Math.min(x.length, y.length));
         if (n == 0) return;
 
-        ArberColor base = seriesOrBase(model, context, 0);
+        ArberColor base = themeSeries(context, isMultiColor() ? 0 : getLayerIndex());
         if (base == null) base = themeSeries(context, 0);
         float[] xs = RendererAllocationCache.getFloatArray(this, "smith.path.x", n);
         float[] ys = RendererAllocationCache.getFloatArray(this, "smith.path.y", n);
         for (int i = 0; i < n; i++) {
-            context.mapToPixel(x[i], y[i], pixelBuf);
+            transformer.mapToPixel(context, x[i], y[i], pixelBuf);
             xs[i] = (float) pixelBuf[0];
             ys[i] = (float) pixelBuf[1];
         }
@@ -88,42 +87,54 @@ public final class SmithChartRenderer extends BaseRenderer implements Coordinate
         double[] x = model.getXData();
         double[] y = model.getYData();
         if (x == null || y == null) return;
-        int n = Math.min(x.length, y.length);
+        int n = Math.min(model.getPointCount(), Math.min(x.length, y.length));
         if (n == 0) return;
 
-        double[] coords = spatialBuffer.getInputCoords();
+        ArberColor base = themeSeries(context, isMultiColor() ? 0 : getLayerIndex());
+        if (base == null) base = themeSeries(context, 0);
+        ArberColor traceColor = ColorUtils.applyAlpha(base, 0.9f);
+        float stroke = ChartAssets.getFloat("chart.render.smith.strokeWidth", 2.2f);
+        long traceStyle = SpatialStyleDescriptor.pack(traceColor.argb(), stroke, 0, 0);
         int capacity = spatialBuffer.getPointCapacity();
         int index = 0;
-
-        boolean markerEnabled = ChartAssets.getBoolean("Demo.smith.marker.enabled", true);
-        SpatialPathBatchBuilder builder = (consumer instanceof SpatialPathBatchBuilder b) ? b : null;
-        long baseStyle = (builder != null) ? builder.getStyleKey() : SpatialStyleDescriptor.getDefaultKey();
-        long traceStyle = baseStyle;
-        if (builder != null) {
-            int argb = SpatialStyleDescriptor.unpackArgb(baseStyle);
-            float width = Math.max(1.2f, ChartAssets.getFloat("chart.render.smith.strokeWidth", 2.2f));
-            int dashId = SpatialStyleDescriptor.unpackDashId(baseStyle);
-            traceStyle = SpatialStyleDescriptor.pack(argb, width, dashId, markerEnabled ? 2 : 0);
-            builder.setStyleKey(traceStyle);
-        }
-
         while (index < n) {
-            int chunk = Math.min(capacity, n - index);
-            int out = 0;
-            for (int i = 0; i < chunk; i++) {
-                context.mapToPixel(x[index + i], y[index + i], pixelBuf);
-                coords[out++] = pixelBuf[0];
-                coords[out++] = pixelBuf[1];
-                // Spatial clipping keeps only z > zMin (zMin defaults to 0).
-                // Use positive z to keep Smith trace visible in spatial batch pipeline.
-                coords[out++] = 1.0;
+            int count = Math.min(capacity, n - index);
+            for (int i = 0; i < count; i++) {
+                writeSpatialPoint(i, x[index + i], y[index + i], context, traceStyle, index + i == 0);
             }
-            consumer.accept(spatialBuffer, chunk);
-            index += chunk;
+            consumer.accept(spatialBuffer, count);
+            index += count;
         }
-        if (builder != null && traceStyle != baseStyle) {
-            builder.setStyleKey(baseStyle);
+
+        float markerSize = ChartAssets.getFloat("chart.render.smith.markerSize", 3.2f);
+        long markerStyle = SpatialStyleDescriptor.pack(traceColor.argb(), markerSize, 0,
+                SpatialStyleDescriptor.MARKER_SQUARE);
+        int markerStep = Math.max(1, n / 18);
+        int count = 0;
+        for (int i = 0; i < n; i += markerStep) {
+            writeSpatialPoint(count++, x[i], y[i], context, markerStyle, true);
+            if (count == capacity) {
+                consumer.accept(spatialBuffer, count);
+                count = 0;
+            }
         }
+        if (count > 0) consumer.accept(spatialBuffer, count);
+
+        long endpointStyle = SpatialStyleDescriptor.pack(themeForeground(context).argb(), markerSize + 1.6f, 0,
+                SpatialStyleDescriptor.MARKER_SQUARE);
+        writeSpatialPoint(0, x[0], y[0], context, endpointStyle, true);
+        writeSpatialPoint(1, x[n - 1], y[n - 1], context, endpointStyle, true);
+        consumer.accept(spatialBuffer, 2);
+    }
+
+    private void writeSpatialPoint(int index, double x, double y, PlotContext context, long style, boolean pathStart) {
+        transformer.mapToPixel(context, x, y, pixelBuf);
+        double[] coords = spatialBuffer.getInputCoords();
+        int offset = index * 3;
+        coords[offset] = pixelBuf[0];
+        coords[offset + 1] = pixelBuf[1];
+        coords[offset + 2] = 1.0;
+        spatialBuffer.setPointMetadata(index, style, pathStart);
     }
 
     @Override

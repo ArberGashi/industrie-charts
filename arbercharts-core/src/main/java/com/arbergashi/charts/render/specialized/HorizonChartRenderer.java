@@ -39,9 +39,10 @@ public class HorizonChartRenderer extends BaseRenderer {
         if (len < 2) return;
 
         ArberRect bounds = context.getPlotBounds();
+        if (bounds.width() <= 0 || bounds.height() <= 0) return;
         double midY = bounds.y() + bounds.height() * 0.5;
-        double halfH = Math.max(1.0, bounds.height() * 0.5);
-        double bandH = bounds.height() / MAX_BANDS;
+        double halfH = bounds.height() * 0.5;
+        double bandH = halfH / MAX_BANDS;
 
         ArberColor base = seriesOrBase(model, context, 0);
         ArberColor negBase = ColorRegistry.adjustBrightness(base, 0.7);
@@ -66,7 +67,11 @@ public class HorizonChartRenderer extends BaseRenderer {
                 x0 = x1;
                 x1 = t;
             }
-            double width = Math.max(1.0, x1 - x0);
+            if (!Double.isFinite(x0) || !Double.isFinite(x1) || !Double.isFinite(py)) continue;
+            x0 = Math.max(bounds.x(), x0);
+            x1 = Math.min(bounds.maxX(), x1);
+            if (x1 <= x0) continue;
+            double width = x1 - x0;
 
             double norm = (midY - py) / halfH; // positive -> above midline
             double abs = Math.min(1.0, Math.abs(norm));

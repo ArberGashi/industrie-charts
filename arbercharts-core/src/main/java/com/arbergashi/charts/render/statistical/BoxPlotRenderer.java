@@ -22,6 +22,8 @@ import java.util.Optional;
  *
  * <p>Headless geometry only: boxes, whiskers, median and outliers.
  * Text and styling are delegated to bridges.</p>
+ * <p>{@link StatisticalChartModel} supplies explicit quartiles. For a generic
+ * model, component 2 is interpreted as an IQR centered on the Y value.</p>
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -30,6 +32,49 @@ public final class BoxPlotRenderer extends BaseRenderer {
 
     public BoxPlotRenderer() {
         super("boxplot");
+    }
+
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        int count = model.getPointCount();
+        for (int i = 0; i < count; i++) {
+            double median;
+            double q1;
+            double q3;
+            double min;
+            double max;
+            if (model instanceof StatisticalChartModel stats) {
+                median = stats.getMedian(i);
+                q1 = stats.getQ1(i);
+                q3 = stats.getQ3(i);
+                min = stats.getMin(i);
+                max = stats.getMax(i);
+            } else {
+                median = model.getY(i);
+                double halfIqr = Math.max(0.0, model.getValue(i, 2)) / 2.0;
+                q1 = median - halfIqr;
+                q3 = median + halfIqr;
+                min = model.getValue(i, 3);
+                max = model.getValue(i, 4);
+            }
+            if (!Double.isFinite(model.getX(i)) || !Double.isFinite(median)
+                    || !Double.isFinite(min) || !Double.isFinite(max)
+                    || !Double.isFinite(q1) || !Double.isFinite(q3)) continue;
+            minY = Math.min(minY, Math.min(min, Math.min(q1, Math.min(q3, median))));
+            maxY = Math.max(maxY, Math.max(max, Math.max(q1, Math.max(q3, median))));
+            if (model instanceof BoxPlotOutlierModel outliers) {
+                double[] values = outliers.getOutliers(i);
+                if (values == null) continue;
+                for (double value : values) {
+                    if (!Double.isFinite(value)) continue;
+                    minY = Math.min(minY, value);
+                    maxY = Math.max(maxY, value);
+                }
+            }
+        }
+        return minY == Double.POSITIVE_INFINITY ? null : new double[]{minY, maxY};
     }
 
     @Override
@@ -51,22 +96,30 @@ public final class BoxPlotRenderer extends BaseRenderer {
             final double median;
             final double min;
             final double max;
-            final double iqr;
+            final double q1;
+            final double q3;
             if (model instanceof StatisticalChartModel stats) {
                 median = stats.getMedian(i);
                 min = stats.getMin(i);
                 max = stats.getMax(i);
-                iqr = stats.getIqr(i);
+                q1 = stats.getQ1(i);
+                q3 = stats.getQ3(i);
             } else {
                 median = model.getY(i);
                 min = model.getValue(i, 3);
                 max = model.getValue(i, 4);
-                iqr = model.getValue(i, 2);
+                double halfIqr = Math.max(0.0, model.getValue(i, 2)) / 2.0;
+                q1 = median - halfIqr;
+                q3 = median + halfIqr;
             }
+            if (!Double.isFinite(xVal) || !Double.isFinite(median)
+                    || !Double.isFinite(min) || !Double.isFinite(max)
+                    || !Double.isFinite(q1) || !Double.isFinite(q3)) continue;
 
             double[] buf = pBuffer();
             context.mapToPixel(xVal, median, buf);
             double x = buf[0];
+            double medianY = buf[1];
             if (x < bounds.x() - barWidth || x > bounds.maxX() + barWidth) {
                 continue;
             }
@@ -76,16 +129,19 @@ public final class BoxPlotRenderer extends BaseRenderer {
             context.mapToPixel(xVal, min, buf);
             double pixMinY = buf[1];
 
-            double halfIqr = (iqr > 0) ? (iqr / 2.0) : 0.0;
-            context.mapToPixel(xVal, median + halfIqr, buf);
+            context.mapToPixel(xVal, q3, buf);
             double pixQ3Y = buf[1];
-            context.mapToPixel(xVal, median - halfIqr, buf);
+            context.mapToPixel(xVal, q1, buf);
             double pixQ1Y = buf[1];
+            if (!Double.isFinite(x) || !Double.isFinite(medianY)
+                    || !Double.isFinite(pixMaxY) || !Double.isFinite(pixMinY)
+                    || !Double.isFinite(pixQ3Y) || !Double.isFinite(pixQ1Y)) continue;
 
             ArberColor boxColor = seriesOrBase(model, context, i);
             if (boxColor == null) boxColor = theme.getSeriesColor(0);
 
             canvas.setColor(boxColor);
+            canvas.setStroke(strokeWidth);
             double xLine = x;
             double yMax = pixMaxY;
             double yQ3 = pixQ3Y;
@@ -114,7 +170,6 @@ public final class BoxPlotRenderer extends BaseRenderer {
 
             canvas.setColor(themeForeground(context));
             canvas.setStroke(ChartScale.scale(1.8f));
-            double medianY = buf[1];
             drawLine(canvas, x - barWidth / 2.0, medianY, x + barWidth / 2.0, medianY);
 
             if (model instanceof BoxPlotOutlierModel outlierModel) {
@@ -124,7 +179,9 @@ public final class BoxPlotRenderer extends BaseRenderer {
                     ArberColor outColor = ColorUtils.applyAlpha(boxColor, 0.90f);
                     canvas.setColor(outColor);
                     for (double outlier : outliers) {
+                        if (!Double.isFinite(outlier)) continue;
                         context.mapToPixel(xVal, outlier, buf);
+                        if (!Double.isFinite(buf[0]) || !Double.isFinite(buf[1])) continue;
                         float size = (float) (r * 2.0);
                         float ox = (float) (buf[0] - r);
                         float oy = (float) (buf[1] - r);

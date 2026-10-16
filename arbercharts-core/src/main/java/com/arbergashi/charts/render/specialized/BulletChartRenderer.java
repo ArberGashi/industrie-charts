@@ -10,7 +10,7 @@ import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>BulletChartRenderer - Compact KPI Visualization</h1>
+ * <h2>BulletChartRenderer - Compact KPI Visualization</h2>
  *
  * <p>Enterprise-grade bullet chart renderer for comparing actual performance
  * against targets with qualitative performance ranges.</p>

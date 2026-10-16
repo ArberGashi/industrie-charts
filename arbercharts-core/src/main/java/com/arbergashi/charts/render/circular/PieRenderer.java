@@ -13,22 +13,20 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 /**
- * <h1>Modern Pie Renderer</h1>
+ * <h2>Modern Pie Renderer</h2>
  * <p>
- * Draws a professional, interactive pie chart with intelligent external labeling and hover effects,
- * adhering to strict zero-allocation guidelines.
+ * Draws grouped category sectors with measured external labels and hover effects.
+ * Drawing buffers are reused; aggregation and label formatting may allocate.
  * </p>
  * <h2>Features:</h2>
  * <ul>
  *     <li><b>Smart Labels:</b> Automatically places labels outside with leader lines to avoid clutter.</li>
  *     <li><b>Rich Labels:</b> Displays category name and percentage value.</li>
  *     <li><b>Hover Effect:</b> Segments brighten on mouse hover for better interactivity.</li>
- *     <li><b>Zero-Allocation:</b> Highly optimized for performance.</li>
  * </ul>
  *
  * @author Arber Gashi
  * @since 2025-06-01
-  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
  */
 public class PieRenderer extends BaseRenderer {
@@ -37,10 +35,11 @@ public class PieRenderer extends BaseRenderer {
     private static final double LABEL_THRESHOLD_ANGLE = 8.0;
 
     private final LinkedHashMap<String, Double> perLabel = new LinkedHashMap<>(64);
-    private final ArberColor[] colorCache = new ArberColor[256];
+    private final LinkedHashMap<String, Integer> firstIndexPerLabel = new LinkedHashMap<>(64);
 
     private double[] hitStartDeg = new double[0];
     private double[] hitExtentDeg = new double[0];
+    private int[] hitModelIndices = new int[0];
     private int hitN;
     private double hitCx, hitCy, hitOuterR;
     private int hoverIndex = -1;
@@ -61,15 +60,18 @@ public class PieRenderer extends BaseRenderer {
  * @since 1.5.0
  */
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        hitN = 0;
+        hitOuterR = 0;
+        perLabel.clear();
+        firstIndexPerLabel.clear();
         int count = model.getPointCount();
         if (count == 0) return;
 
         ArberRect plot = context.getPlotBounds();
         if (plot == null || plot.getWidth() <= 1 || plot.getHeight() <= 1) return;
 
-        perLabel.clear();
         double total = aggregateData(model, perLabel);
-        if (perLabel.isEmpty() || !(total > 0.0)) return;
+        if (perLabel.isEmpty() || !(total > 0.0) || !Double.isFinite(total)) return;
 
         double diameter = Math.min(plot.getWidth(), plot.getHeight()) * 0.7;
         if (diameter <= 1) return;
@@ -78,8 +80,62 @@ public class PieRenderer extends BaseRenderer {
         hitCy = plot.getCenterY();
         hitOuterR = diameter * 0.5;
 
-        this.renderTheme = getResolvedTheme(context);
+        renderTheme = getResolvedTheme(context);
         drawSegments(canvas, total, diameter);
+        drawLabels(canvas, plot, total);
+    }
+
+    private void drawLabels(ArberCanvas canvas, ArberRect plot, double total) {
+        canvas.setFont(renderTheme.getBaseFont());
+        canvas.setColor(renderTheme.getForeground());
+        canvas.setStroke(1.0f);
+        double lineHeight = canvas.getTextLineHeight();
+        double ascent = canvas.getTextAscent();
+        double minY = plot.y() + ascent + 2;
+        double maxY = plot.maxY() - (lineHeight - ascent) - 2;
+        double previousRight = minY - lineHeight;
+        double previousLeft = maxY + lineHeight;
+        int i = 0;
+        for (Map.Entry<String, Double> entry : perLabel.entrySet()) {
+            double extent = hitExtentDeg[i];
+            double angle = Math.toRadians(hitStartDeg[i++] - extent * 0.5);
+            if (extent < LABEL_THRESHOLD_ANGLE) continue;
+            boolean right = Math.cos(angle) >= 0;
+            double anchorX = hitCx + (right ? 1 : -1) * hitOuterR * LABEL_OFFSET;
+            double available = right ? plot.maxX() - anchorX - 4 : anchorX - plot.x() - 4;
+            if (available < canvas.measureTextWidth("…")) continue;
+            String label = entry.getKey() + " " + Math.round(entry.getValue() / total * 1000.0) / 10.0 + "%";
+            label = fitLabel(canvas, label, available);
+            double baseline = hitCy - Math.sin(angle) * hitOuterR * LABEL_OFFSET + ascent * 0.35;
+            baseline = Math.max(minY, Math.min(maxY, baseline));
+            if (right) {
+                baseline = Math.max(baseline, previousRight + lineHeight);
+                if (baseline > maxY) continue;
+                previousRight = baseline;
+            } else {
+                baseline = Math.min(baseline, previousLeft - lineHeight);
+                if (baseline < minY) continue;
+                previousLeft = baseline;
+            }
+            double width = canvas.measureTextWidth(label);
+            double x = right ? anchorX : anchorX - width;
+            float leaderY = (float) (baseline - ascent * 0.35);
+            canvas.drawLine((float) (hitCx + Math.cos(angle) * hitOuterR),
+                    (float) (hitCy - Math.sin(angle) * hitOuterR),
+                    (float) (anchorX + (right ? -3 : 3)), leaderY);
+            canvas.drawText((float) x, (float) baseline, label);
+        }
+    }
+
+    protected static String fitLabel(ArberCanvas canvas, String text, double width) {
+        if (canvas.measureTextWidth(text) <= width) return text;
+        int end = text.length();
+        while (end > 0) {
+            end = text.offsetByCodePoints(end, -1);
+            String shortened = text.substring(0, end) + "…";
+            if (canvas.measureTextWidth(shortened) <= width) return shortened;
+        }
+        return "";
     }
 
     private void drawSegments(ArberCanvas canvas, double total, double diameter) {
@@ -88,20 +144,20 @@ public class PieRenderer extends BaseRenderer {
         double startAngle = 90.0;
         int idx = 0;
 
-        for (Double value : perLabel.values()) {
+        for (Map.Entry<String, Double> entry : perLabel.entrySet()) {
+            double value = entry.getValue();
             if (value <= 0.0) continue;
             double angle = 360.0 * (value / total);
             if (angle <= 0.0) continue;
 
             ArberColor color = getSegmentColor(idx);
-            if (idx == hoverIndex) {
-                // no brighten in core
-            }
+            if (idx == hoverIndex) color = com.arbergashi.charts.util.ColorRegistry.adjustBrightness(color, 1.1);
             canvas.setColor(color);
             fillArcSegment(canvas, hitCx, hitCy, hitOuterR, startAngle, angle);
 
             hitStartDeg[hitN] = startAngle;
             hitExtentDeg[hitN] = angle;
+            hitModelIndices[hitN] = firstIndexPerLabel.get(entry.getKey());
             hitN++;
             startAngle -= angle;
             idx++;
@@ -118,11 +174,21 @@ public class PieRenderer extends BaseRenderer {
             if (!(w > 0.0) || !Double.isFinite(w)) continue;
 
             target.merge(label, w, Double::sum);
+            firstIndexPerLabel.putIfAbsent(label, i);
             total += w;
         }
         return total;
     }
 
+    /**
+     * Returns the first contributing model point in the category under the pointer.
+     * Grouped categories retain their own internal hover index.
+     *
+     * @param pixel pointer position in canvas coordinates
+     * @param model model used for the current frame
+     * @param context current plot context
+     * @return an original model index, or an empty result outside the chart
+     */
     @Override
     public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
         if (hitN <= 0 || !(hitOuterR > 0)) return Optional.empty();
@@ -142,15 +208,12 @@ public class PieRenderer extends BaseRenderer {
         if (a < 0) a += 360.0;
 
         for (int i = 0; i < hitN; i++) {
-            double start = hitStartDeg[i];
             double extent = hitExtentDeg[i];
-            double end = start - extent;
-            if (end < 0) end += 360.0;
-
-            boolean hit = (start >= end) ? (a <= start && a >= end) : (a <= start || a >= end);
+            double distance = ((hitStartDeg[i] - a) % 360.0 + 360.0) % 360.0;
+            boolean hit = distance <= extent;
             if (hit) {
                 setHoverIndex(i);
-                return Optional.of(i);
+                return Optional.of(hitModelIndices[i]);
             }
         }
 
@@ -163,25 +226,21 @@ public class PieRenderer extends BaseRenderer {
             int newCap = Math.max(required, hitStartDeg.length == 0 ? 16 : hitStartDeg.length * 2);
             hitStartDeg = new double[newCap];
             hitExtentDeg = new double[newCap];
+            hitModelIndices = new int[newCap];
         }
     }
 
     // Package-private for tests in the same package.
     ArberColor getSegmentColor(int idx) {
-        int i = Math.floorMod(idx, colorCache.length);
-        ArberColor c = colorCache[i];
-        if (c != null) return c;
-
         ChartTheme theme = (renderTheme != null) ? renderTheme : getResolvedTheme(null);
-        c = theme.getSeriesColor(i);
-
-        colorCache[i] = c;
-        return c;
+        // Theme instances may change their palettes between frames.
+        return theme.getSeriesColor(idx);
     }
 
     @Override
     public void clearHover() {
         super.clearHover();
+        hoverIndex = -1;
         renderTheme = null;
     }
 

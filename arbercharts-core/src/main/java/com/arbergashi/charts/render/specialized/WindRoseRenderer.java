@@ -7,6 +7,7 @@ import com.arbergashi.charts.internal.RendererDescriptor;
 import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.render.grid.PolarGeometry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 
 /**
@@ -43,7 +44,7 @@ public class WindRoseRenderer extends BaseRenderer {
         var bounds = context.getPlotBounds();
         double cx = bounds.centerX();
         double cy = bounds.centerY();
-        double radius = Math.min(bounds.width(), bounds.height()) * 0.4;
+        double radius = PolarGeometry.radius(bounds);
 
         int dirs = 16; // 16 direction bins (22.5° each)
         if (bins == null || bins.length < dirs) {

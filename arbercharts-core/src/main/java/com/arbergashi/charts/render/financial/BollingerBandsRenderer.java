@@ -26,7 +26,10 @@ public final class BollingerBandsRenderer extends BaseRenderer {
     private transient float[] rangeX;
     private transient float[] rangeY;
 
+    private ChartModel cachedModel;
     private long lastModelStamp = -1;
+    private int cachedPeriod;
+    private double cachedStdDevFactor;
     private int cachedPointCount;
     private double[] yValues;
     private double[] smaValues;
@@ -128,14 +131,19 @@ public final class BollingerBandsRenderer extends BaseRenderer {
 
     private void ensureCache(ChartModel model) {
         final long stamp = model.getUpdateStamp();
-        if (stamp == lastModelStamp && cachedPointCount == model.getPointCount()) {
+        final int period = Math.max(1, ChartAssets.getInt("chart.financial.bollinger.period", 20));
+        final double stdDevFactor = ChartAssets.getFloat("chart.financial.bollinger.stddev", 2.0f);
+        if (cachedModel == model && stamp == lastModelStamp && cachedPointCount == model.getPointCount()
+                && cachedPeriod == period && Double.compare(cachedStdDevFactor, stdDevFactor) == 0) {
             return;
         }
+        cachedModel = model;
         lastModelStamp = stamp;
+        cachedPeriod = period;
+        cachedStdDevFactor = stdDevFactor;
         cachedPointCount = model.getPointCount();
         final int n = cachedPointCount;
 
-        int period = ChartAssets.getInt("chart.financial.bollinger.period", 20);
         if (n < period) {
             cachedPointCount = 0;
             return;
@@ -162,7 +170,6 @@ public final class BollingerBandsRenderer extends BaseRenderer {
             }
         }
 
-        double stdDevFactor = ChartAssets.getFloat("chart.financial.bollinger.stddev", 2.0f);
         AnalysisWorker.getCalculatedBollingerBands(yValues, period, stdDevFactor, smaValues, upperValues, lowerValues);
     }
 }

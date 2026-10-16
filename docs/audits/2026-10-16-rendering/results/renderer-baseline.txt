@@ -1,0 +1,29 @@
+DONUT textCalls=0 sameCommandsWithAndWithoutText=true
+PIE dark=ff3b82f6 reusedNord=ff3b82f6 freshNord=ff88c0d0
+OVERLAYS circularDraw=0 circularText=0 physicalDraw=0 performanceDraw=0 performanceText=0
+BOX fillRect y=[120.0, 280.0] stroke=1.5
+BOX line y=[280.0, 280.0] stroke=1.8
+ATR stamp=50->101 reusedUnchanged=true reusedEqualsFresh=false
+SANKEY maxY=520.0 plotMaxY=400
+TERNARY point0=320.0,0.0
+TERNARY point1=-5.551115123125783E-17,400.0
+TERNARY point2=640.0,400.0
+TERNARY gridEdge0=[320.0, 116.772705],[24.0, 376.0]
+TERNARY gridEdge1=[116.772705, 523.2273],[376.0, 376.0]
+TERNARY gridEdge2=[523.2273, 320.0],[376.0, 24.0]
+MEDICAL_GRID batch=java.lang.ArrayIndexOutOfBoundsException: Index 2 out of bounds for length 2
+ECG partialValid=20 recordedVertices=108 uninitializedOriginVertices=88
+PREDICTIVE_BAR fillRect[168.75517, 306.38074][-1091.2, 400.0]11111964061.4
+TERNARY_SPATIAL count=3 moveFlags=true,false,false, firstMarker=0
+GRID DefaultGridLayer canvasOps=32 textCalls=0 batch=points=0
+GRID MedicalGridLayer canvasOps=60 textCalls=0 batch=ArrayIndexOutOfBoundsException
+GRID FinancialGridLayer canvasOps=33 textCalls=0 batch=ArrayIndexOutOfBoundsException
+GRID StatisticalGridLayer canvasOps=32 textCalls=0 batch=points=0
+GRID AnalysisGridLayer canvasOps=21 textCalls=0 batch=points=42
+GRID IsometricGridLayer canvasOps=81 textCalls=0 batch=points=162
+GRID SmithChartGridLayer canvasOps=1087 textCalls=0 batch=points=2174
+GRID PolarGridLayer canvasOps=608 textCalls=0 batch=points=1216
+GRID TernaryGridLayer canvasOps=30 textCalls=0 batch=points=60
+GRID GeoGridLayer canvasOps=20 textCalls=0 batch=points=40
+GRID LogarithmicGridLayer canvasOps=32 textCalls=0 batch=points=0
+EMPTY_RASTER_CRC32=4246071722

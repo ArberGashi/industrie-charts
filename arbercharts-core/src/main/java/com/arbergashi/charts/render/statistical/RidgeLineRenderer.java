@@ -10,9 +10,9 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 /**
- * RidgeLine Renderer for JDK 25.
- * Known as "Joyplot" - ideal for comparing distributions over time.
- * Utilizes a vertical offset based on the x-value to create overlapping ridges.
+ * Draws one filled ridge using the context's X and Y coordinate mapping.
+ * <p>Each model supplies one ridge. Grouping and vertical placement of multiple
+ * ridges are owned by the host; X data never supplies a pixel offset.</p>
  *
  * @author Arber Gashi
  * @since 2026-01-01
@@ -46,7 +46,7 @@ public class RidgeLineRenderer extends BaseRenderer {
             double y = model.getY(i);
             context.mapToPixel(x, y, pix);
             xs[i] = pix[0];
-            ys[i] = pix[1] - (x * 0.5);
+            ys[i] = pix[1];
         }
         float[] px = RendererAllocationCache.getFloatArray(this, "ridgeline.px", n + 2);
         float[] py = RendererAllocationCache.getFloatArray(this, "ridgeline.py", n + 2);

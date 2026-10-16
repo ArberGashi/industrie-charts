@@ -14,7 +14,7 @@ final class PerformanceAuditRendererAdapter extends BaseRenderer {
 
     PerformanceAuditRendererAdapter(LatencyTracker tracker) {
         super("performance_audit_adapter");
-        this.audit = new PerformanceAuditRenderer(tracker);
+        this.audit = new PerformanceAuditRenderer(tracker).setEnabled(true);
     }
 
     @Override

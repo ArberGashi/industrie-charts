@@ -53,7 +53,18 @@ public final class DepthAwareBatchConsumer implements SpatialChunkConsumer {
             return;
         }
         ensureCapacity(size + 1);
-        buffers[size] = buffer;
+        count = Math.min(count, buffer.getPointCapacity());
+        SpatialBuffer snapshot = buffers[size];
+        if (snapshot == null || snapshot.getPointCapacity() < count) {
+            snapshot = new SpatialBuffer(count);
+            buffers[size] = snapshot;
+        }
+        System.arraycopy(buffer.getInputCoords(), 0, snapshot.getInputCoords(), 0, count * 3);
+        System.arraycopy(buffer.getOutputCoords(), 0, snapshot.getOutputCoords(), 0, count * 3);
+        long fallbackStyle = builder.getStyleKey();
+        for (int i = 0; i < count; i++) {
+            snapshot.setPointMetadata(i, buffer.getPointStyleKey(i, fallbackStyle), buffer.isPathStart(i));
+        }
         counts[size] = count;
         double[] stats = SpatialDepthUtils.getCalculatedZBounds(buffer, count, depthTmp);
         double depth = stats[2];

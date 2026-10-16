@@ -17,12 +17,22 @@ import com.arbergashi.charts.render.standard.LineRenderer;
 import com.arbergashi.charts.render.testing.RasterTestCanvas;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.zip.CRC32;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RendererVisualRegressionTest {
+
+    @Test
+    void aTransparentImageCannotPassTheVisibleContentOracle() {
+        DefaultChartModel model = new DefaultChartModel("Empty renderer");
+        model.setXY(0, 1);
+        model.setXY(1, 2);
+        assertThrows(AssertionError.class, () -> renderHash(new BaseRenderer("no-output") { }, model));
+    }
 
     @Test
     void candlestickIsDeterministicAndNonEmpty() {
@@ -42,7 +52,6 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new CandlestickRenderer(), model);
 
         assertEquals(hash1, hash2, "Candlestick render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Candlestick render should not be empty.");
     }
 
     @Test
@@ -58,7 +67,6 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new LineRenderer(), model);
 
         assertEquals(hash1, hash2, "Line render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Line render should not be empty.");
     }
 
     @Test
@@ -67,14 +75,13 @@ public class RendererVisualRegressionTest {
         String[] labels = {"Equities", "Rates", "FX", "Commodities", "Alt"};
         double[] weights = {40, 22, 14, 12, 12};
         for (int i = 0; i < labels.length; i++) {
-            model.setPoint(i, weights[i], 0.0, 0.0, weights[i], labels[i]);
+            model.setPoint(i, weights[i], weights[i], labels[i]);
         }
 
         long hash1 = renderHash(new PieRenderer(), model);
         long hash2 = renderHash(new PieRenderer(), model);
 
         assertEquals(hash1, hash2, "Pie render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Pie render should not be empty.");
     }
 
     @Test
@@ -82,14 +89,14 @@ public class RendererVisualRegressionTest {
         DefaultChartModel model = new DefaultChartModel("Radar");
         double[] values = {62, 48, 91, 70, 79, 55};
         for (int i = 0; i < values.length; i++) {
-            model.setPoint(i, values[i], 0.0, 0.0, values[i], "R" + (i + 1));
+            model.setPoint(i, values[i], values[i], "R" + (i + 1));
         }
+        assertEquals(91.0, model.getDataRange()[3], "The radial scale must include the fixture values.");
 
         long hash1 = renderHash(new RadarRenderer(), model, 320, 240);
         long hash2 = renderHash(new RadarRenderer(), model, 320, 240);
 
         assertEquals(hash1, hash2, "Radar render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Radar render should not be empty.");
     }
 
     @Test
@@ -106,16 +113,15 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new HeatmapRenderer(), model);
 
         assertEquals(hash1, hash2, "Heatmap render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Heatmap render should not be empty.");
     }
 
     @Test
     void medicalSweepRendererIsDeterministicAndNonEmpty() {
-        ChartModel model = new com.arbergashi.charts.model.CircularFastMedicalModel(4096, 2);
+        ChartModel model = new com.arbergashi.charts.model.CircularFastMedicalModel(4096, 1);
         double t = 0.0;
         for (int i = 0; i < 2000; i++) {
             double y = Math.sin(t * 0.05) * 0.8 + Math.sin(t * 0.12) * 0.2;
-            ((com.arbergashi.charts.model.CircularFastMedicalModel) model).add(t, new double[]{t, y});
+            ((com.arbergashi.charts.model.CircularFastMedicalModel) model).add(t, new double[]{y});
             t += 1.0;
         }
 
@@ -123,7 +129,6 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new MedicalSweepRenderer(), model);
 
         assertEquals(hash1, hash2, "Medical sweep render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Medical sweep render should not be empty.");
     }
 
     @Test
@@ -145,7 +150,6 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new VolumeRenderer(), model);
 
         assertEquals(hash1, hash2, "Volume render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Volume render should not be empty.");
     }
 
     @Test
@@ -154,7 +158,7 @@ public class RendererVisualRegressionTest {
         String[] labels = {"Core", "Addons", "Support", "Ops"};
         double[] weights = {38, 24, 18, 20};
         for (int i = 0; i < labels.length; i++) {
-            model.setPoint(i, weights[i], 0.0, 0.0, weights[i], labels[i]);
+            model.setPoint(i, weights[i], weights[i], labels[i]);
         }
 
         DonutRenderer renderer = new DonutRenderer().setCenterText("Revenue").setCenterSubText("LTS");
@@ -162,7 +166,6 @@ public class RendererVisualRegressionTest {
         long hash2 = renderHash(new DonutRenderer().setCenterText("Revenue").setCenterSubText("LTS"), model);
 
         assertEquals(hash1, hash2, "Donut render hash must be deterministic.");
-        assertTrue(hash1 != 0L, "Donut render should not be empty.");
     }
 
     private long renderHash(ChartRenderer renderer, ChartModel model) {
@@ -182,8 +185,12 @@ public class RendererVisualRegressionTest {
                 ChartThemes.getDarkTheme(),
                 null
         );
-        renderer.render(canvas, model, context);
-        return crc32(canvas.pixels());
+        try (canvas) {
+            renderer.render(canvas, model, context);
+            assertTrue(Arrays.stream(canvas.pixels()).anyMatch(pixel -> (pixel >>> 24) != 0),
+                    "Renderer must produce visible pixels: " + renderer.getClass().getSimpleName());
+            return crc32(canvas.pixels());
+        }
     }
 
     private long crc32(int[] pixels) {

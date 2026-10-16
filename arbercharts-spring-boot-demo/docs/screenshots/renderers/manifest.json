@@ -1,0 +1,85 @@
+{
+  "artifact": "arbercharts-spring-boot-demo-2.2.0.jar",
+  "artifactSha256": "48a235d6e4eae16ae086d29c2a50adb4e9b15c65eef991751e174d3e8cecdbde",
+  "springBoot": "4.1.1",
+  "java": 25,
+  "runtime": "Eclipse Adoptium",
+  "dataSource": "Synthetic demo data",
+  "width": 1600,
+  "height": 900,
+  "scale": 2,
+  "images": [
+    {
+      "file": "candlestick-light.png",
+      "renderer": "CandlestickRenderer",
+      "request": "/api/charts/candlestick.png?width=1600&height=900&scale=2&samples=96&theme=light",
+      "sha256": "0ecc06fdac16b26e95a2ed6c67de25b67dad647367ef2a96ad696422a6dd5f81"
+    },
+    {
+      "file": "candlestick-dark.png",
+      "renderer": "CandlestickRenderer",
+      "request": "/api/charts/candlestick.png?width=1600&height=900&scale=2&samples=96&theme=dark",
+      "sha256": "82c9b1ff1574ebb75bafddcf2472f7179ad17399d3d4d26b72361e30fd8f6b7d"
+    },
+    {
+      "file": "heatmap-light.png",
+      "renderer": "HeatmapRenderer",
+      "request": "/api/charts/heatmap.png?width=1600&height=900&scale=2&samples=1024&theme=light",
+      "sha256": "b380035997b10b99155e4eb9b6fcab002657422d6caeed5dab41e8b07de78f38"
+    },
+    {
+      "file": "heatmap-dark.png",
+      "renderer": "HeatmapRenderer",
+      "request": "/api/charts/heatmap.png?width=1600&height=900&scale=2&samples=1024&theme=dark",
+      "sha256": "6c54fb415ccfc71df37aa2dccd033d95e04ccb0c1c0f2fbf51c28744721961e7"
+    },
+    {
+      "file": "donut-light.png",
+      "renderer": "DonutRenderer",
+      "request": "/api/charts/donut.png?width=1600&height=900&scale=2&samples=256&theme=light",
+      "sha256": "eda3c402f6fdf2da507f6bd64a77f6d26cf5dc2e74457c68d66383793eb3973b"
+    },
+    {
+      "file": "donut-dark.png",
+      "renderer": "DonutRenderer",
+      "request": "/api/charts/donut.png?width=1600&height=900&scale=2&samples=256&theme=dark",
+      "sha256": "68be92614809efbe31ffb606b79e68b3be8761033a4e967705c3097a0ce24f91"
+    },
+    {
+      "file": "radar-light.png",
+      "renderer": "RadarRenderer",
+      "request": "/api/charts/radar.png?width=1600&height=900&scale=2&samples=96&theme=light",
+      "sha256": "18b47d61b1079a43d9571c23f0606403f4ebfaf5dc0e899594b267f1a94fccdf"
+    },
+    {
+      "file": "radar-dark.png",
+      "renderer": "RadarRenderer",
+      "request": "/api/charts/radar.png?width=1600&height=900&scale=2&samples=96&theme=dark",
+      "sha256": "89c59bc2e03b1b89187f0247672e025b1a917abbb253fe144bed6db52aeef1bf"
+    },
+    {
+      "file": "boxplot-light.png",
+      "renderer": "BoxPlotRenderer",
+      "request": "/api/charts/boxplot.png?width=1600&height=900&scale=2&samples=96&theme=light",
+      "sha256": "800e7fa026f60bcf8d61eae39da21442c282e8d5cd3861491422947c67482bb4"
+    },
+    {
+      "file": "boxplot-dark.png",
+      "renderer": "BoxPlotRenderer",
+      "request": "/api/charts/boxplot.png?width=1600&height=900&scale=2&samples=96&theme=dark",
+      "sha256": "44b17137e133164268f598242c53be2a47ecf35804c5b3625d6ae4512bf9e725"
+    },
+    {
+      "file": "kde-light.png",
+      "renderer": "KDERenderer",
+      "request": "/api/charts/kde.png?width=1600&height=900&scale=2&samples=256&theme=light",
+      "sha256": "88265669a1aa2848dc79d661a076952e03aeeb8a14dbd3a4fcee19bba1341946"
+    },
+    {
+      "file": "kde-dark.png",
+      "renderer": "KDERenderer",
+      "request": "/api/charts/kde.png?width=1600&height=900&scale=2&samples=256&theme=dark",
+      "sha256": "0787be2f477a4ab29b189c1926e4663824236a4b63733d6331b8afd25a589c49"
+    }
+  ]
+}

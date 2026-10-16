@@ -164,6 +164,32 @@ public interface PlotContext {
     }
 
     /**
+     * Whether grid lines positioned by X-axis values are visible.
+     * @return true to draw vertical Cartesian grid lines
+     */
+    default boolean isGridVisibleX() {
+        return true;
+    }
+
+    /**
+     * Whether grid lines positioned by Y-axis values are visible.
+     * @return true to draw horizontal Cartesian grid lines
+     */
+    default boolean isGridVisibleY() {
+        return true;
+    }
+
+    /**
+     * Returns the calibrated physical scale in logical canvas units per millimeter.
+     * Hosts may override the 96-DPI fallback with their monitor calibration;
+     * backend device scaling must not be applied a second time here.
+     * @return positive logical canvas units per millimeter
+     */
+    default double getPixelsPerMillimeter() {
+        return 96.0 / 25.4;
+    }
+
+    /**
      * Snap a pixel coordinate to a crisp device pixel boundary.
      *
      * <p>Policy: grids and thin strokes align to half-pixel coordinates to avoid

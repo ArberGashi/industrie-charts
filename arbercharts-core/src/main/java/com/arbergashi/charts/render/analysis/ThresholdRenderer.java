@@ -11,22 +11,15 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
+import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>ThresholdRenderer - Visual Threshold Indicator</h1>
- *
- * <p>Enterprise-grade threshold renderer for highlighting regions above or
- * below a critical value with semi-transparent fills and optional reference lines.</p>
- *
- * <h2>Performance Characteristics:</h2>
- * <ul>
- *   <li><b>Render Time:</b> {@code &lt; 0.5ms} (constant time)</li>
- *   <li><b>Complexity:</b> O(1) - draws single rectangle</li>
- *   <li><b>Memory:</b> Zero allocations (shape pooling)</li>
- * </ul>
+ * Highlights the data region above or below a configured threshold.
+ * The fill honors {@code chart.render.threshold.alpha} and Y-axis inversion;
+ * an optional reference line marks the threshold. Geometry work is constant
+ * per frame and its line buffers are reused.
  *
  * @author Arber Gashi
  * @since 2024-06-01
-  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
  */
 public final class ThresholdRenderer extends BaseRenderer {
@@ -67,6 +60,7 @@ public final class ThresholdRenderer extends BaseRenderer {
 
         context.mapToPixel(0, y, pBuffer);
         double py = pBuffer[1];
+        if (!Double.isFinite(py)) return;
         // JDK 25: Use Math.clamp() to constrain y position to bounds
         ArberRect bounds = context.getPlotBounds();
         py = Math.clamp(py, bounds.y(), bounds.maxY());
@@ -75,13 +69,14 @@ public final class ThresholdRenderer extends BaseRenderer {
         ArberColor base = isMultiColor() ? themeSeries(context, 0) : theme.getAccentColor();
         if (base == null) base = theme.getAccentColor();
         float alpha = ChartAssets.getFloat("chart.render.threshold.alpha", 0.08f);
-        ArberColor fill = base;
+        ArberColor fill = ColorRegistry.applyAlpha(base, Float.isFinite(alpha) ? alpha : 0.08f);
 
         float rx;
         float ry;
         float rw;
         float rh;
-        if ("below".equalsIgnoreCase(mode)) {
+        boolean fillBelowPixel = "below".equalsIgnoreCase(mode) != context.isInvertedY();
+        if (fillBelowPixel) {
             rx = (float) bounds.x();
             ry = (float) py;
             rw = (float) bounds.width();

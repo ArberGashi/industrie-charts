@@ -13,6 +13,8 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
+import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
 
 /**
  * Streaming consumer that renders spatial path batches directly to Graphics2D.
@@ -26,6 +28,8 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
     private Stroke stroke;
     private final int[] quadX = new int[4];
     private final int[] quadY = new int[4];
+    private final Path2D.Float markerPath = new Path2D.Float();
+    private final Rectangle2D.Float markerRect = new Rectangle2D.Float();
 
     public SwingSpatialBatchConsumer(SpatialPathBatchBuilder builder) {
         this.builder = builder;
@@ -119,7 +123,7 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
 
     private void drawBatch(SpatialPathBatch batch) {
         int count = batch.getPointCount();
-        if (count <= 1) {
+        if (count <= 0) {
             return;
         }
         double[] xs = batch.getXData();
@@ -131,6 +135,10 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
         long lastStyleKey = Long.MIN_VALUE;
 
         for (int i = 0; i < count; i++) {
+            if (!batch.isVisible(i)) {
+                hasLast = false;
+                continue;
+            }
             long styleKey = batch.getStyleKey(i);
             int markerId = SpatialStyleDescriptor.unpackMarkerId(styleKey);
             if (styleKey != lastStyleKey) {
@@ -144,13 +152,13 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
                 lastY = y;
                 hasLast = true;
                 if (markerId != 0) {
-                    drawMarker(markerId, x, y);
+                    drawMarker(styleKey, xs[i], ys[i]);
                 }
                 continue;
             }
             graphics.drawLine(lastX, lastY, x, y);
             if (markerId != 0) {
-                drawMarker(markerId, x, y);
+                drawMarker(styleKey, xs[i], ys[i]);
             }
             lastX = x;
             lastY = y;
@@ -161,25 +169,44 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
         int argb = SpatialStyleDescriptor.unpackArgb(styleKey);
         float strokeWidth = SpatialStyleDescriptor.unpackStrokeWidth(styleKey);
         int dashId = SpatialStyleDescriptor.unpackDashId(styleKey);
-        int markerId = SpatialStyleDescriptor.unpackMarkerId(styleKey);
         if (graphics == null) {
             return;
         }
-        // markerId reserved for future symbol rendering (v1.8.0+)
         graphics.setColor(ColorCache.get(argb));
         graphics.setStroke(DashStrokeCache.get(dashId, strokeWidth));
     }
 
-    private void drawMarker(int markerId, int x, int y) {
+    private void drawMarker(long styleKey, double px, double py) {
         if (graphics == null) {
             return;
         }
+        int markerId = SpatialStyleDescriptor.unpackMarkerId(styleKey);
+        int x = (int) px;
+        int y = (int) py;
         switch (markerId) {
             case 1 -> {
                 graphics.drawLine(x - 2, y, x + 2, y);
                 graphics.drawLine(x, y - 2, x, y + 2);
             }
             case 2 -> graphics.fillRect(x - 1, y - 1, 3, 3);
+            case SpatialStyleDescriptor.MARKER_OCTAGON -> {
+                double radius = SpatialStyleDescriptor.unpackStrokeWidth(styleKey) * 0.5;
+                markerPath.reset();
+                for (int i = 0; i < 8; i++) {
+                    double angle = i * Math.PI * 0.25;
+                    float vx = (float) (px + Math.cos(angle) * radius);
+                    float vy = (float) (py + Math.sin(angle) * radius);
+                    if (i == 0) markerPath.moveTo(vx, vy);
+                    else markerPath.lineTo(vx, vy);
+                }
+                markerPath.closePath();
+                graphics.fill(markerPath);
+            }
+            case SpatialStyleDescriptor.MARKER_SQUARE -> {
+                float size = SpatialStyleDescriptor.unpackStrokeWidth(styleKey);
+                markerRect.setRect(px - size * 0.5, py - size * 0.5, size, size);
+                graphics.fill(markerRect);
+            }
             default -> {
             }
         }

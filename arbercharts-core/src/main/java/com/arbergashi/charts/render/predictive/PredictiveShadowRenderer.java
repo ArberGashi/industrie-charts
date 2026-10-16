@@ -6,6 +6,7 @@ import com.arbergashi.charts.api.LinearLeastSquaresPredictor;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.PredictionModel;
 import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
@@ -60,6 +61,14 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
     private double deltaSqSum;
     private int deltaSamples;
     private long lastPredictStamp = Long.MIN_VALUE;
+    private ChartModel lastModel;
+    private PlotContext lastContext;
+    private int lastPointCount = -1;
+    private double lastMinX;
+    private double lastMaxX;
+    private double lastMinY;
+    private double lastMaxY;
+    private ArberRect lastBounds;
     private double lastResidualStd;
     private double lastResidualScale = 1.0;
 
@@ -83,23 +92,48 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
     }
 
     /**
-     * Ensures the prediction buffer and audit mapping are up to date for the model stamp.
+     * Refreshes predictions when the model, logical size, update stamp or viewport changes.
+     * Models returning stamp zero do not provide a cache key and are recomputed each call.
      */
     public void ensurePredicted(ChartModel model, PlotContext context) {
         if (model == null || context == null) return;
         long stamp = model.getUpdateStamp();
-        if (stamp == lastPredictStamp && buffer.count() > 0) return;
         if (!ChartAssets.getBoolean(KEY_ENABLED, true)) return;
+        int count = model.getPointCount();
+        if (stamp != 0L && model == lastModel && count == lastPointCount
+                && stamp == lastPredictStamp && context == lastContext
+                && context.getMinX() == lastMinX && context.getMaxX() == lastMaxX
+                && context.getMinY() == lastMinY && context.getMaxY() == lastMaxY
+                && context.getPlotBounds().equals(lastBounds)) return;
+        if (model != lastModel || count < lastPointCount) {
+            auditCount = 0;
+            auditActualIndex = -1;
+            deltaSum = 0.0;
+            deltaAbsSum = 0.0;
+            deltaSqSum = 0.0;
+            deltaSamples = 0;
+        }
         evaluateDeltaAudit(model);
+        buffer.setCount(0).setResidualStd(0.0).setResidualScale(1.0);
         predictor.predict(model, context, buffer);
         lastResidualStd = buffer.residualStd();
         lastResidualScale = buffer.residualScale();
         int last = lastFiniteIndex(model);
-        if (last >= 0) {
+        if (last >= 0 && buffer.count() > 0) {
             double lastX = model.getX(last);
             setDeltaAudit(model, lastX, buffer.x(), buffer.y(), buffer.confidence(), buffer.count());
+        } else {
+            auditCount = 0;
         }
         lastPredictStamp = stamp;
+        lastModel = model;
+        lastPointCount = count;
+        lastContext = context;
+        lastMinX = context.getMinX();
+        lastMaxX = context.getMaxX();
+        lastMinY = context.getMinY();
+        lastMaxY = context.getMaxY();
+        lastBounds = context.getPlotBounds();
     }
 
     /**
@@ -134,7 +168,7 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
         ensurePredicted(model, context);
         int last = lastFiniteIndex(model);
         if (last < 1) return;
-        int n = buffer.count();
+        int n = Math.min(buffer.count(), Math.min(buffer.x().length, buffer.y().length));
         if (n < 1) return;
 
         double[] px = pBuffer();
@@ -145,6 +179,7 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
         context.mapToPixel(lastX, lastY, px);
         double prevPx = context.snapPixel(px[0]);
         double prevPy = context.snapPixel(px[1]);
+        boolean previousValid = Double.isFinite(prevPx) && Double.isFinite(prevPy);
 
         double[] xs = buffer.x();
         double[] ys = buffer.y();
@@ -167,10 +202,17 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
         for (int i = 0; i < n; i++) {
             double x = xs[i];
             double y = ys[i];
-            if (!Double.isFinite(x) || !Double.isFinite(y)) continue;
+            if (!Double.isFinite(x) || !Double.isFinite(y)) {
+                previousValid = false;
+                continue;
+            }
             context.mapToPixel(x, y, px);
             double sx = context.snapPixel(px[0]);
             double sy = context.snapPixel(px[1]);
+            if (!Double.isFinite(sx) || !Double.isFinite(sy)) {
+                previousValid = false;
+                continue;
+            }
 
             double conf = (confidence != null && i < confidence.length) ? confidence[i] : 0.0;
             canvas.setColor(getResolvedConfidenceColor(conf, midT, highT, highAlpha, midAlpha, lowAlpha));
@@ -178,9 +220,10 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
             lineX[1] = (float) sx;
             lineY[0] = (float) prevPy;
             lineY[1] = (float) sy;
-            canvas.drawPolyline(lineX, lineY, 2);
+            if (previousValid) canvas.drawPolyline(lineX, lineY, 2);
             prevPx = sx;
             prevPy = sy;
+            previousValid = true;
         }
 
     }
@@ -220,13 +263,17 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
 
     private void setDeltaAudit(ChartModel model, double startX, double[] xs, double[] ys,
                                   double[] confidence, int count) {
-        if (count <= 0 || xs == null || ys == null) return;
+        if (count <= 0 || xs == null || ys == null) {
+            auditCount = 0;
+            return;
+        }
+        count = Math.min(count, Math.min(xs.length, ys.length));
         ensureAuditCapacity(count);
         System.arraycopy(xs, 0, auditXs, 0, count);
         System.arraycopy(ys, 0, auditYs, 0, count);
-        if (confidence != null) {
-            System.arraycopy(confidence, 0, auditConfidence, 0, Math.min(count, confidence.length));
-        }
+        int confidenceCount = confidence == null ? 0 : Math.min(count, confidence.length);
+        if (confidenceCount > 0) System.arraycopy(confidence, 0, auditConfidence, 0, confidenceCount);
+        java.util.Arrays.fill(auditConfidence, confidenceCount, count, 0.0);
         auditCount = count;
         auditStartX = startX;
         auditStep = (count > 0) ? (auditXs[0] - startX) : 1.0;

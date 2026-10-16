@@ -8,11 +8,13 @@ import com.arbergashi.charts.render.ChartRenderer;
 import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
 import com.arbergashi.charts.render.analysis.VectorFieldRenderer;
 import com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer;
+import com.arbergashi.charts.render.common.PhysicalScaleRenderer;
 import com.arbergashi.charts.render.financial.PredictiveCandleRenderer;
 import com.arbergashi.charts.render.forensic.PlaybackStatusRenderer;
 import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.LatencyTracker;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
@@ -36,6 +38,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class RendererSmokeTest {
     private static final Dimension SIZE = new Dimension(640, 400);
+    private static final ServerRenderService SERVICE = new ServerRenderService(1, false, null);
+
+    @AfterAll
+    static void closeRenderService() {
+        SERVICE.close();
+    }
 
     /**
      * Renderers without a no-arg constructor, wired the same way the demo
@@ -57,7 +65,9 @@ class RendererSmokeTest {
             "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer",
             () -> new CircularLatencyOverlayRenderer(sampleTracker()),
             "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer",
-            () -> new PlaybackStatusRenderer(new StubPlaybackController()));
+            () -> new PlaybackStatusRenderer(new StubPlaybackController()),
+            "com.arbergashi.charts.render.common.PhysicalScaleRenderer",
+            () -> new PhysicalScaleRenderer().setEnabled(true));
 
     /**
      * Catalog entries that are not ChartRenderer implementations at all;
@@ -94,31 +104,22 @@ class RendererSmokeTest {
             "com.arbergashi.charts.render.financial.PredictiveCandleRenderer");
 
     /**
-     * Known blank in the plain single-frame headless path. All of these are
-     * exercised (construction + render run exception-free); they draw nothing
-     * without live runtime state:
-     * - CircularLatencyOverlay needs an active latency window,
-     *   PlaybackStatus an active playback session.
-     * - Calibration and PhysicalScale are config-gated overlays,
-     *   disabled by default.
+     * Calibration remains disabled by default. The other overlays are supplied
+     * with active runtime state above, so their raster output is required.
      */
     private static final Set<String> KNOWN_BLANK_HEADLESS = Set.of(
-            "com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer",
-            "com.arbergashi.charts.render.forensic.PlaybackStatusRenderer",
-            "com.arbergashi.charts.render.medical.CalibrationRenderer",
-            "com.arbergashi.charts.render.common.PhysicalScaleRenderer");
+            "com.arbergashi.charts.render.medical.CalibrationRenderer");
 
     @TestFactory
     Stream<DynamicTest> everyCatalogRendererRendersHeadless() {
         List<RendererCatalogEntry> entries = RendererCatalog.load().entries();
         assertTrue(entries.size() >= 150, "catalog unexpectedly small: " + entries.size());
-        ServerRenderService service = new ServerRenderService(1, false, null);
 
         return entries.stream()
                 .filter(entry -> !NOT_A_CHART_RENDERER.contains(entry.className()))
                 .map(entry -> DynamicTest.dynamicTest(
                         entry.category() + "/" + entry.simpleName(),
-                        () -> renderOnce(service, entry)));
+                        () -> renderOnce(SERVICE, entry)));
     }
 
     private static void renderOnce(ServerRenderService service, RendererCatalogEntry entry) throws Exception {
@@ -126,23 +127,27 @@ class RendererSmokeTest {
         ChartRenderer renderer = (factory != null)
                 ? factory.get()
                 : (ChartRenderer) Class.forName(entry.className()).getDeclaredConstructor().newInstance();
-        ChartModel model = RendererDemoDataFactory.build(entry.category(), entry.className());
-        assertNotNull(model, "no demo model for " + entry.className());
+        try {
+            ChartModel model = RendererDemoDataFactory.build(entry.category(), entry.className());
+            assertNotNull(model, "no demo model for " + entry.className());
 
-        double[] range = INDICATOR_Y_RANGES.get(entry.className());
-        BufferedImage image;
-        if (PREDICTIVE_X_EXTEND.contains(entry.className())) {
-            double lastX = model.getX(Math.max(0, model.getPointCount() - 1));
-            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer,
-                    Double.NaN, lastX + 40.0, Double.NaN, Double.NaN);
-        } else if (range == null) {
-            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer);
-        } else {
-            image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer, range[0], range[1]);
-        }
-        assertNotNull(image, "renderer produced no image: " + entry.className());
-        if (!KNOWN_BLANK_HEADLESS.contains(entry.className())) {
-            assertTrue(hasContent(image), "renderer produced a blank image: " + entry.className());
+            double[] range = INDICATOR_Y_RANGES.get(entry.className());
+            BufferedImage image;
+            if (PREDICTIVE_X_EXTEND.contains(entry.className())) {
+                double lastX = model.getX(Math.max(0, model.getPointCount() - 1));
+                image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer,
+                        Double.NaN, lastX + 40.0, Double.NaN, Double.NaN);
+            } else if (range == null) {
+                image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer);
+            } else {
+                image = service.renderToImage(model, SIZE, ChartThemes.getDarkTheme(), renderer, range[0], range[1]);
+            }
+            assertNotNull(image, "renderer produced no image: " + entry.className());
+            if (!KNOWN_BLANK_HEADLESS.contains(entry.className())) {
+                assertTrue(hasContent(image), "renderer produced a blank image: " + entry.className());
+            }
+        } finally {
+            if (renderer instanceof AutoCloseable closeable) closeable.close();
         }
     }
 
@@ -156,9 +161,9 @@ class RendererSmokeTest {
         return false;
     }
 
-    /** Minimal inactive playback wiring for the status renderer. */
+    /** Minimal active playback wiring for the status renderer. */
     private static final class StubPlaybackController implements PlaybackController {
-        private boolean deterministic;
+        private boolean deterministic = true;
         private double speed = 1.0;
 
         @Override
@@ -197,7 +202,7 @@ class RendererSmokeTest {
 
         @Override
         public boolean isPlaybackActive() {
-            return false;
+            return deterministic;
         }
 
         @Override

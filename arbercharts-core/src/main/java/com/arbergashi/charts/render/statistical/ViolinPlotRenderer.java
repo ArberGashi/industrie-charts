@@ -9,9 +9,10 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
 /**
- * ViolinPlotRenderer.
- * Combines box-plot properties with a kernel density estimate (KDE).
- * Shows the distribution of data across categories.
+ * Draws a symmetric summary silhouette between each category's minimum and maximum,
+ * with a marker at its supplied central Y value.
+ * <p>The summary model does not supply per-category samples, so the silhouette
+ * is not a kernel density estimate.</p>
  *
  * @author Arber Gashi
  * @since 2025-06-15
@@ -22,6 +23,23 @@ public class ViolinPlotRenderer extends BaseRenderer {
 
     public ViolinPlotRenderer() {
         super("violin");
+    }
+
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        int count = model.getPointCount();
+        for (int i = 0; i < count; i++) {
+            double center = model.getY(i);
+            double min = model.getMin(i);
+            double max = model.getMax(i);
+            if (!Double.isFinite(model.getX(i)) || !Double.isFinite(center)
+                    || !Double.isFinite(min) || !Double.isFinite(max)) continue;
+            minY = Math.min(minY, Math.min(center, Math.min(min, max)));
+            maxY = Math.max(maxY, Math.max(center, Math.max(min, max)));
+        }
+        return minY == Double.POSITIVE_INFINITY ? null : new double[]{minY, maxY};
     }
 
     @Override/**
@@ -35,23 +53,26 @@ public class ViolinPlotRenderer extends BaseRenderer {
 
         double[] centerPix = pBuffer();
         double[] minPix = pBuffer4();
-        double[] maxPix = pBuffer();
 
         for (int i = 0; i < count; i++) {
             ArberColor violinColor = seriesOrBase(model, context, i);
-            drawViolin(canvas, i, model, context, violinColor, maxWidth, centerPix, minPix, maxPix);
+            drawViolin(canvas, i, model, context, violinColor, maxWidth, centerPix, minPix);
         }
     }
 
     private void drawViolin(ArberCanvas canvas, int idx, ChartModel model, PlotContext context, ArberColor color, double maxWidth,
-                            double[] centerPix, double[] minPix, double[] maxPix) {
+                            double[] centerPix, double[] minPix) {
         context.mapToPixel(model.getX(idx), model.getY(idx), centerPix);
-        context.mapToPixel(model.getX(idx), model.getMin(idx), minPix);
-        context.mapToPixel(model.getX(idx), model.getMax(idx), maxPix);
-
         double centerX = centerPix[0];
-        double minY = maxPix[1]; /* Y is inverted in Swing */
-        double maxY = minPix[1];
+        double centerY = centerPix[1];
+        context.mapToPixel(model.getX(idx), model.getMin(idx), minPix);
+        double lowerPixel = minPix[1];
+        context.mapToPixel(model.getX(idx), model.getMax(idx), centerPix);
+
+        double minY = Math.min(centerPix[1], lowerPixel);
+        double maxY = Math.max(centerPix[1], lowerPixel);
+        if (!Double.isFinite(centerX) || !Double.isFinite(centerY)
+                || !Double.isFinite(minY) || !Double.isFinite(maxY)) return;
         double height = maxY - minY;
 
         int segments = 24;
@@ -77,6 +98,6 @@ public class ViolinPlotRenderer extends BaseRenderer {
 
         double boxWidth = ChartScale.scale(4.0);
         canvas.setColor(themeBackground(context));
-        canvas.fillRect((float) (centerX - boxWidth / 2), (float) (centerPix[1] - boxWidth), (float) boxWidth, (float) (boxWidth * 2));
+        canvas.fillRect((float) (centerX - boxWidth / 2), (float) (centerY - boxWidth), (float) boxWidth, (float) (boxWidth * 2));
     }
 }

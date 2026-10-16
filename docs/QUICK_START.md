@@ -1,10 +1,12 @@
 # ArberCharts Quick Start Guide
 
-**Get started in under 5 minutes!**
+Create a Swing chart or render a PNG with the APIs available in ArberCharts 2.2.0.
 
 ---
 
 ## Installation
+
+Use Eclipse Temurin JDK 25 from Adoptium. An existing Temurin 25 installation is sufficient.
 
 ### Maven
 
@@ -12,19 +14,19 @@
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-swing-bridge</artifactId>
-    <version>2.0.0</version>
+    <version>2.2.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("com.arbergashi:arbercharts-swing-bridge:2.0.0")
+implementation("com.arbergashi:arbercharts-swing-bridge:2.2.0")
 ```
 
 ---
 
-## Your First Chart (2 Lines)
+## Your First Chart
 
 ```java
 import com.arbergashi.charts.Charts;
@@ -38,11 +40,11 @@ public class HelloChart {
 }
 ```
 
-**That's it!** Run it and you get a beautiful, interactive chart.
+Run this class on a graphical desktop. The Swing bridge creates the chart window.
 
 ---
 
-## 5-Minute Tutorial
+## Adding Data
 
 ### Step 1: Create a Chart
 
@@ -61,58 +63,35 @@ chart.addPoint(5, 220);
 chart.addPoint(6, 250);
 ```
 
-### Step 3: Customize
+### Step 3: Set the Window Title
 
 ```java
-chart.title("Sales 2026")
-     .subtitle("Q1 Performance")
-     .xLabel("Month")
-     .yLabel("Revenue (CHF)")
-     .theme("obsidian");
+chart.title("Sales 2026");
 ```
 
-### Step 4: Show or Export
+### Step 4: Show the Chart
 
 ```java
-// Display in window
 chart.show();
-
-// Or export to file
-chart.exportToPNG("sales-2026.png");
 ```
+
+For PNG output, use `ServerRenderService` as shown in the Spring Boot example below.
 
 ---
 
 ## Common Use Cases
 
-### Real-Time Monitoring
+- **Animated data and medical renderers:** the [Swing workbench](../arbercharts-demo/docs/WORKBENCH.md)
+  uses actual chart models, renderers and panel lifecycle handling.
+- **Financial data:** the [Spring Boot workbench](../arbercharts-spring-boot-demo/README.md)
+  includes a runnable candlestick example with synthetic OHLC data.
+- **Other chart families:** use the [renderer catalog](RENDERER_CATALOG.md)
+  and the corresponding model types directly.
 
-```java
-Charts.streamingLineChart(1000)
-    .title("CPU Usage")
-    .updateInterval(100)  // 10 Hz
-    .startStreaming(() -> getCpuUsage())
-    .show();
-```
-
-### Financial Data
-
-```java
-Charts.candlestickChart()
-    .title("BTC/USD")
-    .loadFromCSV("bitcoin-prices.csv")
-    .show();
-```
-
-### Medical ECG
-
-```java
-Charts.ecgChart()
-    .sweepMode(true)
-    .gridEnabled(true)
-    .startStreaming(() -> getHeartRateSignal())
-    .show();
-```
+The `Charts` convenience API currently supports line-chart creation, data insertion
+and display. Its streaming and export helpers, and the other convenience factories,
+are not implemented. Use the model, renderer and host APIs demonstrated by the workbenches
+for those features.
 
 ---
 
@@ -120,11 +99,13 @@ Charts.ecgChart()
 
 ### Step 1: Add Starter
 
+In an existing Spring Boot 4.1.1 web application, add:
+
 ```xml
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-spring-boot-starter</artifactId>
-    <version>2.0.0</version>
+    <version>2.2.0</version>
 </dependency>
 ```
 
@@ -132,114 +113,99 @@ Charts.ecgChart()
 
 ```yaml
 arbercharts:
-  theme: dark
-  export:
-    enabled: true
-    formats: [png, svg, pdf]
+  server:
+    pool-size: 4
+    metrics-enabled: true
 ```
 
-### Step 3: Use Anywhere
+### Step 3: Render a PNG
 
 ```java
+import com.arbergashi.charts.bridge.server.ServerRenderService;
+import com.arbergashi.charts.model.CircularChartModel;
+import java.awt.Dimension;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 public class ChartController {
-    
-    @GetMapping("/chart.png")
+    private final ServerRenderService renderService;
+
+    public ChartController(ServerRenderService renderService) {
+        this.renderService = renderService;
+    }
+
+    @GetMapping(value = "/chart.png", produces = "image/png")
     public byte[] chart() {
-        return Charts.lineChart()
-            .addData(1, 10, 2, 20, 3, 15)
-            .exportToPNG();
+        var model = new CircularChartModel(3);
+        model.setPoint(1, 10, 1.0, null);
+        model.setPoint(2, 20, 1.0, null);
+        model.setPoint(3, 15, 1.0, null);
+        return renderService.renderToPng(model, new Dimension(800, 450));
     }
 }
 ```
 
-**Zero configuration needed!** Auto-configured on startup.
+The starter configures `ServerRenderService`, and Spring closes the service on
+shutdown. Each request above owns its model. Headless rendering needs a Java runtime
+containing `java.desktop`, but does not require a display server.
 
 ---
 
-## Themes
+## Configure a Swing Panel
 
-ArberCharts comes with 3 beautiful themes:
+Use `ArberChartPanel` directly for panel themes and renderer selection. Create and
+configure Swing components on the event dispatch thread:
 
 ```java
-chart.theme("dark");      // Default - dark background
-chart.theme("light");     // Light background
-chart.theme("obsidian");  // Professional dark theme
+import com.arbergashi.charts.api.ChartThemes;
+import com.arbergashi.charts.model.CircularChartModel;
+import com.arbergashi.charts.platform.swing.ArberChartPanel;
+import com.arbergashi.charts.render.standard.LineRenderer;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+
+public class ConfiguredChart {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            var model = new CircularChartModel(3);
+            model.setPoint(1, 20, 1.0, null);
+            model.setPoint(2, 21, 1.0, null);
+            model.setPoint(3, 20.5, 1.0, null);
+
+            var panel = new ArberChartPanel(model, new LineRenderer());
+            panel.setTheme(ChartThemes.getLightTheme());
+
+            var frame = new JFrame("Temperature");
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.add(panel);
+            frame.setSize(800, 450);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+    }
+}
 ```
 
----
+For application-specific axes, grids and layers, see the
+[rendering architecture](RENDERING_ARCHITECTURE.md) and the runnable workbenches.
 
 ## Performance
 
-ArberCharts is **Zero-GC** - no garbage collection pauses:
-
-```java
-// Renders at 10,000+ FPS with zero GC pauses
-Charts.streamingLineChart(10000)
-    .updateInterval(1)  // 1000 Hz!
-    .startStreaming(() -> Math.random())
-    .show();
-```
-
-**Perfect for:**
-- Medical monitors (ECG, vital signs)
-- Trading systems (real-time prices)
-- Industrial dashboards (sensor data)
-
----
-
-## API Philosophy
-
-**ArberCharts follows 3 principles:**
-
-1. **Simple things are simple** - Common charts in 2-5 lines
-2. **Complex things are possible** - Full API access when needed
-3. **Zero-GC always** - <1ms latency guaranteed
-
----
-
-## Examples
-
-### Minimal (2 lines)
-
-```java
-Charts.lineChart()
-    .show();
-```
-
-### Typical (5 lines)
-
-```java
-Charts.lineChart()
-    .title("Temperature")
-    .addData(1, 20, 2, 21, 3, 20.5)
-    .theme("dark")
-    .show();
-```
-
-### Advanced (10 lines)
-
-```java
-Charts.streamingLineChart(1000)
-    .title("Real-Time Sensor")
-    .subtitle("Temperature Monitor")
-    .xLabel("Time (s)")
-    .yLabel("°C")
-    .theme("obsidian")
-    .updateInterval(50)
-    .startStreaming(() -> sensor.read())
-    .exportToPNG("output.png")
-    .show();
-```
+Renderers reuse buffers and support optional Vector API acceleration. Throughput
+and allocation rates depend on the renderer, backend, data and runtime. See the
+[verification strategy](VERIFICATION_STRATEGY.md) for the functional, allocation
+and performance checks and their coverage limits.
 
 ---
 
 ## What's Next?
 
 - **[User Guide](USER_GUIDE.md)** - Complete documentation
-- **[Renderer Catalog](RENDERER_CATALOG.md)** - 158 chart types
-- **[Examples](../examples/)** - More code samples
-- **[API Reference](../javadoc/)** - Full API docs
+- **[Renderer Catalog](RENDERER_CATALOG.md)** - 156 catalog entries
+- **[Swing Workbench](../arbercharts-demo/docs/WORKBENCH.md)** - Desktop demo
+- **[Spring Boot Workbench](../arbercharts-spring-boot-demo/README.md)** - Browser demo and server examples
+- **[API Sources](../arbercharts-core/src/main/java/com/arbergashi/charts/)** - Core API and Javadoc comments
 
 ---
 
@@ -247,11 +213,5 @@ Charts.streamingLineChart(1000)
 
 **Questions?** gashi@pro-business.ch
 
-**Found a bug?** [GitHub Issues](https://github.com/ArberGashi/charts/issues)
-
----
-
-**Welcome to ArberCharts!** 🎉
-
-The **simplest** and **fastest** Java charting framework.
+**Found a bug?** [GitHub Issues](https://github.com/ArberGashi/industrie-charts/issues)
 

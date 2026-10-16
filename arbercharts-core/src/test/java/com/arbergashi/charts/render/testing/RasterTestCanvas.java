@@ -1,193 +1,149 @@
 package com.arbergashi.charts.render.testing;
 
 import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberFont;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.core.rendering.ArberMatrices;
 import com.arbergashi.charts.core.rendering.ArberMatrix;
 import com.arbergashi.charts.core.rendering.VoxelBuffer;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+
 /**
- * Minimal raster canvas for renderer regression tests.
+ * Test-only Java2D reference canvas with actual fills, clipping and source-over
+ * compositing. Production Core remains independent of java.desktop.
  */
-public final class RasterTestCanvas implements ArberCanvas {
-    private final int width;
-    private final int height;
-    private final int[] pixels;
-    private int color = 0xFF000000;
-    private float stroke = 1f;
+public final class RasterTestCanvas implements ArberCanvas, AutoCloseable {
+    private final BufferedImage image;
+    private final Graphics2D graphics;
+    private final Path2D.Float path = new Path2D.Float();
     private float lastX;
     private float lastY;
     private ArberRect clip;
-    private boolean clipEnabled;
-    private int clipX0;
-    private int clipY0;
-    private int clipX1;
-    private int clipY1;
 
     public RasterTestCanvas(int width, int height) {
-        this.width = Math.max(1, width);
-        this.height = Math.max(1, height);
-        this.pixels = new int[this.width * this.height];
+        image = new BufferedImage(Math.max(1, width), Math.max(1, height), BufferedImage.TYPE_INT_ARGB);
+        graphics = image.createGraphics();
+        graphics.setColor(Color.BLACK);
+        graphics.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
     }
 
-    public int[] pixels() {
-        return pixels;
-    }
-
-    public int width() {
-        return width;
-    }
-
-    public int height() {
-        return height;
-    }
+    public int[] pixels() { return ((DataBufferInt) image.getRaster().getDataBuffer()).getData(); }
+    public int width() { return image.getWidth(); }
+    public int height() { return image.getHeight(); }
 
     @Override
     public void setColor(ArberColor color) {
-        if (color != null) {
-            this.color = color.argb();
-        }
+        if (color != null) graphics.setColor(new Color(color.argb(), true));
     }
 
     @Override
     public void setStroke(float width) {
-        this.stroke = Math.max(1f, width);
+        if (Float.isFinite(width) && width > 0) graphics.setStroke(new BasicStroke(width));
     }
 
     @Override
-    public void moveTo(float x, float y) {
-        lastX = x;
-        lastY = y;
-    }
+    public void moveTo(float x, float y) { lastX = x; lastY = y; }
 
     @Override
     public void lineTo(float x, float y) {
-        drawLine(Math.round(lastX), Math.round(lastY), Math.round(x), Math.round(y));
-        lastX = x;
-        lastY = y;
+        path.reset();
+        path.moveTo(lastX, lastY);
+        path.lineTo(x, y);
+        graphics.draw(path);
+        moveTo(x, y);
     }
 
     @Override
     public void drawPolyline(float[] xs, float[] ys, int count) {
-        if (xs == null || ys == null || count <= 1) return;
-        int n = Math.min(count, Math.min(xs.length, ys.length));
-        int x0 = Math.round(xs[0]);
-        int y0 = Math.round(ys[0]);
-        for (int i = 1; i < n; i++) {
-            int x1 = Math.round(xs[i]);
-            int y1 = Math.round(ys[i]);
-            drawLine(x0, y0, x1, y1);
-            x0 = x1;
-            y0 = y1;
-        }
+        int n = available(xs, ys, count);
+        if (n < 2) return;
+        buildPath(xs, ys, n);
+        graphics.draw(path);
     }
 
     @Override
-    public void drawRect(float x, float y, float w, float h) {
-        int x0 = Math.round(x);
-        int y0 = Math.round(y);
-        int x1 = Math.round(x + w);
-        int y1 = Math.round(y + h);
-        drawLine(x0, y0, x1, y0);
-        drawLine(x1, y0, x1, y1);
-        drawLine(x1, y1, x0, y1);
-        drawLine(x0, y1, x0, y0);
+    public void drawRect(float x, float y, float width, float height) {
+        if (width < 0 || height < 0) return;
+        graphics.draw(new Rectangle2D.Float(x, y, width, height));
     }
 
     @Override
-    public void fillRect(float x, float y, float w, float h) {
-        int x0 = Math.max(0, Math.round(x));
-        int y0 = Math.max(0, Math.round(y));
-        int x1 = Math.min(width - 1, Math.round(x + w));
-        int y1 = Math.min(height - 1, Math.round(y + h));
-        if (clipEnabled) {
-            x0 = Math.max(x0, clipX0);
-            y0 = Math.max(y0, clipY0);
-            x1 = Math.min(x1, clipX1);
-            y1 = Math.min(y1, clipY1);
-        }
-        for (int yy = y0; yy <= y1; yy++) {
-            int row = yy * width;
-            for (int xx = x0; xx <= x1; xx++) {
-                pixels[row + xx] = color;
-            }
-        }
+    public void fillRect(float x, float y, float width, float height) {
+        if (!(width > 0) || !(height > 0)) return;
+        graphics.fill(new Rectangle2D.Float(x, y, width, height));
     }
 
     @Override
     public void fillPolygon(float[] xs, float[] ys, int count) {
-        // Fast outline-only fill for regression tests (keeps determinism, avoids heavy scan fills).
-        drawPolyline(xs, ys, count);
+        int n = available(xs, ys, count);
+        if (n < 3) return;
+        buildPath(xs, ys, n);
+        path.closePath();
+        graphics.fill(path);
+    }
+
+    private static int available(float[] xs, float[] ys, int count) {
+        return xs == null || ys == null ? 0 : Math.min(count, Math.min(xs.length, ys.length));
+    }
+
+    private void buildPath(float[] xs, float[] ys, int count) {
+        path.reset();
+        path.moveTo(xs[0], ys[0]);
+        for (int i = 1; i < count; i++) path.lineTo(xs[i], ys[i]);
     }
 
     @Override
     public void drawVoxelField(VoxelBuffer buffer) {
-        if (buffer == null) return;
-        float[] xs = buffer.x();
-        float[] ys = buffer.y();
-        int[] argb = buffer.argb();
-        int n = buffer.count();
-        for (int i = 0; i < n; i++) {
-            int x = Math.round(xs[i]);
-            int y = Math.round(ys[i]);
-            if (x < 0 || y < 0 || x >= width || y >= height) continue;
-            if (clipEnabled && (x < clipX0 || x > clipX1 || y < clipY0 || y > clipY1)) continue;
-            pixels[y * width + x] = (argb != null && i < argb.length) ? argb[i] : color;
+        if (buffer == null || buffer.x() == null || buffer.y() == null) return;
+        Color original = graphics.getColor();
+        float size = ((BasicStroke) graphics.getStroke()).getLineWidth();
+        int n = available(buffer.x(), buffer.y(), buffer.count());
+        try {
+            for (int i = 0; i < n; i++) {
+                graphics.setColor(buffer.argb() != null && i < buffer.argb().length
+                        ? new Color(buffer.argb()[i], true) : original);
+                fillRect(buffer.x()[i] - size / 2, buffer.y()[i] - size / 2, size, size);
+            }
+        } finally {
+            graphics.setColor(original);
         }
     }
 
-    @Override
-    public ArberMatrix getTransform() {
-        return ArberMatrices.identity();
-    }
+    @Override public ArberMatrix getTransform() { return ArberMatrices.identity(); }
 
     @Override
-    public void setClip(ArberRect clip) {
-        this.clip = clip;
-        if (clip == null) {
-            clipEnabled = false;
-            return;
-        }
-        clipEnabled = true;
-        clipX0 = (int) Math.floor(clip.x());
-        clipY0 = (int) Math.floor(clip.y());
-        clipX1 = (int) Math.ceil(clip.x() + clip.width()) - 1;
-        clipY1 = (int) Math.ceil(clip.y() + clip.height()) - 1;
+    public void setClip(ArberRect value) {
+        clip = value;
+        graphics.setClip(value == null ? null : new Rectangle2D.Double(value.x(), value.y(), value.width(), value.height()));
     }
+
+    @Override public ArberRect getClip() { return clip; }
 
     @Override
-    public ArberRect getClip() {
-        return clip;
+    public void setFont(ArberFont font) {
+        if (font != null) graphics.setFont(new Font(font.name(), font.style(), Math.max(1, Math.round(font.size()))));
     }
 
-    private void drawLine(int x0, int y0, int x1, int y1) {
-        int dx = Math.abs(x1 - x0);
-        int dy = Math.abs(y1 - y0);
-        int sx = x0 < x1 ? 1 : -1;
-        int sy = y0 < y1 ? 1 : -1;
-        int err = dx - dy;
-        int x = x0;
-        int y = y0;
-        int maxSteps = Math.max(dx, dy) + 2;
-        for (int i = 0; i < maxSteps; i++) {
-            if (x >= 0 && y >= 0 && x < width && y < height) {
-                if (!clipEnabled || (x >= clipX0 && x <= clipX1 && y >= clipY0 && y <= clipY1)) {
-                    pixels[y * width + x] = color;
-                }
-            }
-            if (x == x1 && y == y1) break;
-            int e2 = 2 * err;
-            if (e2 > -dy) {
-                err -= dy;
-                x += sx;
-            }
-            if (e2 < dx) {
-                err += dx;
-                y += sy;
-            }
-        }
+    @Override public float measureTextWidth(String text) { return graphics.getFontMetrics().stringWidth(text); }
+    @Override public float getTextLineHeight() { return graphics.getFontMetrics().getHeight(); }
+    @Override public float getTextAscent() { return graphics.getFontMetrics().getAscent(); }
+
+    @Override
+    public void drawText(float x, float y, String text) {
+        if (text != null && !text.isEmpty() && Float.isFinite(x) && Float.isFinite(y)) graphics.drawString(text, x, y);
     }
 
-    // pointInPolygon removed for performance; outline-only is sufficient for deterministic hashes.
+    @Override public void close() { graphics.dispose(); }
 }

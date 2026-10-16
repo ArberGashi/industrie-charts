@@ -10,11 +10,12 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 
 /**
- * Professional, zero-allocation, high-precision bubble chart renderer.
+ * Renders bubbles whose area is proportional to each positive model weight.
+ * Nonfinite coordinates and nonpositive or nonfinite weights are omitted.
+ * The largest bubble has a device-scaled diameter of 50 pixels.
  *
  * @author Arber Gashi
  * @since 2025-06-01
- * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class BubbleRenderer extends BaseRenderer {
 
@@ -29,20 +30,23 @@ public final class BubbleRenderer extends BaseRenderer {
      */
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
-        final int n = model.getPointCount();
-        if (n == 0) return;
-
         double[] xData = model.getXData();
         double[] yData = model.getYData();
-        double[] weightData = yData;
+        double[] weightData = model.getWeightData();
+        if (xData == null || yData == null || weightData == null) return;
+        final int n = Math.min(model.getPointCount(),
+                Math.min(weightData.length, Math.min(xData.length, yData.length)));
+        if (n <= 0) return;
 
         ArberColor color = getSeriesColor(model);
 
-        double maxWeight = 1.0;
+        double maxWeight = 0.0;
         for (int i = 0; i < n; i++) {
             double w = weightData[i];
-            if (w > maxWeight) maxWeight = w;
+            if (Double.isFinite(xData[i]) && Double.isFinite(yData[i])
+                    && Double.isFinite(w) && w > maxWeight) maxWeight = w;
         }
+        if (maxWeight <= 0.0) return;
 
         ArberRect viewBounds = context.getPlotBounds();
         double maxBubbleSize = ChartScale.scale(50.0);
@@ -53,11 +57,13 @@ public final class BubbleRenderer extends BaseRenderer {
         canvas.setColor(color);
         for (int i = 0; i < n; i++) {
             double weight = weightData[i];
-            double size = (weight / maxWeight) * maxBubbleSize;
-            if (size < 2) size = 2;
+            if (!Double.isFinite(weight) || weight <= 0.0
+                    || !Double.isFinite(xData[i]) || !Double.isFinite(yData[i])) continue;
+            double size = Math.sqrt(weight / maxWeight) * maxBubbleSize;
             double halfSize = size / 2.0;
 
             context.mapToPixel(xData[i], yData[i], p0);
+            if (!Double.isFinite(p0[0]) || !Double.isFinite(p0[1])) continue;
 
             if (p0[0] < viewBounds.minX() - halfSize || p0[0] > viewBounds.maxX() + halfSize ||
                     p0[1] < viewBounds.minY() - halfSize || p0[1] > viewBounds.maxY() + halfSize) {

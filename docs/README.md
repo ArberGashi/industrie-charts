@@ -1,31 +1,34 @@
-# ArberCharts Documentation (v2.0.0)
+# ArberCharts documentation
 
-This directory contains the active documentation set for ArberCharts 2.0.0.
+The current source tree and Maven installation examples target **2.2.0**. Documents named for older versions remain historical references; they do not establish the current implementation or verification status.
 
-## Start Here
+## Start here
 
-- `QUICK_START.md`
-- `USER_GUIDE.md`
-- `RENDERER_CATALOG.md`
-- `RELEASE_NOTES_2.0.0.md`
-- `LICENSING.md`
+- [Project README and installation](../README.md)
+- [Quick Start](QUICK_START.md)
+- [User Guide](USER_GUIDE.md)
+- [Renderer Catalog](RENDERER_CATALOG.md)
+- [Release notes index](../RELEASE_NOTES.md)
+- [Licensing](LICENSING.md)
 
-## Architecture and Quality
+## Architecture and verification
 
-- `DOCTRINE_POLICY.md`
-- `PERFORMANCE_REPORT.md`
-- `CONCURRENCY_MODEL.md`
-- `VERIFICATION_STRATEGY.md`
-- `LOGGING_POLICY.md`
+- [Rendering architecture and 2.2.0 migration](RENDERING_ARCHITECTURE.md)
+- [Verification strategy and test limits](VERIFICATION_STRATEGY.md)
+- [Independent renderer, axes and UI audit — 16 October 2026](audits/2026-10-16-rendering/README.md)
+- [Dependency updates](DEPENDENCY_UPDATES.md)
+- [GraalVM metadata ownership and validation limits](GRAALVM_AUDIT.md)
+- [Concurrency model](CONCURRENCY_MODEL.md)
+- [Logging policy](LOGGING_POLICY.md)
+- [Design policies](DOCTRINE_POLICY.md)
+- [Recorded performance report](PERFORMANCE_REPORT.md)
 
-## Product and Delivery
+The independent audit separates executed reproductions, source review and inventory coverage. Its remaining visual and numerical findings are follow-up work; primitive backend tests and catalog smoke tests do not constitute full visual approval.
 
-- `ANFORDERUNGEN.md`
-- `PRICING.md`
-- `SLA.md`
-- `SLA_DE.md`
-- `EULA_DRAFT.md`
+## Applications and delivery
 
-## Scope Policy
-
-ArberCharts 2.0.0 is the only maintained product line in this repository.
+- [Swing demo module](../arbercharts-demo/)
+- [Spring Boot demo](../arbercharts-spring-boot-demo/README.md)
+- [Release preparation and publishing](../RELEASING.md)
+- [Commercial support](PRICING.md)
+- [Service level agreement](SLA.md) / [German version](SLA_DE.md)

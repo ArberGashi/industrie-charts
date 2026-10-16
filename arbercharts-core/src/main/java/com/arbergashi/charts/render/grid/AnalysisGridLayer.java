@@ -7,7 +7,6 @@ import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
@@ -50,6 +49,7 @@ public class AnalysisGridLayer implements GridLayer {
     private static final String KEY_MAX_VLINES = "Chart.analysisGrid.maxVLines";
 
     private final GridBatchConfig gridBatchConfig = new GridBatchConfig();
+    private final GridBatchCanvas batchCanvas = new GridBatchCanvas();
     private final float[] lineXs = new float[2];
     private final float[] lineYs = new float[2];
 
@@ -95,7 +95,7 @@ public class AnalysisGridLayer implements GridLayer {
         ArberColor majorColor = ColorRegistry.applyAlpha(themeGrid, majorAlpha);
 
         // Horizontal grid lines
-        for (int i = 0; i <= hLines; i++) {
+        for (int i = 0; context.isGridVisibleY() && i <= hLines; i++) {
             double y = plotY + i * plotH / hLines;
             boolean isMajor = majorEveryY > 0 && (i % majorEveryY == 0);
             canvas.setColor(isMajor ? majorColor : minorColor);
@@ -104,7 +104,7 @@ public class AnalysisGridLayer implements GridLayer {
         }
 
         // Vertical grid lines
-        for (int i = 0; i <= vLines; i++) {
+        for (int i = 0; context.isGridVisibleX() && i <= vLines; i++) {
             double x = plotX + i * plotW / vLines;
             boolean isMajor = majorEveryX > 0 && (i % majorEveryX == 0);
             canvas.setColor(isMajor ? majorColor : minorColor);
@@ -115,63 +115,7 @@ public class AnalysisGridLayer implements GridLayer {
 
     @Override
     public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        GridBatchConfig effective = (config != null) ? config : gridBatchConfig;
-        builder.setZMin(effective.getZMin())
-                .setClippingMode(effective.getClippingMode());
-
-        ArberRect bounds = context.getPlotBounds();
-        double plotX = bounds.x();
-        double plotY = bounds.y();
-        double plotW = bounds.width();
-        double plotH = bounds.height();
-
-        int maxHLines = ChartAssets.getUIInt(KEY_MAX_HLINES, ChartAssets.getInt(KEY_MAX_HLINES, 8));
-        int maxVLines = ChartAssets.getUIInt(KEY_MAX_VLINES, ChartAssets.getInt(KEY_MAX_VLINES, 14));
-
-        int hLines = Math.max(4, Math.min(maxHLines, (int) Math.round(plotH / 40.0)));
-        int vLines = Math.max(6, Math.min(maxVLines, (int) Math.round(plotW / 60.0)));
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor themeGrid = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA,
-            ChartAssets.getFloat(KEY_MINOR_ALPHA,
-                ChartAssets.getFloat(KEY_ALPHA, 0.12f)));
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA,
-            ChartAssets.getFloat(KEY_MAJOR_ALPHA, Math.min(1f, minorAlpha + 0.12f)));
-        float minorStrokeWidth = ChartAssets.getUIFloat(KEY_MINOR_STROKE_WIDTH,
-            ChartAssets.getFloat(KEY_MINOR_STROKE_WIDTH,
-                ChartAssets.getFloat(KEY_STROKE_WIDTH, 0.6f)));
-        float majorStrokeWidth = ChartAssets.getUIFloat(KEY_MAJOR_STROKE_WIDTH,
-            ChartAssets.getFloat(KEY_MAJOR_STROKE_WIDTH, 0.75f));
-
-        ArberColor minorColor = ColorRegistry.applyAlpha(themeGrid, minorAlpha);
-        ArberColor majorColor = ColorRegistry.applyAlpha(themeGrid, majorAlpha);
-
-        int majorEveryX = ChartAssets.getUIInt(KEY_MAJOR_EVERY_X,
-            ChartAssets.getInt(KEY_MAJOR_EVERY_X, 4));
-        int majorEveryY = ChartAssets.getUIInt(KEY_MAJOR_EVERY_Y,
-            ChartAssets.getInt(KEY_MAJOR_EVERY_Y, 3));
-
-        // Horizontal lines
-        for (int i = 0; i <= hLines; i++) {
-            double y = plotY + i * plotH / hLines;
-            boolean isMajor = majorEveryY > 0 && (i % majorEveryY == 0);
-            ArberColor color = isMajor ? majorColor : minorColor;
-            float strokeWidth = ChartScale.scale(isMajor ? majorStrokeWidth : minorStrokeWidth);
-            builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-            builder.setLineSegment(plotX, y, 1.0, plotX + plotW, y, 1.0);
-        }
-
-        // Vertical lines
-        for (int i = 0; i <= vLines; i++) {
-            double x = plotX + i * plotW / vLines;
-            boolean isMajor = majorEveryX > 0 && (i % majorEveryX == 0);
-            ArberColor color = isMajor ? majorColor : minorColor;
-            float strokeWidth = ChartScale.scale(isMajor ? majorStrokeWidth : minorStrokeWidth);
-            builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-            builder.setLineSegment(x, plotY, 1.0, x, plotY + plotH, 1.0);
-        }
+        batchCanvas.render(this, builder, context, config != null ? config : gridBatchConfig);
     }
 
     private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {

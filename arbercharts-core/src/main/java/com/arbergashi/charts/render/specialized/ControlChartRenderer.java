@@ -28,7 +28,9 @@ public final class ControlChartRenderer extends BaseRenderer {
     }
 
     // Cached stats (avoid O(n) scan on repeated paints).
-    private transient int statsKey;
+    private transient ChartModel statsModel;
+    private transient long statsStamp;
+    private transient int statsCount;
     private transient double statsMean;
     private transient double statsUcl;
     private transient double statsLcl;
@@ -45,7 +47,9 @@ public final class ControlChartRenderer extends BaseRenderer {
 
         double[] xData = model.getXData();
         double[] yData = model.getYData();
-        ensureStats(yData, n);
+        n = Math.min(n, Math.min(xData.length, yData.length));
+        if (n == 0) return;
+        ensureStats(model, yData, n);
 
         ArberRect bounds = context.getPlotBounds();
         if (bounds == null || bounds.width() <= 1 || bounds.height() <= 1) return;
@@ -112,9 +116,9 @@ public final class ControlChartRenderer extends BaseRenderer {
         }
     }
 
-    private void ensureStats(double[] yData, int n) {
-        int key = System.identityHashCode(yData) * 31 + n;
-        if (statsValid && key == statsKey) return;
+    private void ensureStats(ChartModel model, double[] yData, int n) {
+        long stamp = model.getUpdateStamp();
+        if (statsValid && stamp != 0 && model == statsModel && stamp == statsStamp && n == statsCount) return;
 
         double mean = 0.0;
         double m2 = 0.0;
@@ -130,7 +134,9 @@ public final class ControlChartRenderer extends BaseRenderer {
         statsMean = mean;
         statsUcl = mean + 3.0 * stdDev;
         statsLcl = mean - 3.0 * stdDev;
-        statsKey = key;
+        statsModel = model;
+        statsStamp = stamp;
+        statsCount = n;
         statsValid = true;
     }
 

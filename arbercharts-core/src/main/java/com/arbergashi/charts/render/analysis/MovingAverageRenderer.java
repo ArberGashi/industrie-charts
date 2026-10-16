@@ -9,7 +9,7 @@ import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>MovingAverageRenderer - Simple Moving Average (SMA) Overlay</h1>
+ * <h2>MovingAverageRenderer - Simple Moving Average (SMA) Overlay</h2>
  *
  * <p>Enterprise-grade moving average renderer with configurable window size,
  * pixel decimation for large datasets, and dashed line styling.</p>

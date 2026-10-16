@@ -13,7 +13,7 @@ import com.arbergashi.charts.util.ColorRegistry;
 import java.util.Optional;
 
 /**
- * <h1>Modern Nightingale Rose Renderer</h1>
+ * <h2>Modern Nightingale Rose Renderer</h2>
  * <p>
  * A modern, interactive polar area chart where segment radii represent values.
  * Adheres to strict zero-allocation guidelines.
@@ -55,7 +55,7 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
             double r = valueRatio * maxRadius;
             if (r <= 0.0) continue;
 
-            double startAngle = i * angleStep - 90.0;
+            double startAngle = 90.0 - i * angleStep;
 
             ArberColor color = getSeriesColor(model, i, context);
             if (i == hoverIndex) {
@@ -140,7 +140,7 @@ public final class NightingaleRoseRenderer extends BaseRenderer {
     private double getMaxValue(ChartModel model) {
         double max = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < model.getPointCount(); i++) {
-            if (model.getY(i) > max) {
+            if (Double.isFinite(model.getY(i)) && model.getY(i) > max) {
                 max = model.getY(i);
             }
         }

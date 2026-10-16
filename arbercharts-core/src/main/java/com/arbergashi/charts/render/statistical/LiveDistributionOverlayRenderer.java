@@ -46,11 +46,11 @@ public final class LiveDistributionOverlayRenderer extends BaseRenderer {
         final ArberRect plot = context.getPlotBounds();
         final double minY = context.getMinY();
         final double maxY = context.getMaxY();
-        if (!(maxY > minY)) return;
+        if (!Double.isFinite(minY) || !Double.isFinite(maxY) || !(maxY > minY)) return;
 
         final int bins = Math.max(12, ChartAssets.getInt(KEY_BINS, 30));
         final double binSize = (maxY - minY) / bins;
-        if (!(binSize > 0.0)) return;
+        if (!(binSize > 0.0) || !Double.isFinite(binSize)) return;
 
         frameStamp++;
         if (frameStamp == Integer.MAX_VALUE) {
@@ -76,14 +76,13 @@ public final class LiveDistributionOverlayRenderer extends BaseRenderer {
         for (int i = Math.max(0, n - windowCap); i < n; i++) {
             final double x = model.getX(i);
             final double y = model.getY(i);
-            if (!Double.isFinite(x) || !Double.isFinite(y)) continue;
+            if (!Double.isFinite(x) || !Double.isFinite(y) || y < minY || y > maxY) continue;
 
             context.mapToPixel(x, y, px);
             final double pxX = px[0];
-            if (pxX < clipLeft || pxX > clipRight) continue;
+            if (!Double.isFinite(pxX) || pxX < clipLeft || pxX > clipRight) continue;
 
-            int bin = (int) ((y - minY) / binSize);
-            if (bin < 0 || bin >= bins) continue;
+            int bin = Math.min(bins - 1, (int) ((y - minY) / binSize));
 
             if (stamps[bin] != frameStamp) {
                 stamps[bin] = frameStamp;
@@ -110,7 +109,6 @@ public final class LiveDistributionOverlayRenderer extends BaseRenderer {
 
         final double widthRatio = Math.min(0.5, Math.max(0.08, ChartAssets.getFloat(KEY_WIDTH_RATIO, 0.18f)));
         final double maxWidth = plot.width() * widthRatio;
-        final double binPixelHeight = plot.height() / bins;
 
         final ArberColor base = themeAccent(context);
         final float alpha = clamp01(ChartAssets.getFloat(KEY_ALPHA, 0.28f));
@@ -122,8 +120,16 @@ public final class LiveDistributionOverlayRenderer extends BaseRenderer {
             if (count <= 0.0) continue;
 
             double width = (count / maxCount) * maxWidth;
-            double y = plot.maxY() - (bin + 1) * binPixelHeight;
-            canvas.fillRect((float) (plot.maxX() - width), (float) y, (float) width, (float) Math.max(1.0, binPixelHeight - 1.0));
+            context.mapToPixel(context.getMinX(), minY + bin * binSize, px);
+            double lowerPixel = px[1];
+            context.mapToPixel(context.getMinX(), minY + (bin + 1) * binSize, px);
+            double upperPixel = px[1];
+            if (!Double.isFinite(lowerPixel) || !Double.isFinite(upperPixel)) continue;
+            double y = Math.max(plot.y(), Math.min(lowerPixel, upperPixel));
+            double bottom = Math.min(plot.maxY(), Math.max(lowerPixel, upperPixel));
+            if (bottom <= y) continue;
+            double height = Math.min(bottom - y, Math.max(1.0, bottom - y - 1.0));
+            canvas.fillRect((float) (plot.maxX() - width), (float) y, (float) width, (float) height);
         }
 
         final double variance = m2 / Math.max(1, included - 1);

@@ -4,41 +4,25 @@ import com.arbergashi.charts.model.CircularChartModel;
 import com.arbergashi.charts.render.standard.LineRenderer;
 
 /**
- * Simple factory for creating charts with minimal code.
+ * Factory for line charts using the {@link SimpleChart} convenience API.
  *
- * <p><strong>Philosophy:</strong> ArberCharts should be simple to use for common cases
- * while remaining powerful for advanced scenarios.
+ * <p>Line-chart creation, manual data insertion and display are implemented.
+ * The other convenience factories are reserved and always throw
+ * {@link UnsupportedOperationException}. Their renderer classes can be used
+ * directly with an appropriate model and a Swing or server host.
  *
- * <h2>Quick Start Examples</h2>
+ * <p>Displaying a chart requires {@code arbercharts-swing-bridge} on the classpath
+ * and a graphical desktop. See the
+ * <a href="https://github.com/ArberGashi/industrie-charts/blob/main/docs/QUICK_START.md">quick start</a>
+ * for working panel and server examples.
  *
- * <h3>Line Chart (3 lines of code)</h3>
+ * <h2>Line Chart Example</h2>
  * <pre>{@code
  * // Create chart with sensible defaults
  * var chart = Charts.lineChart();
  * chart.addData(1, 10, 2, 20, 3, 15);
  * chart.show();
  * }</pre>
- *
- * <h3>Real-Time Streaming (4 lines)</h3>
- * <pre>{@code
- * var chart = Charts.streamingLineChart(1000);
- * chart.startStreaming(() -> Math.random() * 100);
- * chart.show();
- * }</pre>
- *
- * <h3>Financial Candlestick (2 lines)</h3>
- * <pre>{@code
- * var chart = Charts.candlestickChart();
- * chart.loadFromCSV("prices.csv");
- * }</pre>
- *
- * <h2>Design Goals</h2>
- * <ul>
- *   <li><strong>Minimal Code:</strong> Common charts in 2-5 lines</li>
- *   <li><strong>Sensible Defaults:</strong> Works out-of-box, customizable later</li>
- *   <li><strong>Fluent API:</strong> Method chaining for readability</li>
- *   <li><strong>Zero Configuration:</strong> No XML, no properties files</li>
- * </ul>
  *
  * @since 2.0.0
  * @see SimpleChart
@@ -52,15 +36,10 @@ public final class Charts {
     /**
      * Creates a simple line chart with default settings.
      *
-     * <p><strong>What you get:</strong>
-     * <ul>
-     *   <li>1000-point circular buffer (auto-scrolling)</li>
-     *   <li>Green line on dark background</li>
-     *   <li>Auto-scaling Y-axis</li>
-     *   <li>Anti-aliasing enabled</li>
-     * </ul>
+     * <p>Uses a 1000-point {@link CircularChartModel} and a {@link LineRenderer}.
+     * The display host controls presentation and interaction.
      *
-     * <h2>Example</h2>
+     * <h4>Example</h4>
      * <pre>{@code
      * Charts.lineChart()
      *     .title("Temperature")
@@ -91,22 +70,16 @@ public final class Charts {
     }
 
     /**
-     * Creates a real-time streaming line chart.
+     * Creates a line chart and records the streaming-enabled flag.
      *
-     * <p>Perfect for live dashboards, monitoring, IoT data.
+     * <p>This method does not start a producer or schedule updates.
+     * {@link SimpleChart#startStreaming(java.util.function.Supplier)} is not
+     * implemented and always throws {@link UnsupportedOperationException}.
+     * Supply data explicitly through {@link SimpleChart#addPoint(double, double)}
+     * or manage a {@link CircularChartModel} directly in the host application.
      *
-     * <h2>Example</h2>
-     * <pre>{@code
-     * // CPU monitoring
-     * Charts.streamingLineChart(500)
-     *     .title("CPU Usage")
-     *     .updateInterval(100)  // 10 Hz
-     *     .startStreaming(() -> getCpuUsage())
-     *     .show();
-     * }</pre>
-     *
-     * @param capacity number of points visible in window
-     * @return a SimpleChart with streaming support
+     * @param capacity number of data points to keep in memory
+     * @return a line chart with its streaming flag set, without automatic updates
      */
     public static SimpleChart streamingLineChart(int capacity) {
         return lineChart(capacity)
@@ -114,10 +87,13 @@ public final class Charts {
     }
 
     /**
-     * Creates a scatter plot chart.
+     * Reserved scatter-plot convenience factory; not implemented.
      *
-     * @return a SimpleChart configured as scatter plot
-     * @throws UnsupportedOperationException scatter plots coming in v2.1
+     * <p>Use {@link com.arbergashi.charts.render.standard.ScatterRenderer}
+     * directly with a chart model and a Swing or server host.
+     *
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public static SimpleChart scatterPlot() {
         throw new UnsupportedOperationException(
@@ -128,10 +104,13 @@ public final class Charts {
     }
 
     /**
-     * Creates a bar chart.
+     * Reserved bar-chart convenience factory; not implemented.
      *
-     * @return a SimpleChart configured as bar chart
-     * @throws UnsupportedOperationException bar charts coming in v2.1
+     * <p>Use {@link com.arbergashi.charts.render.standard.BarRenderer}
+     * directly with a chart model and a Swing or server host.
+     *
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public static SimpleChart barChart() {
         throw new UnsupportedOperationException(
@@ -142,18 +121,16 @@ public final class Charts {
     }
 
     /**
-     * Creates a financial candlestick chart.
+     * Reserved candlestick convenience factory; not implemented.
      *
-     * <h2>Example</h2>
-     * <pre>{@code
-     * Charts.candlestickChart()
-     *     .title("BTC/USD")
-     *     .loadFromCSV("bitcoin-prices.csv")
-     *     .show();
-     * }</pre>
+     * <p>Use {@link com.arbergashi.charts.model.DefaultFinancialChartModel}
+     * with {@link com.arbergashi.charts.render.financial.CandlestickRenderer}
+     * in a Swing or server host. The
+     * <a href="https://github.com/ArberGashi/industrie-charts/blob/main/arbercharts-spring-boot-demo/README.md">Spring Boot workbench</a>
+     * includes a runnable example with synthetic OHLC data.
      *
-     * @return a SimpleChart configured as candlestick chart
-     * @throws UnsupportedOperationException candlestick charts coming in v2.2
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public static SimpleChart candlestickChart() {
         throw new UnsupportedOperationException(
@@ -164,19 +141,17 @@ public final class Charts {
     }
 
     /**
-     * Creates an ECG/EKG medical chart.
+     * Reserved ECG/EKG convenience factory; not implemented.
      *
-     * <h2>Example</h2>
-     * <pre>{@code
-     * Charts.ecgChart()
-     *     .sweepMode(true)  // Oscilloscope-style
-     *     .gridEnabled(true)
-     *     .startStreaming(() -> getHeartRateSignal())
-     *     .show();
-     * }</pre>
+     * <p>For a sweep display, use
+     * {@link com.arbergashi.charts.model.CircularFastMedicalModel} with
+     * {@link com.arbergashi.charts.render.medical.MedicalSweepRenderer} in a
+     * chart host. The
+     * <a href="https://github.com/ArberGashi/industrie-charts/blob/main/arbercharts-demo/docs/WORKBENCH.md">Swing workbench</a>
+     * demonstrates the available medical renderers and their model setup.
      *
-     * @return a SimpleChart configured for medical ECG
-     * @throws UnsupportedOperationException ECG charts coming in v2.3
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public static SimpleChart ecgChart() {
         throw new UnsupportedOperationException(

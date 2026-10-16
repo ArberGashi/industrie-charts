@@ -1,6 +1,7 @@
 package com.arbergashi.charts.render.analysis;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.DefaultPlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
@@ -19,26 +20,29 @@ import java.util.function.DoubleUnaryOperator;
  * Draws mathematical functions f(x) with adaptive sampling.
  * Uses virtual threads for parallel background computation of points.
  * <p>
- * Optimized for zero-allocation rendering and FlatLaf integration.
+ * Reuses sampling and display buffers. Nonfinite samples separate curve paths;
+ * cancelled or superseded computations never replace the current frame.
  *
  * @author Arber Gashi
  * @since 2026-01-01
-  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  *
  */
-public class AdaptiveFunctionRenderer extends BaseRenderer {
+public class AdaptiveFunctionRenderer extends BaseRenderer implements AutoCloseable {
 
     private final DoubleUnaryOperator function;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-    // Buffer pool to preserve zero-allocation even with parallel tasks.
+    // Buffers are exclusively owned by a worker or protected by this renderer's monitor.
     private final Deque<PointBuffer> bufferPool = new ArrayDeque<>();
     private PointBuffer renderBuffer = new PointBuffer();
     private CompletableFuture<Void> calculationTask;
     private PlotContext lastContext;
-    private Runnable repaintCallback;
+    private volatile Runnable repaintCallback;
+    private volatile long generation;
+    private volatile boolean closed;
+    private final double[] pixel = new double[2];
     public AdaptiveFunctionRenderer(DoubleUnaryOperator function) {
         super("function");
-        this.function = function;
+        this.function = java.util.Objects.requireNonNull(function, "function");
         // Prime the pool (2 buffers for double-buffering + reserve).
         bufferPool.push(new PointBuffer());
         bufferPool.push(new PointBuffer());
@@ -52,19 +56,18 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
         // Recalculate on context changes (zoom/resize/scroll).
         if (isContextChanged(context)) {
             startAsyncCalculation(context);
-            lastContext = context;
         }
 
         // Cold start: no frame has ever been produced. Wait briefly for the
         // running calculation so the first frame (and single-frame headless
         // rendering) shows the curve. Later recalculations keep the previous
         // buffer on screen and stay fully asynchronous.
-        if (renderBuffer.count < 2) {
+        if (!hasRenderPoints()) {
             awaitInitialCalculation();
         }
 
         // If no points are available yet, skip drawing.
-        if (renderBuffer.count < 2) {
+        if (!hasRenderPoints()) {
             return;
         }
 
@@ -76,25 +79,37 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
         if (curveColor == null) curveColor = seriesOrBase(model, context, 0);
 
         canvas.setColor(curveColor);
-        canvas.setStroke(1.0f);
+        canvas.setStroke(ChartScale.scale(1.0f));
 
-        float[] xs = RendererAllocationCache.getFloatArray(this, "func.line.x", renderBuffer.count);
-        float[] ys = RendererAllocationCache.getFloatArray(this, "func.line.y", renderBuffer.count);
-        int outCount = 0;
-
-        // Zeichne den Pfad aus dem aktuellen Render-Buffer
-        for (int i = 0; i < renderBuffer.count; i++) {
-            double px = ChartUtils.transformX(renderBuffer.x[i], context);
-            double py = ChartUtils.transformY(renderBuffer.y[i], context);
-
-            xs[outCount] = (float) px;
-            ys[outCount] = (float) py;
-            outCount++;
+        float[] xs;
+        float[] ys;
+        int count;
+        synchronized (this) {
+            count = renderBuffer.count;
+            xs = RendererAllocationCache.getFloatArray(this, "func.line.x", count);
+            ys = RendererAllocationCache.getFloatArray(this, "func.line.y", count);
+            for (int i = 0; i < count; i++) {
+                if (!Double.isFinite(renderBuffer.x[i]) || !Double.isFinite(renderBuffer.y[i])) {
+                    xs[i] = Float.NaN;
+                    ys[i] = Float.NaN;
+                    continue;
+                }
+                context.mapToPixel(renderBuffer.x[i], renderBuffer.y[i], pixel);
+                xs[i] = (float) pixel[0];
+                ys[i] = (float) pixel[1];
+            }
         }
-
-        if (outCount > 1) {
-            canvas.drawPolyline(xs, ys, outCount);
+        int used = 0;
+        for (int i = 0; i < count; i++) {
+            if (!Float.isFinite(xs[i]) || !Float.isFinite(ys[i])) {
+                if (used > 1) canvas.drawPolyline(xs, ys, used);
+                used = 0;
+                continue;
+            }
+            xs[used] = xs[i];
+            ys[used++] = ys[i];
         }
+        if (used > 1) canvas.drawPolyline(xs, ys, used);
     }
 
     /**
@@ -105,6 +120,19 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
     public AdaptiveFunctionRenderer setRepaintCallback(Runnable callback) {
         this.repaintCallback = callback;
         return this;
+    }
+
+    /** Cancels pending sampling and releases this renderer's virtual-thread executor. */
+    @Override
+    public synchronized void close() {
+        closed = true;
+        generation++;
+        if (calculationTask != null) calculationTask.cancel(true);
+        executor.shutdownNow();
+    }
+
+    private synchronized boolean hasRenderPoints() {
+        return renderBuffer.count >= 2;
     }
 
     private void awaitInitialCalculation() {
@@ -130,6 +158,11 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
                 lastContext.getMaxX() != context.getMaxX() ||
                 lastContext.getMinY() != context.getMinY() ||
                 lastContext.getMaxY() != context.getMaxY() ||
+                lastContext.isInvertedX() != context.isInvertedX() ||
+                lastContext.isInvertedY() != context.isInvertedY() ||
+                lastContext.getScaleModeX() != context.getScaleModeX() ||
+                lastContext.getScaleModeY() != context.getScaleModeY() ||
+                lastContext.isLogarithmicY() != context.isLogarithmicY() ||
                 !lastContext.getPlotBounds().equals(context.getPlotBounds());
     }
 
@@ -138,10 +171,18 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
      * Uses double-buffering to avoid blocking the EDT.
      */
     private synchronized void startAsyncCalculation(PlotContext context) {
+        if (closed) return;
         if (calculationTask != null && !calculationTask.isDone()) {
             calculationTask.cancel(true);
         }
 
+        PlotContext snapshot = new DefaultPlotContext(context.getPlotBounds(),
+                context.getMinX(), context.getMaxX(), context.getMinY(), context.getMaxY(),
+                context.isLogarithmicY(), context.isInvertedX(), context.isInvertedY(),
+                context.getScaleModeX(), context.getScaleModeY(), context.getTheme(),
+                context.getRenderHints(), context.getGapModel(), context.getAnimationProfile());
+        lastContext = snapshot;
+        long requestedGeneration = ++generation;
         calculationTask = CompletableFuture.runAsync(() -> {
             // Get a buffer from the pool or create a new one (avoids races on shared state).
             PointBuffer workingBuffer;
@@ -149,46 +190,60 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
                 workingBuffer = bufferPool.isEmpty() ? new PointBuffer() : bufferPool.pop();
             }
             workingBuffer.clear();
+            boolean published = false;
+            try {
+                double minX = snapshot.getMinX();
+                double maxX = snapshot.getMaxX();
+                double width = snapshot.getPlotBounds().getWidth();
+                if (!Double.isFinite(minX) || !Double.isFinite(maxX) || !(maxX > minX)
+                        || !Double.isFinite(width) || width <= 0) return;
+                int baseSamples = (int) Math.clamp(width, 100, 16_384);
+                double step = (maxX - minX) / baseSamples;
+                double thresholdPx = ChartScale.scale(0.25f);
 
-            double minX = context.getMinX();
-            double maxX = context.getMaxX();
-            double width = context.getPlotBounds().getWidth();
-            int baseSamples = (int) Math.max(100, width);
-            double step = (maxX - minX) / baseSamples;
-            double thresholdPx = ChartScale.scale(0.25f);
-
-            double lastX = minX;
-            double lastY = function.applyAsDouble(lastX);
-            if (Double.isFinite(lastY)) {
+                double lastX = minX;
+                double lastY = function.applyAsDouble(lastX);
                 workingBuffer.add(lastX, lastY);
-            }
 
-            for (int i = 1; i <= baseSamples; i++) {
-                if (Thread.currentThread().isInterrupted()) return;
+                for (int i = 1; i <= baseSamples; i++) {
+                    if (Thread.currentThread().isInterrupted() || requestedGeneration != generation) return;
 
-                double x = minX + i * step;
-                double y = function.applyAsDouble(x);
+                    double x = minX + i * step;
+                    double y = function.applyAsDouble(x);
 
-                if (Double.isFinite(y)) {
-                    if (workingBuffer.count > 0) {
-                        sampleRecursive(workingBuffer, workingBuffer.x[workingBuffer.count - 1],
-                                workingBuffer.y[workingBuffer.count - 1],
-                                x, y, context, thresholdPx, 0);
+                    if (Double.isFinite(y)) {
+                        if (workingBuffer.count > 0 && Double.isFinite(workingBuffer.y[workingBuffer.count - 1])) {
+                            sampleRecursive(workingBuffer, workingBuffer.x[workingBuffer.count - 1],
+                                    workingBuffer.y[workingBuffer.count - 1],
+                                    x, y, snapshot, thresholdPx, 0, requestedGeneration);
+                        }
+                        workingBuffer.add(x, y);
+                    } else {
+                        workingBuffer.add(x, Double.NaN);
                     }
-                    workingBuffer.add(x, y);
                 }
-            }
 
-            synchronized (this) {
-                PointBuffer temp = renderBuffer;
-                renderBuffer = workingBuffer;
-                // Return old buffer to the pool.
-                synchronized (bufferPool) {
-                    temp.clear();
-                    bufferPool.push(temp);
+                synchronized (this) {
+                    if (requestedGeneration != generation || closed) return;
+                    PointBuffer temp = renderBuffer;
+                    renderBuffer = workingBuffer;
+                    published = true;
+                    // Return old buffer to the pool.
+                    synchronized (bufferPool) {
+                        temp.clear();
+                        bufferPool.push(temp);
+                    }
+                }
+                Runnable callback = repaintCallback;
+                if (callback != null) callback.run();
+            } finally {
+                if (!published) {
+                    synchronized (bufferPool) {
+                        workingBuffer.clear();
+                        bufferPool.push(workingBuffer);
+                    }
                 }
             }
-            if (repaintCallback != null) repaintCallback.run();
         }, executor);
     }
 
@@ -196,13 +251,17 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
      * Recursive adaptive sampling to increase curve detail.
      * Runs on a background thread.
      */
-    private void sampleRecursive(PointBuffer buffer, double x1, double y1, double x2, double y2, PlotContext context, double thresholdPx, int depth) {
-        if (depth > 12 || Thread.currentThread().isInterrupted()) return;
+    private void sampleRecursive(PointBuffer buffer, double x1, double y1, double x2, double y2, PlotContext context,
+                                 double thresholdPx, int depth, long requestedGeneration) {
+        if (depth > 12 || Thread.currentThread().isInterrupted() || requestedGeneration != generation) return;
 
         double midX = Math.fma(x1 + x2, 0.5, 0);
         double actualY = function.applyAsDouble(midX);
 
-        if (!Double.isFinite(actualY)) return;
+        if (!Double.isFinite(actualY)) {
+            buffer.add(midX, Double.NaN);
+            return;
+        }
 
         double pix1x = ChartUtils.transformX(x1, context);
         double pix1y = ChartUtils.transformY(y1, context);
@@ -214,9 +273,9 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
         double dist = pointToLineDistance(pixMidX, pixMidY, pix1x, pix1y, pix2x, pix2y);
 
         if (dist > thresholdPx) {
-            sampleRecursive(buffer, x1, y1, midX, actualY, context, thresholdPx, depth + 1);
+            sampleRecursive(buffer, x1, y1, midX, actualY, context, thresholdPx, depth + 1, requestedGeneration);
             buffer.add(midX, actualY);
-            sampleRecursive(buffer, midX, actualY, x2, y2, context, thresholdPx, depth + 1);
+            sampleRecursive(buffer, midX, actualY, x2, y2, context, thresholdPx, depth + 1, requestedGeneration);
         }
     }
 
@@ -237,7 +296,7 @@ public class AdaptiveFunctionRenderer extends BaseRenderer {
                 / Math.sqrt(Math.fma(dx, dx, dy * dy));
     }
 
-    // Double-buffer for points (zero-allocation after initialization).
+    // Sampling storage grows only when a more detailed curve needs additional points.
     private static class PointBuffer {
         double[] x = new double[1024];
         double[] y = new double[1024];

@@ -2,6 +2,7 @@ package com.arbergashi.charts.render.specialized;
 
 import com.arbergashi.charts.api.CoordinateTransformer;
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.render.grid.SmithChartGridLayer;
 /**
  * Smith chart coordinate transform (unit circle mapping).
   * Part of the Zero-Allocation Render Path. High-frequency execution safe.
@@ -12,7 +13,7 @@ import com.arbergashi.charts.api.PlotContext;
 public final class SmithChartTransform implements CoordinateTransformer {
     @Override
     public void mapToPixel(PlotContext context, double x, double y, double[] out) {
-        double radius = Math.min(context.getPlotBounds().getWidth(), context.getPlotBounds().getHeight()) * 0.5;
+        double radius = SmithChartGridLayer.radius(context.getPlotBounds());
         double cx = context.getPlotBounds().getCenterX();
         double cy = context.getPlotBounds().getCenterY();
         out[0] = cx + x * radius;
@@ -21,7 +22,7 @@ public final class SmithChartTransform implements CoordinateTransformer {
 
     @Override
     public void mapToData(PlotContext context, double pixelX, double pixelY, double[] out) {
-        double radius = Math.min(context.getPlotBounds().getWidth(), context.getPlotBounds().getHeight()) * 0.5;
+        double radius = SmithChartGridLayer.radius(context.getPlotBounds());
         double cx = context.getPlotBounds().getCenterX();
         double cy = context.getPlotBounds().getCenterY();
         if (radius == 0) radius = 1.0;

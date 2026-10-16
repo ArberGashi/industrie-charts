@@ -1,7 +1,6 @@
 package com.arbergashi.charts.render.grid;
 
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 
 /**
  * Logarithmic grid layer.
@@ -28,16 +27,6 @@ public final class LogarithmicGridLayer extends DefaultGridLayer {
             y = getSafeLogValue(context, y);
         }
         super.mapToSpatial(context, x, y, z, out);
-    }
-
-    @Override
-    public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        if (context.getMinX() <= 0 || context.getMinY() <= 0) {
-            super.renderGridBatch(builder, context, config);
-            return;
-        }
-        super.renderGridBatch(builder, context, config);
     }
 
     private static double getSafeLogValue(PlotContext context, double y) {

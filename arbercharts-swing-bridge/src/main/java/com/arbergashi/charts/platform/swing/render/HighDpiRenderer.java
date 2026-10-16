@@ -1,6 +1,10 @@
 package com.arbergashi.charts.platform.swing.render;
 
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
 import java.awt.geom.AffineTransform;
 
 /**

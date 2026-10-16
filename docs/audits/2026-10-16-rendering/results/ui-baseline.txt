@@ -1,0 +1,19 @@
+MEDICAL pixelsPerMm=3.77952756 xPxPerUnit=25.00000000 expectedXPxPerUnit=94.48818898 yPxPerUnit=10.00000000 expectedYPxPerUnit=37.79527559
+DOCK LEFT canvas=java.awt.Rectangle[x=244,y=0,width=556,height=400] plot=ArberRect[x=48.0, y=32.0, width=728.0, height=332.0]
+DOCK RIGHT canvas=java.awt.Rectangle[x=0,y=0,width=542,height=400] plot=ArberRect[x=48.0, y=32.0, width=728.0, height=332.0]
+DOCK TOP canvas=java.awt.Rectangle[x=0,y=126,width=800,height=274] plot=ArberRect[x=48.0, y=32.0, width=728.0, height=332.0]
+DOCK BOTTOM canvas=java.awt.Rectangle[x=0,y=0,width=800,height=274] plot=ArberRect[x=48.0, y=32.0, width=728.0, height=332.0]
+DOCK_THEME before=false
+DOCK_THEME after=true
+EXPORT preferred=java.awt.Dimension[width=500,height=400] actual=java.awt.Dimension[width=0,height=0] image=500x400 nontransparentPixels=0
+PRECISION ticks=[0.0, 0.001, 0.002, 0.003, 0.004] labels=[0, 0, 0, 0, 0]
+GRID xDisabledPixelDifference=0
+LEGEND actions=null deepestAtName=HighPrecisionCrosshair
+LEGEND directClick before=true after=true
+FREEZE label=BPM: 99.3 parent=null bounds=java.awt.Rectangle[x=0,y=0,width=0,height=0]
+TRANSFORM calls=0 map=[412.0, 47.09090909090912]
+INVERTED_ZOOM focusBefore=1.852197802 focusAfter=1.697252747
+LOCALE panel=de_DE axis=en_US label=1.5
+SECONDARY context=-1.0..1.0
+OUT_OF_RANGE_TICK value=0.000 pixel=7.556 plot=48.000..776.000
+OUT_OF_RANGE_TICK value=2.000 pixel=816.444 plot=48.000..776.000

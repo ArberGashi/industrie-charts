@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <title>Charts workbench · Spring Boot demo</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="workbench.css">
+    <script src="workbench.js" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#chart-view">Skip to chart</a>
+    <header class="app-header">
+        <img class="brand-icon" src="icon.svg" alt="" width="24" height="24">
+        <strong>Charts workbench</strong>
+        <span class="header-separator"></span>
+        <span class="workspace-name">Spring Boot demo</span>
+        <div class="header-actions">
+            <span class="connection" id="connection"><span class="status-dot"></span>Connecting</span>
+            <button id="theme-toggle" type="button" class="quiet-button" aria-label="Switch to light theme">Light theme</button>
+        </div>
+    </header>
+
+    <div class="workbench">
+        <aside class="catalog-pane" aria-label="Chart examples">
+            <div class="pane-heading"><h1>Examples</h1><span id="example-count" class="muted">—</span></div>
+            <label class="search-field"><span class="search-icon" aria-hidden="true"></span>
+                <input id="search" type="search" placeholder="Find a chart…" aria-label="Find a chart" autocomplete="off">
+            </label>
+            <nav id="catalog" aria-label="Choose an example"></nav>
+            <p class="catalog-empty" id="catalog-empty" hidden>No matching examples.</p>
+            <div class="catalog-note">
+                <span class="sample-mark" aria-hidden="true"></span>
+                <div><strong>Synthetic datasets</strong><p>Reproducible examples for exploring the renderers.</p></div>
+            </div>
+        </aside>
+
+        <main class="editor-pane" id="chart-view" tabindex="-1">
+            <div class="editor-tabs"><div class="active-tab"><span class="file-icon" aria-hidden="true"></span><span id="tab-title">Line.chart</span></div><span class="editor-kind">Preview</span></div>
+            <div class="chart-toolbar" aria-label="Chart settings">
+                <label for="samples"><span id="sample-label">Samples</span> <select id="samples" disabled><option value="24">24</option><option value="96">96</option><option value="256" selected>256</option><option value="1024">1,024</option><option value="2048">2,048</option></select></label>
+                <label for="size">Size <select id="size" disabled><option value="fit">Fit panel</option><option value="1280x720">1280 × 720</option><option value="1600x900">1600 × 900</option><option value="1920x1080">1920 × 1080</option></select></label>
+                <button type="button" id="render" class="render-button" disabled><span class="play-icon" aria-hidden="true"></span>Render</button>
+                <a id="download" class="toolbar-link disabled" aria-disabled="true">Download PNG</a>
+            </div>
+
+            <section class="chart-content" aria-labelledby="chart-title">
+                <div class="chart-heading"><div><h2 id="chart-title">Synthetic sensor signal</h2><p id="chart-description">A smooth signal with a slow trend and periodic variation.</p></div><span class="dataset-badge">Demo data</span></div>
+                <figure id="chart-stage" class="chart-stage" data-state="loading" aria-busy="true">
+                    <img id="chart-image" alt="" hidden>
+                    <div id="chart-message" class="chart-message" role="status">Loading the workbench…</div>
+                    <figcaption class="sr-only" id="chart-caption">Server-rendered chart using synthetic data.</figcaption>
+                </figure>
+                <div class="chart-legend"><span class="series-dot" id="series-symbol"></span><span id="series-name">Synthetic sensor signal</span><span class="legend-note">Generated locally</span></div>
+            </section>
+
+            <section class="render-details" aria-label="Render details">
+                <div class="details-header"><h2>Render details</h2><span id="render-status" role="status" aria-live="polite">Waiting for server</span></div>
+                <div class="details-values"><span>Image <strong id="image-size">—</strong></span><span>Response <strong id="response-size">—</strong></span><span>Round trip <strong id="render-time">—</strong></span><span>Format <strong>PNG</strong></span></div>
+                <details class="request-details"><summary>HTTP request</summary><div class="request-line"><code id="request-url">Select an example to render.</code><button type="button" id="copy-url" class="quiet-button" disabled>Copy URL</button></div></details>
+            </section>
+        </main>
+
+        <aside class="inspector-pane" aria-label="Example information">
+            <div class="pane-heading"><h2>Inspector</h2></div>
+            <section class="inspector-section"><h3>Dataset</h3><dl><dt>Source</dt><dd>Synthetic</dd><dt id="inspector-sample-label">Samples</dt><dd id="inspector-points">256</dd><dt id="inspector-x-title">Horizontal axis</dt><dd id="inspector-x">Time (s)</dd><dt id="inspector-y-title">Vertical axis</dt><dd id="inspector-y">Signal</dd></dl></section>
+            <section class="inspector-section"><h3>Renderer</h3><p id="inspector-renderer" class="renderer-name">LineRenderer</p><p class="muted">The same renderer runs through the server backend.</p></section>
+            <section class="inspector-section"><h3>Explore</h3><p>Choose an example, adjust its input size, and compare light and dark themes.</p><p>The PNG includes the labels and scales appropriate to each chart.</p></section>
+            <div class="inspector-footnote">Curated renderer examples.<br>All data is generated for this demo.</div>
+        </aside>
+    </div>
+
+    <footer class="status-bar"><span><span class="status-dot"></span><span id="footer-status">Starting</span></span><span id="runtime-info">Java 25</span></footer>
+    <noscript><div class="no-script">Enable JavaScript to use the chart workbench. The PNG endpoint is also available at <a href="api/charts/line.png">api/charts/line.png</a>.</div></noscript>
+</body>
+</html>

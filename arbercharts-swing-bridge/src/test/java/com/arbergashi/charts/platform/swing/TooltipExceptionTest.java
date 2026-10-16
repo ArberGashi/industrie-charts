@@ -10,6 +10,7 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TooltipExceptionTest {
 
@@ -22,14 +23,14 @@ public class TooltipExceptionTest {
         panel.doLayout();
         
         // WHEN: Mouse moves over the panel (triggering tooltip update)
-        MouseEvent moveEvent = new MouseEvent(panel, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 
+        JComponent canvas = panel.getOverlayCanvasForTesting();
+        MouseEvent moveEvent = new MouseEvent(canvas, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(),
                 0, 250, 200, 0, false);
         
         // THEN: It should not throw ArrayIndexOutOfBoundsException
         assertDoesNotThrow(() -> {
-            for (java.awt.event.MouseMotionListener l : panel.getMouseMotionListeners()) {
-                l.mouseMoved(moveEvent);
-            }
+            assertTrue(canvas.getMouseMotionListeners().length > 0, "Exercise the installed input controller");
+            SwingUtilities.invokeAndWait(() -> canvas.dispatchEvent(moveEvent));
         });
     }
 
@@ -57,14 +58,14 @@ public class TooltipExceptionTest {
         panel.setSize(500, 400);
         panel.doLayout();
 
-        MouseEvent moveEvent = new MouseEvent(panel, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 
+        JComponent canvas = panel.getOverlayCanvasForTesting();
+        MouseEvent moveEvent = new MouseEvent(canvas, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(),
                 0, 250, 200, 0, false);
 
         // THEN: It should handle the inconsistency gracefully
         assertDoesNotThrow(() -> {
-            for (java.awt.event.MouseMotionListener l : panel.getMouseMotionListeners()) {
-                l.mouseMoved(moveEvent);
-            }
+            assertTrue(canvas.getMouseMotionListeners().length > 0, "Exercise the installed input controller");
+            SwingUtilities.invokeAndWait(() -> canvas.dispatchEvent(moveEvent));
         });
     }
 }

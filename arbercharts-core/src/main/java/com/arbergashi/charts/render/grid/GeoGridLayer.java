@@ -6,12 +6,9 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
-
 
 /**
  * Geographic grid layer.
@@ -56,15 +53,15 @@ public final class GeoGridLayer extends DefaultGridLayer {
         float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
                 ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
 
-        int latLines = Math.max(4, ChartAssets.getInt(KEY_LAT_LINES, 8));
-        int lonLines = Math.max(6, ChartAssets.getInt(KEY_LON_LINES, 12));
+        int latLines = Math.clamp(ChartAssets.getInt(KEY_LAT_LINES, 8), 4, 256);
+        int lonLines = Math.clamp(ChartAssets.getInt(KEY_LON_LINES, 12), 6, 512);
         double poleEps = ChartAssets.getFloat(KEY_POLE_EPS, 2.0f);
 
         ArberColor minorColor = ColorRegistry.applyAlpha(gridBase, minorAlpha);
         ArberColor majorColor = ColorRegistry.applyAlpha(gridBase, majorAlpha);
 
         // Latitude (horizontal)
-        for (int i = 0; i <= latLines; i++) {
+        for (int i = 0; context.isGridVisibleY() && i <= latLines; i++) {
             double y = minY + i * (maxY - minY) / latLines;
             if (y - minY < poleEps || maxY - y < poleEps) {
                 continue;
@@ -76,66 +73,12 @@ public final class GeoGridLayer extends DefaultGridLayer {
         }
 
         // Longitude (vertical)
-        for (int i = 0; i <= lonLines; i++) {
+        for (int i = 0; context.isGridVisibleX() && i <= lonLines; i++) {
             double x = minX + i * (maxX - minX) / lonLines;
             boolean isMajor = (i % Math.max(1, lonLines / 3) == 0);
             canvas.setColor(isMajor ? majorColor : minorColor);
             canvas.setStroke(ChartScale.scale(isMajor ? majorStroke : minorStroke));
             drawLine(canvas, x, minY, x, maxY);
-        }
-    }
-
-    @Override
-    public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        GridBatchConfig effective = (config != null) ? config : getGridBatchConfig();
-        builder.setZMin(effective.getZMin())
-                .setClippingMode(effective.getClippingMode());
-
-        ArberRect bounds = context.getPlotBounds();
-        double minX = bounds.minX();
-        double maxX = bounds.maxX();
-        double minY = bounds.minY();
-        double maxY = bounds.maxY();
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor gridBase = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.minorAlpha", 0.08f));
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.majorAlpha", Math.min(0.25f, minorAlpha + 0.12f)));
-        float minorStroke = ChartAssets.getUIFloat(KEY_MINOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.minorStrokeWidth", 0.6f));
-        float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
-
-        int latLines = Math.max(4, ChartAssets.getInt(KEY_LAT_LINES, 8));
-        int lonLines = Math.max(6, ChartAssets.getInt(KEY_LON_LINES, 12));
-        double poleEps = ChartAssets.getFloat(KEY_POLE_EPS, 2.0f);
-
-        for (int i = 0; i <= latLines; i++) {
-            double y = minY + i * (maxY - minY) / latLines;
-            if (y - minY < poleEps || maxY - y < poleEps) {
-                continue;
-            }
-            boolean isMajor = (i % Math.max(1, latLines / 2) == 0);
-            int argb = ColorRegistry.applyAlpha(gridBase, isMajor ? majorAlpha : minorAlpha).argb();
-            float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-            int dashId = 1;
-            long styleKey = SpatialStyleDescriptor.pack(argb, strokeWidth, dashId, 0);
-            builder.setStyleKey(styleKey);
-            builder.setLineSegment(minX, y, 1.0, maxX, y, 1.0);
-        }
-
-        for (int i = 0; i <= lonLines; i++) {
-            double x = minX + i * (maxX - minX) / lonLines;
-            boolean isMajor = (i % Math.max(1, lonLines / 3) == 0);
-            int argb = ColorRegistry.applyAlpha(gridBase, isMajor ? majorAlpha : minorAlpha).argb();
-            float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-            int dashId = 2;
-            long styleKey = SpatialStyleDescriptor.pack(argb, strokeWidth, dashId, 0);
-            builder.setStyleKey(styleKey);
-            builder.setLineSegment(x, minY, 1.0, x, maxY, 1.0);
         }
     }
 

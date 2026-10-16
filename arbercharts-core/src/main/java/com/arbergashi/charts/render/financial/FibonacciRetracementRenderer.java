@@ -8,7 +8,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>FibonacciRetracementRenderer</h1>
+ * <h2>FibonacciRetracementRenderer</h2>
  * <p>
  * Draws Fibonacci retracement levels (0%, 23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%).
  * Typically used as an overlay for candlestick or line charts.

@@ -3,6 +3,7 @@ package com.arbergashi.charts.render.specialized;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
@@ -15,11 +16,14 @@ import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ChartUtils;
 
 import java.util.Arrays;
+import java.util.Optional;
 /**
  * ParetoRenderer - combines bar chart with cumulative line.
  *
  * <p><b>Performance notes</b>:
- * Sorting is cached and only recomputed when the model content changes (size / identity hash).
+ * Sorting is cached using the model identity, update stamp, and point count.
+ * Models without an update stamp are sorted on each draw. Values are displayed in
+ * descending order at the sorted X positions; hit testing retains the original data index.
  *
  * @author Arber Gashi
  * @since 2026-01-01
@@ -34,7 +38,10 @@ public class ParetoRenderer extends BaseRenderer {
         RendererRegistry.register("pareto", new RendererDescriptor("pareto", "renderer.pareto", "/icons/pareto.svg"), ParetoRenderer::new);
     }
 
-    private transient int cachedKey;
+    private transient ChartModel cachedModel;
+    private transient long cachedStamp;
+    private transient int cachedCount;
+    private transient double[] categoryX;
     private transient int[] cachedSortedIndices;
     private transient double cachedTotal;
     // Reusable arrays for cumulative line mapping
@@ -57,9 +64,11 @@ public class ParetoRenderer extends BaseRenderer {
         if (n == 0) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        n = Math.min(n, Math.min(xData.length, yData.length));
+        if (n == 0 || context.getPlotBounds().width() <= 0 || context.getPlotBounds().height() <= 0) return;
 
         ChartTheme theme = getResolvedTheme(context);
-        int[] sortedIndices = getOrBuildSortedIndices(yData, n);
+        int[] sortedIndices = getOrBuildSortedIndices(model, xData, yData, n);
         double totalSum = cachedTotal;
         if (totalSum <= 0) return;
 
@@ -70,17 +79,22 @@ public class ParetoRenderer extends BaseRenderer {
 
         ArberColor barColor = theme.getSeriesColor(getLayerIndex());
         ArberColor lineEdgeColor = theme.getAccentColor();
-        drawBars(canvas, xData, yData, sortedIndices, n, context, fast, barColor, theme);
-        drawCumulativeLine(canvas, xData, yData, sortedIndices, n, totalSum, context, fast, lineEdgeColor);
+        drawBars(canvas, categoryX, yData, sortedIndices, n, context, fast, barColor, theme);
+        drawCumulativeLine(canvas, categoryX, yData, sortedIndices, n, totalSum, context, fast, lineEdgeColor);
     }
 
-    private int[] getOrBuildSortedIndices(double[] yData, int n) {
-        int key = System.identityHashCode(yData) * 31 + n;
-        if (cachedSortedIndices != null && cachedKey == key && cachedSortedIndices.length == n) {
+    private int[] getOrBuildSortedIndices(ChartModel model, double[] xData, double[] yData, int n) {
+        long stamp = model.getUpdateStamp();
+        if (cachedSortedIndices != null && stamp != 0 && model == cachedModel
+                && stamp == cachedStamp && n == cachedCount) {
             return cachedSortedIndices;
         }
 
-        int[] indices = new int[n];
+        int[] indices = cachedSortedIndices;
+        if (indices == null || indices.length < n) indices = new int[n];
+        if (categoryX == null || categoryX.length < n) categoryX = new double[n];
+        System.arraycopy(xData, 0, categoryX, 0, n);
+        Arrays.sort(categoryX, 0, n);
         for (int i = 0; i < n; i++) indices[i] = i;
 
         // Primitive sort (quicksort indices based on yData descending)
@@ -89,7 +103,9 @@ public class ParetoRenderer extends BaseRenderer {
         double total = 0;
         for (int i = 0; i < n; i++) total += yData[i];
 
-        cachedKey = key;
+        cachedModel = model;
+        cachedStamp = stamp;
+        cachedCount = n;
         cachedSortedIndices = indices;
         cachedTotal = total;
 
@@ -121,7 +137,7 @@ public class ParetoRenderer extends BaseRenderer {
             for (int i = 0; i < n; i++) {
                 int idx = indices[i];
                 double[] buf = pBuffer();
-                context.mapToPixel(xData[idx], yData[idx], buf);
+                context.mapToPixel(xData[i], yData[idx], buf);
                 double x = buf[0] - barWidth / 2;
                 double y = Math.min(buf[1], baselineY);
                 double height = Math.abs(buf[1] - baselineY);
@@ -143,7 +159,7 @@ public class ParetoRenderer extends BaseRenderer {
             bucketMax = new double[w];
             bucketUsed = new boolean[w];
         }
-        if (bucketCount < w) bucketCount = w;
+        bucketCount = w;
         Arrays.fill(bucketUsed, 0, bucketCount, false);
 
         double bx = bounds.x();
@@ -153,7 +169,7 @@ public class ParetoRenderer extends BaseRenderer {
         double[] pixBuf = pBuffer();
         for (int i = 0; i < n; i++) {
             int idx = indices[i];
-            context.mapToPixel(xData[idx], yData[idx], pixBuf);
+            context.mapToPixel(xData[i], yData[idx], pixBuf);
             double xCenter = pixBuf[0];
             int col = (int) ((xCenter - bx) * invW);
             if (col < 0 || col >= bucketCount) continue;
@@ -171,7 +187,7 @@ public class ParetoRenderer extends BaseRenderer {
             if (!bucketUsed[col]) continue;
             double height = bucketMax[col];
             double x = bx + col * colW;
-            double y = baselineY - height;
+            double y = context.isInvertedY() ? baselineY : baselineY - height;
             if (x + colW < bounds.x() || x > bounds.maxX()) continue;
             canvas.fillRect((float) x, (float) y, (float) colW, (float) height);
         }
@@ -193,7 +209,7 @@ public class ParetoRenderer extends BaseRenderer {
             currentSum += yData[idx];
             double percentage = (currentSum / totalSum);
             cumY[i] = by + bh * (1.0 - percentage);
-            context.mapToPixel(xData[idx], 0, buf);
+            context.mapToPixel(xData[i], 0, buf);
             cumX[i] = buf[0];
         }
 
@@ -244,28 +260,46 @@ public class ParetoRenderer extends BaseRenderer {
     }
 
     private void sortIndices(int[] indices, double[] values, int low, int high) {
-        if (low < high) {
-            int pi = partition(indices, values, low, high);
-            sortIndices(indices, values, low, pi - 1);
-            sortIndices(indices, values, pi + 1, high);
-        }
-    }
-
-    private int partition(int[] indices, double[] values, int low, int high) {
-        double pivot = values[indices[high]];
-        int i = (low - 1);
-        for (int j = low; j < high; j++) {
-            if (values[indices[j]] > pivot) { // Descending
-                i++;
-                int temp = indices[i];
-                indices[i] = indices[j];
-                indices[j] = temp;
+        if (low >= high) return;
+        int left = low;
+        int right = high;
+        double pivot = values[indices[(low + high) >>> 1]];
+        while (left <= right) {
+            while (Double.compare(values[indices[left]], pivot) > 0) left++;
+            while (Double.compare(values[indices[right]], pivot) < 0) right--;
+            if (left <= right) {
+                int swap = indices[left];
+                indices[left++] = indices[right];
+                indices[right--] = swap;
             }
         }
-        int temp = indices[i + 1];
-        indices[i + 1] = indices[high];
-        indices[high] = temp;
-        return i + 1;
+        if (low < right) sortIndices(indices, values, low, right);
+        if (left < high) sortIndices(indices, values, left, high);
+    }
+
+    @Override
+    public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
+        double[] xData = model.getXData();
+        double[] yData = model.getYData();
+        int n = Math.min(model.getPointCount(), Math.min(xData.length, yData.length));
+        if (n == 0) return Optional.empty();
+        int[] indices = getOrBuildSortedIndices(model, xData, yData, n);
+        ArberRect bounds = context.getPlotBounds();
+        double width = ChartUtils.getCalculatedBestBarWidth(n, bounds.width(),
+                ChartAssets.getFloat("chart.bar.padding", 0.2f));
+        double[] point = pBuffer();
+        context.mapToPixel(0, 0, point);
+        double baseline = Math.clamp(point[1], bounds.y(), bounds.maxY());
+        for (int i = 0; i < n; i++) {
+            int index = indices[i];
+            context.mapToPixel(categoryX[i], yData[index], point);
+            if (Math.abs(pixel.x() - point[0]) <= width / 2
+                    && pixel.y() >= Math.min(point[1], baseline)
+                    && pixel.y() <= Math.max(point[1], baseline)) {
+                return Optional.of(index);
+            }
+        }
+        return Optional.empty();
     }
 
     public ParetoRenderer setMultiColor(boolean enabled){

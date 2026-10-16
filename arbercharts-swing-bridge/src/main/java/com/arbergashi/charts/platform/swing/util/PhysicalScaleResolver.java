@@ -29,4 +29,16 @@ public final class PhysicalScaleResolver {
         }
         return (dpi * scale) / MM_PER_INCH;
     }
+
+    /**
+     * Returns millimeter density in Swing user coordinates. Device transforms and
+     * export scaling are already applied by Graphics2D and must not be applied twice.
+     */
+    public static double logicalPixelsPerMillimeter(Graphics2D g2) {
+        double deviceScale = 1.0;
+        if (g2 != null && g2.getDeviceConfiguration() != null) {
+            deviceScale = g2.getDeviceConfiguration().getDefaultTransform().getScaleX();
+        }
+        return pixelsPerMillimeter(g2) / Math.max(deviceScale, 1e-9);
+    }
 }

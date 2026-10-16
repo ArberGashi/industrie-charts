@@ -7,12 +7,16 @@
     <parent>
         <groupId>com.arbergashi</groupId>
         <artifactId>arber-charts-parent</artifactId>
-        <version>2.2.0-SNAPSHOT</version>
+        <version>2.2.0</version>
     </parent>
 
     <artifactId>arbercharts-demo</artifactId>
     <name>ArberCharts Swing Demo</name>
     <packaging>jar</packaging>
+
+    <properties>
+        <demo.dist.directory>${maven.multiModuleProjectDirectory}/dist/releases/jvm/${project.version}</demo.dist.directory>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -47,7 +51,6 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-fonts-inter</artifactId>
-            <version>4.1</version>
         </dependency>
     </dependencies>
 
@@ -56,7 +59,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>${maven.shade.plugin.version}</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -86,11 +89,11 @@
                 </executions>
             </plugin>
 
-            <!-- Stage an "end-customer" runnable JAR + launchers into dist/releases/jvm. -->
+            <!-- Each distribution starts the exact JAR produced by this build. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>${maven.antrun.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>stage-demo-dist</id>
@@ -100,13 +103,19 @@
                         </goals>
                         <configuration>
                             <target>
-                                <mkdir dir="${maven.multiModuleProjectDirectory}/dist/releases/jvm"/>
+                                <mkdir dir="${demo.dist.directory}"/>
                                 <copy file="${project.build.directory}/${project.build.finalName}.jar"
-                                      tofile="${maven.multiModuleProjectDirectory}/dist/releases/jvm/${project.build.finalName}.jar"
+                                      tofile="${demo.dist.directory}/${project.build.finalName}.jar"
                                       overwrite="true"/>
-                                <copy todir="${maven.multiModuleProjectDirectory}/dist/releases/jvm" overwrite="true">
+                                <copy todir="${demo.dist.directory}" overwrite="true">
                                     <fileset dir="${basedir}/src/main/dist"/>
+                                    <filterset>
+                                        <filter token="DEMO_JAR" value="${project.build.finalName}.jar"/>
+                                        <filter token="PROJECT_VERSION" value="${project.version}"/>
+                                    </filterset>
                                 </copy>
+                                <echo file="${project.build.directory}/demo-jar.txt">${project.build.finalName}.jar</echo>
+                                <chmod dir="${demo.dist.directory}" includes="*.sh,*.command" perm="ugo+x" osfamily="unix"/>
                             </target>
                         </configuration>
                     </execution>

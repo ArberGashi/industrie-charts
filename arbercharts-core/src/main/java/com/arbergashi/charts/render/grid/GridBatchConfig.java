@@ -5,6 +5,9 @@ import com.arbergashi.charts.engine.spatial.SpatialDepthPolicy;
 
 /**
  * Configuration for grid batch rendering in spatial pipelines.
+ * Grid coordinates match the Canvas path; {@code gridZ} supplies their depth
+ * for clipping. The default depth of 1 is visible above the default clip plane 0.
+ * All segments share this depth, so depth sorting does not change their order.
  *
  * <p>Platform-independent and headless-certified. No AWT/Swing dependencies.</p>
  *
@@ -13,7 +16,7 @@ import com.arbergashi.charts.engine.spatial.SpatialDepthPolicy;
  */
 public final class GridBatchConfig {
     private double zMin;
-    private double gridZ;
+    private double gridZ = 1.0;
     private SpatialPathBatchBuilder.ClippingMode clippingMode = SpatialPathBatchBuilder.ClippingMode.DISCARD;
     private SpatialDepthPolicy depthPolicy = () -> SpatialDepthPolicy.Mode.LAYERED;
 

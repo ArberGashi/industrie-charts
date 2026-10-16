@@ -11,7 +11,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>IchimokuRenderer - Ichimoku Kinko Hyo (Ichimoku Cloud)</h1>
+ * <h2>IchimokuRenderer - Ichimoku Kinko Hyo (Ichimoku Cloud)</h2>
  *
  * <p>Professional Ichimoku Cloud renderer for comprehensive trend analysis.
  * Displays all five Ichimoku lines with cloud (Kumo) visualization.</p>
@@ -52,6 +52,7 @@ public final class IchimokuRenderer extends BaseRenderer {
 
     // Cached computed series (x + y) to avoid allocating ChartPoint lists
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
 
     private transient double[] xTenkan;
@@ -219,12 +220,14 @@ public final class IchimokuRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
-        if (cachedModel == model && cachedPointCount == n && xTenkan != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && xTenkan != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
 
         ensureCapacity(n);

@@ -7,179 +7,195 @@ import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
+import com.arbergashi.charts.util.ChartScale;
+import java.util.Objects;
+
 /**
- * Live FFT renderer (JDK 25 standard).
- * Transforms a time signal into the frequency domain and visualizes it.
- * Ideal for acoustics, vibration analysis, and signal processing.
+ * Displays the one-sided amplitude spectrum of a uniformly sampled time signal.
+ *
+ * <p>X values specify sample times; frequencies use inverse X units. The transform
+ * uses a rectangular window and zero-pads to the next power of two. Amplitudes
+ * are normalized by the original sample count, with doubled positive-frequency
+ * bins except DC and Nyquist. Invalid or nonuniform samples produce no spectrum.
+ * Hosts should use the preferred X and Y ranges when autoscaling derived data.</p>
+ *
+ * <p>Call {@link #setSpectrumInput(boolean)} to display already computed frequency
+ * and nonnegative amplitude pairs. Geometry always uses the supplied plot
+ * context, so zoom, inversion and axis transforms apply consistently.</p>
  *
  * @author Arber Gashi
  * @since 2026-01-01
-  * Part of the Zero-Allocation Render Path. High-frequency execution safe.
- *
  */
 public class LiveFFTRenderer extends BaseRenderer {
-
-    private final double[] pBuffer = new double[2];
+    private final double[] pixel = new double[2];
+    private final double[] baselinePixel = new double[2];
     private boolean asBars = true;
+    private boolean spectrumInput;
+    private double[] frequencies = new double[0];
+    private double[] amplitudes = new double[0];
 
     public LiveFFTRenderer() {
         super("fft");
     }
 
     /**
-     * Helper for a simple FFT (Cooley-Tukey).
-     * Provided as a placeholder for internal logic.
+     * Computes a new one-sided amplitude array without modifying the input.
+     * The result contains {@code N / 2 + 1} bins, where N is the next power of two;
+     * an empty input returns an empty array. Bin k represents k/N cycles per sample.
+     *
+     * @param timeSignal finite, uniformly spaced samples
+     * @return normalized nonnegative amplitudes, including DC and Nyquist
+     * @throws NullPointerException if the input is null
+     * @throws IllegalArgumentException if a sample is nonfinite
      */
     public static double[] getComputedFFT(double[] timeSignal) {
-        int n = timeSignal.length;
-        if (Integer.bitCount(n) != 1) {
-            // Padding to the next power of two would be required.
+        Objects.requireNonNull(timeSignal, "timeSignal");
+        if (timeSignal.length == 0) return new double[0];
+        for (double value : timeSignal) {
+            if (!Double.isFinite(value)) throw new IllegalArgumentException("Samples must be finite");
         }
-        // ... FFT Logik ...
-        return timeSignal; // Dummy
+        int length = FourierTransform.paddedLength(timeSignal.length);
+        double[] real = new double[length];
+        double[] imaginary = new double[length];
+        FourierTransform.compute(timeSignal, timeSignal.length, real, imaginary, length);
+        double[] result = new double[length / 2 + 1];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = FourierTransform.amplitude(real, imaginary, i, length, timeSignal.length);
+        }
+        return result;
     }
 
+    /**
+     * Selects filled bars or a connected spectrum line.
+     * @param asBars true for bars
+     * @return this renderer
+     */
     public LiveFFTRenderer setAsBars(boolean asBars) {
         this.asBars = asBars;
         return this;
     }
 
-    @Override/**
- * @since 1.5.0
- */
+    /**
+     * Selects whether the model already contains frequency/amplitude pairs.
+     * @param spectrumInput true for precomputed spectrum data; false for time samples
+     * @return this renderer
+     */
+    public LiveFFTRenderer setSpectrumInput(boolean spectrumInput) {
+        this.spectrumInput = spectrumInput;
+        return this;
+    }
+
+    @Override
+    public double[] getPreferredXRange(ChartModel model) {
+        int count = prepareSpectrum(model);
+        if (count == 0) return null;
+        double min = Double.POSITIVE_INFINITY;
+        double max = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < count; i++) {
+            if (!validBin(i)) continue;
+            min = Math.min(min, frequencies[i]);
+            max = Math.max(max, frequencies[i]);
+        }
+        return Double.isFinite(min) ? new double[]{min, max > min ? max : min + 1.0} : null;
+    }
+
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        int count = prepareSpectrum(model);
+        double max = 0.0;
+        for (int i = 0; i < count; i++) {
+            if (validBin(i)) max = Math.max(max, amplitudes[i]);
+        }
+        return count == 0 ? null : new double[]{0.0, max > 0.0 ? max * 1.05 : 1.0};
+    }
+
+    @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
-        int count = model.getPointCount();
-        if (count < 2) return;
-        double[] xData = model.getXData();
-        double[] yData = model.getYData();
-
-        // In a real setup, FFT would be computed here.
-        // We assume the model already contains frequency data (magnitude),
-        // or this would be transformed if the input is time-domain data.
-
+        int count = prepareSpectrum(model);
+        if (count == 0) return;
         ArberColor base = seriesOrBase(model, context, 0);
         canvas.setColor(base);
-
-        if (asBars) {
-            drawAsBars(canvas, xData, yData, count, context, base);
-        } else {
-            drawAsLine(canvas, xData, yData, count, context, base);
+        canvas.setStroke(ChartScale.scale(1.5f));
+        float[] xs = RendererAllocationCache.getFloatArray(this, "fft.line.x", count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "fft.line.y", count);
+        int used = 0;
+        double baseline = context.getMinY() > 0.0 ? context.getMinY() : 0.0;
+        ArberRect bounds = context.getPlotBounds();
+        for (int i = 0; i < count; i++) {
+            if (!validBin(i)) {
+                if (!asBars && used > 1) canvas.drawPolyline(xs, ys, used);
+                used = 0;
+                continue;
+            }
+            context.mapToPixel(frequencies[i], amplitudes[i], pixel);
+            if (!Float.isFinite((float) pixel[0]) || !Float.isFinite((float) pixel[1])) {
+                if (!asBars && used > 1) canvas.drawPolyline(xs, ys, used);
+                used = 0;
+                continue;
+            }
+            if (asBars) {
+                double spacing = count == 1 ? 1.0 : i == 0
+                        ? Math.abs(frequencies[1] - frequencies[0])
+                        : Math.abs(frequencies[i] - frequencies[i - 1]);
+                if (!Double.isFinite(spacing) || spacing <= 0.0) continue;
+                double center = pixel[0];
+                double top = pixel[1];
+                context.mapToPixel(frequencies[i] + spacing * 0.4, baseline, baselinePixel);
+                double halfWidth = Math.abs(baselinePixel[0] - center);
+                double left = Math.max(bounds.minX(), center - halfWidth);
+                double right = Math.min(bounds.maxX(), center + halfWidth);
+                double y0 = Math.max(bounds.minY(), Math.min(top, baselinePixel[1]));
+                double y1 = Math.min(bounds.maxY(), Math.max(top, baselinePixel[1]));
+                if (isMultiColor()) canvas.setColor(seriesOrBase(model, context, i));
+                if (right > left && y1 > y0) canvas.fillRect((float) left, (float) y0,
+                        (float) (right - left), (float) (y1 - y0));
+            } else {
+                xs[used] = (float) pixel[0];
+                ys[used++] = (float) pixel[1];
+                if (isMultiColor() && used == 2) {
+                    canvas.setColor(seriesOrBase(model, context, i));
+                    canvas.drawPolyline(xs, ys, 2);
+                    xs[0] = xs[1];
+                    ys[0] = ys[1];
+                    used = 1;
+                }
+            }
         }
+        if (!asBars && used > 1) canvas.drawPolyline(xs, ys, used);
     }
 
-    private void drawAsBars(ArberCanvas canvas, double[] xData, double[] yData, int count, PlotContext context, ArberColor base) {
-        // Find data range for proper scaling
-        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
-        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-
-        for (int i = 0; i < count; i++) {
-            if (xData[i] < minX) minX = xData[i];
-            if (xData[i] > maxX) maxX = xData[i];
-            if (yData[i] < minY) minY = yData[i];
-            if (yData[i] > maxY) maxY = yData[i];
-        }
-
-        // Add padding
-        double rangeY = maxY - minY;
-        if (rangeY == 0) rangeY = 1.0;
-        minY = minY - rangeY * 0.05;
-        maxY = maxY + rangeY * 0.05;
-        rangeY = maxY - minY;
-
-        ArberRect bounds = context.getPlotBounds();
-        double plotX = bounds.x();
-        double plotY = bounds.y();
-        double plotW = bounds.width();
-        double plotH = bounds.height();
-
-        double xRange = maxX - minX;
-        if (xRange == 0) xRange = 1.0;
-
-        double barW = plotW / Math.max(1, count);
-        double baseline = plotY + plotH; // Bottom of plot
-
-        for (int i = 0; i < count; i++) {
-            // Manual pixel mapping
-            double px = plotX + (xData[i] - minX) / xRange * plotW;
-            double py = plotY + (maxY - yData[i]) / rangeY * plotH;
-
-            float h = (float) Math.abs(baseline - py);
-            float y = (float) Math.min(baseline, py);
-
-            if (isMultiColor()) {
-                ArberColor bar = themeSeries(context, i);
-                if (bar == null) bar = base;
-                canvas.setColor(bar);
-            }
-            canvas.fillRect((float) (px - barW / 2), y, (float) barW, h);
-        }
+    private boolean validBin(int i) {
+        return Double.isFinite(frequencies[i]) && Double.isFinite(amplitudes[i]) && amplitudes[i] >= 0.0;
     }
 
-    private void drawAsLine(ArberCanvas canvas, double[] xData, double[] yData, int count, PlotContext context, ArberColor base) {
-        // Find data range for proper scaling
-        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
-        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-
+    private int prepareSpectrum(ChartModel model) {
+        if (model == null) return 0;
+        int count = model.getPointCount();
+        if (count <= 0) return 0;
+        double[] x = RendererAllocationCache.getDoubleArray(this, "fft.input.x", count);
+        double[] y = RendererAllocationCache.getDoubleArray(this, "fft.input.y", count);
         for (int i = 0; i < count; i++) {
-            if (xData[i] < minX) minX = xData[i];
-            if (xData[i] > maxX) maxX = xData[i];
-            if (yData[i] < minY) minY = yData[i];
-            if (yData[i] > maxY) maxY = yData[i];
+            x[i] = model.getX(i);
+            y[i] = model.getY(i);
         }
-
-        // Add padding
-        double rangeY = maxY - minY;
-        if (rangeY == 0) rangeY = 1.0;
-        minY = minY - rangeY * 0.05;
-        maxY = maxY + rangeY * 0.05;
-        rangeY = maxY - minY;
-
-        ArberRect bounds = context.getPlotBounds();
-        double plotX = bounds.x();
-        double plotY = bounds.y();
-        double plotW = bounds.width();
-        double plotH = bounds.height();
-
-        double xRange = maxX - minX;
-        if (xRange == 0) xRange = 1.0;
-
-        double prevX = Double.NaN;
-        double prevY = Double.NaN;
-        float[] xs = null;
-        float[] ys = null;
-        int outCount = 0;
-        if (!isMultiColor()) {
-            xs = RendererAllocationCache.getFloatArray(this, "fft.line.x", count);
-            ys = RendererAllocationCache.getFloatArray(this, "fft.line.y", count);
+        if (spectrumInput) {
+            frequencies = x;
+            amplitudes = y;
+            return count;
         }
-
-        for (int i = 0; i < count; i++) {
-            // Manual pixel mapping
-            double px = plotX + (xData[i] - minX) / xRange * plotW;
-            double py = plotY + (maxY - yData[i]) / rangeY * plotH;
-
-            if (!isMultiColor()) {
-                xs[outCount] = (float) px;
-                ys[outCount] = (float) py;
-                outCount++;
-            } else if (i > 0) {
-                ArberColor seg = themeSeries(context, i);
-                if (seg == null) seg = base;
-                canvas.setColor(seg);
-                float[] sx = RendererAllocationCache.getFloatArray(this, "fft.seg.x", 2);
-                float[] sy = RendererAllocationCache.getFloatArray(this, "fft.seg.y", 2);
-                sx[0] = (float) prevX;
-                sy[0] = (float) prevY;
-                sx[1] = (float) px;
-                sy[1] = (float) py;
-                canvas.drawPolyline(sx, sy, 2);
-            }
-            prevX = px;
-            prevY = py;
+        double step = FourierTransform.samplingInterval(x, y, count);
+        if (!Double.isFinite(step)) return 0;
+        int length = FourierTransform.paddedLength(count);
+        double[] real = RendererAllocationCache.getDoubleArray(this, "fft.real", length);
+        double[] imaginary = RendererAllocationCache.getDoubleArray(this, "fft.imaginary", length);
+        FourierTransform.compute(y, count, real, imaginary, length);
+        int bins = length / 2 + 1;
+        frequencies = RendererAllocationCache.getDoubleArray(this, "fft.frequencies", bins);
+        amplitudes = RendererAllocationCache.getDoubleArray(this, "fft.amplitudes", bins);
+        for (int i = 0; i < bins; i++) {
+            frequencies[i] = (i / (double) length) / step;
+            amplitudes[i] = FourierTransform.amplitude(real, imaginary, i, length, count);
         }
-
-        if (!isMultiColor()) {
-            canvas.drawPolyline(xs, ys, outCount);
-        }
+        return bins;
     }
 }

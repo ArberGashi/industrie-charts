@@ -5,14 +5,22 @@ import com.arbergashi.charts.platform.swing.util.ChartEngine;
 import com.arbergashi.charts.util.ChartScale;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import javax.swing.SwingUtilities;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.IdentityHashMap;
+import java.util.Map;
 /**
  * Exports charts rendered by {@link ArberChartPanel} into images.
  *
@@ -63,7 +71,7 @@ public final class ChartExportService {
             g2.scale(geo.getScale(), geo.getScale());
 
             // printAll() includes children (tooltip/crosshair). This is desirable for exports.
-            panel.printAll(g2);
+            printPanel(panel, g2, geo);
 
             writePng(img, geo.getOutputFile());
         } catch (Exception e) {
@@ -102,7 +110,7 @@ public final class ChartExportService {
 
             ChartEngine.prepareGraphics(g2, false);
             g2.scale(geo.scale, geo.scale);
-            panel.printAll(g2);
+            printPanel(panel, g2, geo);
 
             // JFreeSVG: String getSVGElement()
             Method getSvgElement = svgG2Class.getMethod("getSVGElement");
@@ -162,7 +170,7 @@ public final class ChartExportService {
             try {
                 ChartEngine.prepareGraphics(g2, false);
                 g2.scale(geo.scale, geo.scale);
-                panel.printAll(g2);
+                printPanel(panel, g2, geo);
             } finally {
                 g2.dispose();
             }
@@ -193,6 +201,51 @@ public final class ChartExportService {
             throw new RuntimeException("PDF export backend not found. Add dependency 'org.apache.pdfbox:pdfbox'.", e);
         } catch (Exception e) {
             throw new RuntimeException("PDF export failed: " + e.getMessage(), e);
+        }
+    }
+
+    private static void printPanel(ArberChartPanel panel, Graphics2D graphics, ExportGeometry geometry) {
+        Runnable paint = () -> {
+            Map<Component, Rectangle> originalBounds = new IdentityHashMap<>();
+            rememberBounds(panel, originalBounds);
+            try {
+                panel.setSize(Math.max(1, geometry.panelWidth), Math.max(1, geometry.panelHeight));
+                layoutTree(panel);
+                panel.printAll(graphics);
+            } finally {
+                originalBounds.forEach(Component::setBounds);
+                panel.revalidate();
+            }
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            paint.run();
+            return;
+        }
+        try {
+            SwingUtilities.invokeAndWait(paint);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Chart export interrupted", e);
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException("Chart painting failed", e.getCause());
+        }
+    }
+
+    private static void rememberBounds(Component component, Map<Component, Rectangle> bounds) {
+        bounds.put(component, component.getBounds());
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                rememberBounds(child, bounds);
+            }
+        }
+    }
+
+    private static void layoutTree(Container container) {
+        container.doLayout();
+        for (Component child : container.getComponents()) {
+            if (child instanceof Container nested) {
+                layoutTree(nested);
+            }
         }
     }
 

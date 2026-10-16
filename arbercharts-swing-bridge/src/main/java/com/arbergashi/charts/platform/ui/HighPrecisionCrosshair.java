@@ -17,7 +17,8 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.event.ActionEvent;
+import java.awt.event.HierarchyEvent;
+import java.util.function.LongSupplier;
 import java.awt.geom.Line2D;
 import java.awt.geom.RoundRectangle2D;
 
@@ -31,6 +32,11 @@ import java.awt.geom.RoundRectangle2D;
  * @since 2026-01-01
  */
 public final class HighPrecisionCrosshair extends JComponent {
+
+    @Override
+    public boolean contains(int x, int y) {
+        return false;
+    }
     private static final String STYLE_CLASS_PROPERTY = "FlatLaf.styleClass";
 
     // Professional crosshair proportions - readable baseline for production demos.
@@ -43,10 +49,14 @@ public final class HighPrecisionCrosshair extends JComponent {
     private static final float LABEL_FONT_SIZE = 10.0f;
     private static final float MARKER_SIZE = 8.0f;
     private static final float MARKER_RING_STROKE = 1.6f;
-    private static final int ANIMATION_FPS = 16;
+    private static final int FRAME_DELAY_MS = 16;
+    private static final long FADE_DURATION_NANOS = 120_000_000L;
 
     private final Timer animationTimer;
-    private final Timer hideTimer;
+    private final LongSupplier animationClock;
+    private boolean animationsEnabled = !Boolean.getBoolean("arbercharts.reduceMotion");
+    private long fadeStart;
+    private float fadeFrom;
 
     // Zero-GC: Reusable geometric objects
     private final Line2D.Float verticalLine = new Line2D.Float();
@@ -64,11 +74,8 @@ public final class HighPrecisionCrosshair extends JComponent {
 
     private float currentX;
     private float currentY;
-    private float targetX;
-    private float targetY;
     private float opacity;
     private float targetOpacity;
-    private boolean enabled;
 
     private String xLabel = "";
     private String yLabel = "";
@@ -84,6 +91,11 @@ public final class HighPrecisionCrosshair extends JComponent {
     private ChartTheme theme = ChartThemes.getDarkTheme();
 
     public HighPrecisionCrosshair() {
+        this(System::nanoTime);
+    }
+
+    HighPrecisionCrosshair(LongSupplier animationClock) {
+        this.animationClock = animationClock;
         setOpaque(false);
         setVisible(false);
         putClientProperty(STYLE_CLASS_PROPERTY, "precisionCrosshair");
@@ -101,19 +113,18 @@ public final class HighPrecisionCrosshair extends JComponent {
         solidStroke = new BasicStroke(ChartScale.scale(LINE_WIDTH));
         markerRingStroke = new BasicStroke(ChartScale.scale(MARKER_RING_STROKE), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
 
-        animationTimer = new Timer(ANIMATION_FPS, this::tickAnimation);
-        hideTimer = new Timer(200, e -> {
-            if (opacity < 0.05f) {
-                setVisible(false);
+        animationTimer = new Timer(FRAME_DELAY_MS, _ -> advanceAnimation(animationClock.getAsLong()));
+        animationTimer.setCoalesce(true);
+        addHierarchyListener(event -> {
+            if ((event.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && !isShowing()) {
+                hideImmediately();
             }
         });
-        hideTimer.setRepeats(false);
     }
 
     @Override
     public void removeNotify() {
-        animationTimer.stop();
-        hideTimer.stop();
+        hideImmediately();
         super.removeNotify();
     }
 
@@ -132,42 +143,79 @@ public final class HighPrecisionCrosshair extends JComponent {
         repaint();
     }
 
+    /**
+     * Updates the measurement position and its labels together on the EDT.
+     * Only opacity is animated: a crosshair must never lag behind the value it reports.
+     *
+     * @param x horizontal component coordinate
+     * @param y vertical component coordinate
+     * @param labelX formatted X value, or null
+     * @param labelY formatted Y value, or null
+     */
     public void updatePosition(int x, int y, String labelX, String labelY) {
-        targetX = x;
-        targetY = y;
+        if (!isEnabled()) return;
+        currentX = x;
+        currentY = y;
         xLabel = labelX != null ? labelX : "";
         yLabel = labelY != null ? labelY : "";
-        targetOpacity = 1.0f;
-        if (!isVisible()) {
-            setVisible(true);
-            currentX = x;
-            currentY = y;
-            opacity = 0.0f;
-        }
-        if (!animationTimer.isRunning()) {
-            animationTimer.start();
-        }
+        fadeTo(1.0f);
+        repaint();
     }
 
+    /** Hides the crosshair using the current motion setting. Call on the EDT. */
     public void hideCrosshair() {
-        targetOpacity = 0.0f;
-        if (!animationTimer.isRunning()) {
-            animationTimer.start();
+        fadeTo(0.0f);
+    }
+
+    /**
+     * Controls opacity transitions without changing measurement positions.
+     * Disabling animation settles the current transition immediately. Call on the EDT.
+     *
+     * @param enabled whether to animate opacity
+     */
+    public void setAnimationsEnabled(boolean enabled) {
+        animationsEnabled = enabled;
+        if (!enabled) {
+            animationTimer.stop();
+            opacity = targetOpacity;
+            if (opacity == 0.0f) setVisible(false);
+            repaint();
         }
-        hideTimer.restart();
     }
 
     @Override
     public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-        if (!enabled) {
-            hideCrosshair();
+        super.setEnabled(enabled);
+        if (!enabled && animationTimer != null) hideImmediately();
+    }
+
+    private void fadeTo(float target) {
+        long now = animationClock.getAsLong();
+        advanceAnimation(now);
+        if (target > 0.0f && !isVisible()) setVisible(true);
+        if (targetOpacity == target && (animationTimer.isRunning() || opacity == target)) return;
+        fadeFrom = opacity;
+        targetOpacity = target;
+        fadeStart = now;
+        if (!animationsEnabled || !isShowing()) {
+            animationTimer.stop();
+            opacity = target;
+            if (target == 0.0f) setVisible(false);
+            repaint();
+        } else {
+            animationTimer.start();
         }
+    }
+
+    private void hideImmediately() {
+        animationTimer.stop();
+        opacity = targetOpacity = 0.0f;
+        setVisible(false);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        if (!enabled || opacity < 0.01f) return;
+        if (!isEnabled() || opacity < 0.01f) return;
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -317,19 +365,16 @@ public final class HighPrecisionCrosshair extends JComponent {
         }
     }
 
-    private void tickAnimation(ActionEvent e) {
-        float speed = 0.25f;
-        currentX += (targetX - currentX) * speed;
-        currentY += (targetY - currentY) * speed;
-        opacity += (targetOpacity - opacity) * speed;
-
-        if (Math.abs(targetX - currentX) < 0.5f
-                && Math.abs(targetY - currentY) < 0.5f
-                && Math.abs(targetOpacity - opacity) < 0.01f) {
+    void advanceAnimation(long now) {
+        if (!animationTimer.isRunning()) return;
+        double progress = Math.clamp((now - fadeStart) / (double) FADE_DURATION_NANOS, 0.0, 1.0);
+        double remaining = 1.0 - progress;
+        double eased = 1.0 - remaining * remaining * remaining;
+        opacity = (float) (fadeFrom + (targetOpacity - fadeFrom) * eased);
+        if (progress >= 1.0) {
             animationTimer.stop();
-            currentX = targetX;
-            currentY = targetY;
             opacity = targetOpacity;
+            if (opacity == 0.0f) setVisible(false);
         }
         repaint();
     }

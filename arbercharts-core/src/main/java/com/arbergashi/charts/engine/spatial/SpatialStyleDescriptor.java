@@ -17,6 +17,10 @@ package com.arbergashi.charts.engine.spatial;
  * @author Arber Gashi
  */
 public final class SpatialStyleDescriptor {
+    /** Filled octagon; the packed width is its diameter for an isolated point. */
+    public static final int MARKER_OCTAGON = 3;
+    /** Filled square; the packed width is its side length for an isolated point. */
+    public static final int MARKER_SQUARE = 4;
     private static final int DEFAULT_ARGB = 0xFF000000;
     private static final float DEFAULT_STROKE = 1.0f;
     private static final int DEFAULT_DASH = 0;

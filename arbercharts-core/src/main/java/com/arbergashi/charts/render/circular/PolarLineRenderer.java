@@ -7,11 +7,12 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.render.grid.PolarGeometry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import java.util.Optional;
 /**
- * <h1>Modern Polar Line Renderer</h1>
+ * <h2>Modern Polar Line Renderer</h2>
  * <p>
  * Draws an interactive line chart in a polar coordinate system.
  * </p>
@@ -63,7 +64,7 @@ public final class PolarLineRenderer extends BaseRenderer {
         ArberRect b = context.getPlotBounds();
         double cx = b.centerX();
         double cy = b.centerY();
-        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
+        double maxRadius = PolarGeometry.radius(b);
 
         canvas.setColor(getResolvedTheme(context).getGridColor());
         canvas.setStroke(ChartScale.scale(1.0f));
@@ -116,7 +117,7 @@ public final class PolarLineRenderer extends BaseRenderer {
         ArberRect b = context.getPlotBounds();
         double cx = b.centerX();
         double cy = b.centerY();
-        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
+        double maxRadius = PolarGeometry.radius(b);
         
         for (int i = 0; i < n; i++) {
             double angleDeg = model.getX(i);

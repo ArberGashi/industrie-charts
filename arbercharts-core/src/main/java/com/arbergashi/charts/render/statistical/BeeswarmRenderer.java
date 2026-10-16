@@ -8,14 +8,15 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>BeeswarmRenderer - Beeswarm Plot (Stripchart)</h1>
+ * <h2>BeeswarmRenderer - Beeswarm Plot (Stripchart)</h2>
  *
  * <p>Professional beeswarm plot renderer for showing individual data points without overlap.
- * Each point is positioned to avoid overlapping while maintaining vertical alignment by category.</p>
+ * Points retain their mapped Y value and use the nearest free horizontal lane
+ * around their mapped X position. Placement is deterministic in model order.</p>
  *
  * <h2>Features:</h2>
  * <ul>
- *   <li><b>No Overlap:</b> Points are jittered horizontally to avoid collision</li>
+ *   <li><b>No Overlap:</b> Horizontal lane placement avoids previously placed markers</li>
  *   <li><b>All Data Visible:</b> Every data point is shown individually</li>
  *   <li><b>Distribution Shape:</b> Reveals density and outliers</li>
  *   <li><b>Category Grouping:</b> Points grouped by category (x-value)</li>
@@ -44,7 +45,6 @@ import com.arbergashi.charts.util.ChartScale;
 public final class BeeswarmRenderer extends BaseRenderer {
 
     private static final double DOT_RADIUS = 4.0;
-    // MIN_SPACING removed (no longer used)
     private final double[] p0 = new double[2];
 
     public BeeswarmRenderer() {
@@ -59,18 +59,45 @@ public final class BeeswarmRenderer extends BaseRenderer {
         if (count < 1) return;
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        if (xData == null || yData == null) return;
+        count = Math.min(count, Math.min(xData.length, yData.length));
         final ArberColor baseColor = getSeriesColor(model);
         final double scaledRadius = ChartScale.scale(DOT_RADIUS);
-        // Simple beeswarm: plot all points, jitter x if needed (no grouping)
-        for (int i = 0; i < model.getPointCount(); i++) {
+        final double spacing = 2.0 * scaledRadius + ChartScale.scale(0.5);
+        double[] placedX = RendererAllocationCache.getDoubleArray(this, "beeswarm.placedX", count);
+        double[] placedY = RendererAllocationCache.getDoubleArray(this, "beeswarm.placedY", count);
+        int[] occupied = RendererAllocationCache.getIntArray(this, "beeswarm.occupied", 2 * count + 1);
+        java.util.Arrays.fill(occupied, 0, 2 * count + 1, 0);
+        int placed = 0;
+        for (int i = 0; i < count; i++) {
+            if (!Double.isFinite(xData[i]) || !Double.isFinite(yData[i])) continue;
             context.mapToPixel(xData[i], yData[i], p0);
+            double originX = p0[0];
+            double y = p0[1];
+            if (!Double.isFinite(originX) || !Double.isFinite(y)) continue;
+            int stamp = i + 1;
+            for (int j = 0; j < placed; j++) {
+                double dy = y - placedY[j];
+                if (Math.abs(dy) >= spacing) continue;
+                double clearance = Math.sqrt(spacing * spacing - dy * dy);
+                // Each prior circle excludes at most two lanes. Mark them once
+                // instead of repeatedly rescanning all points for each candidate.
+                int first = (int) Math.max(-count, Math.floor((placedX[j] - clearance - originX) / spacing) + 1);
+                int last = (int) Math.min(count, Math.ceil((placedX[j] + clearance - originX) / spacing) - 1);
+                for (int lane = first; lane <= last; lane++) occupied[count + lane] = stamp;
+            }
+            int lane = 0;
+            while (occupied[count + lane] == stamp) lane = lane > 0 ? -lane : 1 - lane;
+            double x = originX + lane * spacing;
+            placedX[placed] = x;
+            placedY[placed++] = y;
             ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (pointColor == null) pointColor = baseColor;
             canvas.setColor(pointColor);
-            fillCircle(canvas, p0[0], p0[1], scaledRadius);
+            fillCircle(canvas, x, y, scaledRadius);
             canvas.setColor(themeBackground(context));
             canvas.setStroke(ChartScale.scale(0.5f));
-            strokeCircle(canvas, p0[0], p0[1], scaledRadius);
+            strokeCircle(canvas, x, y, scaledRadius);
         }
     }
 

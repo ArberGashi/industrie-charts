@@ -33,6 +33,7 @@ public final class DependencyWheelRenderer extends BaseRenderer {
         if (count == 0) return;
 
         ArberRect bounds = context.getPlotBounds();
+        if (bounds.width() <= 0 || bounds.height() <= 0) return;
         double cx = bounds.centerX();
         double cy = bounds.centerY();
         double r = Math.min(bounds.width(), bounds.height()) * 0.35;
@@ -44,8 +45,13 @@ public final class DependencyWheelRenderer extends BaseRenderer {
             if (lbl == null) continue;
             String[] parts = lbl.split(":");
             if (parts.length < 2) continue;
-            if (!angles.containsKey(parts[0])) angles.put(parts[0], idx++ * (2 * Math.PI / Math.max(1, count)));
-            if (!angles.containsKey(parts[1])) angles.put(parts[1], idx++ * (2 * Math.PI / Math.max(1, count)));
+            if (!angles.containsKey(parts[0])) angles.put(parts[0], (double) idx++);
+            if (!angles.containsKey(parts[1])) angles.put(parts[1], (double) idx++);
+        }
+
+        double angleStep = 2 * Math.PI / Math.max(1, angles.size());
+        for (Map.Entry<String, Double> node : angles.entrySet()) {
+            node.setValue(node.getValue() * angleStep);
         }
 
         float[] lineX = RendererAllocationCache.getFloatArray(this, "dep.line.x", 2);
@@ -82,7 +88,7 @@ public final class DependencyWheelRenderer extends BaseRenderer {
         float[] arcY = RendererAllocationCache.getFloatArray(this, "dep.arc.y", segs + 1);
         double start = 0;
         double seg = 2 * Math.PI / Math.max(1, angles.size());
-        double rr = r + 20;
+        double rr = Math.min(r + 20, Math.min(bounds.width(), bounds.height()) * 0.5);
         for (int n = 0; n < angles.size(); n++) {
             double a0 = start;
             double a1 = start + seg;

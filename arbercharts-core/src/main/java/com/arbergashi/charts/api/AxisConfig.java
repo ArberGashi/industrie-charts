@@ -23,6 +23,7 @@ public final class AxisConfig {
     private boolean autoScale = true;
     private boolean inverted = false;
     private Locale locale = Locale.getDefault();
+    private boolean localeExplicit;
     private Double fixedMin = null;
     private Double fixedMax = null;
     private Double unitsPerPixel = null;
@@ -32,7 +33,8 @@ public final class AxisConfig {
     private transient NumberFormat cachedNumberFormat;
     private transient DecimalFormat cachedDecimalFormat;
     private transient String lastPattern;
-    private transient Locale lastLocale;
+    private transient Locale lastNumberLocale;
+    private transient Locale lastDecimalLocale;
 
     public AxisConfig() {
         /* Default constructor */
@@ -45,12 +47,33 @@ public final class AxisConfig {
      * @return The formatted value as a string.
      */
     public String getFormattedValue(double value) {
+        return getFormattedValue(value, locale, Double.NaN);
+    }
+
+    /**
+     * Formats a value for a host axis with a default locale and visible tick spacing.
+     * An explicit pattern and an explicitly selected axis locale take precedence.
+     * Otherwise, precision follows the tick spacing so adjacent small ticks remain distinct.
+     *
+     * @param value value to format
+     * @param fallbackLocale host locale used unless this axis has an explicit locale
+     * @param tickSpacing positive spacing between ticks, or NaN for default precision
+     * @return formatted value including the optional unit suffix
+     */
+    public String getFormattedValue(double value, Locale fallbackLocale, double tickSpacing) {
+        Locale effectiveLocale = localeExplicit ? locale : Objects.requireNonNullElse(fallbackLocale, locale);
         if (labelFormatPattern != null && !labelFormatPattern.isEmpty()) {
-            DecimalFormat df = getDecimalFormat();
+            DecimalFormat df = getDecimalFormat(effectiveLocale);
             return df.format(value) + (unitSuffix.isEmpty() ? "" : " " + unitSuffix);
         }
 
-        NumberFormat nf = getNumberFormat();
+        NumberFormat nf = getNumberFormat(effectiveLocale);
+        int precision = Double.isFinite(tickSpacing) && tickSpacing > 0.0
+                ? Math.min(340, Math.max(2, 1 - (int) Math.floor(Math.log10(tickSpacing)))) : 2;
+        nf.setMaximumFractionDigits(precision);
+        if (Double.isFinite(tickSpacing) && Math.abs(value) < tickSpacing * 1e-9) {
+            value = 0.0;
+        }
         return nf.format(value) + (unitSuffix.isEmpty() ? "" : " " + unitSuffix);
     }
 
@@ -61,12 +84,12 @@ public final class AxisConfig {
      *
      * @return a DecimalFormat instance configured with the current locale and label format pattern.
      */
-    private DecimalFormat getDecimalFormat() {
-        if (cachedDecimalFormat == null || !Objects.equals(labelFormatPattern, lastPattern) || !Objects.equals(locale, lastLocale)) {
-            cachedDecimalFormat = (DecimalFormat) NumberFormat.getNumberInstance(locale);
+    private DecimalFormat getDecimalFormat(Locale effectiveLocale) {
+        if (cachedDecimalFormat == null || !Objects.equals(labelFormatPattern, lastPattern) || !Objects.equals(effectiveLocale, lastDecimalLocale)) {
+            cachedDecimalFormat = (DecimalFormat) NumberFormat.getNumberInstance(effectiveLocale);
             cachedDecimalFormat.applyPattern(labelFormatPattern);
             lastPattern = labelFormatPattern;
-            lastLocale = locale;
+            lastDecimalLocale = effectiveLocale;
         }
         return cachedDecimalFormat;
     }
@@ -77,12 +100,11 @@ public final class AxisConfig {
      *
      * @return a NumberFormat instance configured with the current locale.
      */
-    private NumberFormat getNumberFormat() {
-        if (cachedNumberFormat == null || !Objects.equals(locale, lastLocale)) {
-            cachedNumberFormat = NumberFormat.getNumberInstance(locale);
+    private NumberFormat getNumberFormat(Locale effectiveLocale) {
+        if (cachedNumberFormat == null || !Objects.equals(effectiveLocale, lastNumberLocale)) {
+            cachedNumberFormat = NumberFormat.getNumberInstance(effectiveLocale);
             cachedNumberFormat.setMaximumFractionDigits(2);
-            lastLocale = locale;
-            lastPattern = null;
+            lastNumberLocale = effectiveLocale;
         }
         return cachedNumberFormat;
     }
@@ -340,7 +362,18 @@ public final class AxisConfig {
      */
     public AxisConfig setLocale(Locale locale) {
         this.locale = Objects.requireNonNull(locale);
+        this.localeExplicit = true;
         return this;
+    }
+
+    /**
+     * Returns whether {@link #setLocale(Locale)} selected a locale explicitly.
+     * Hosts may supply their own default when this returns false.
+     *
+     * @return true when the axis locale overrides its host locale
+     */
+    public boolean isLocaleExplicit() {
+        return localeExplicit;
     }
 
     /**

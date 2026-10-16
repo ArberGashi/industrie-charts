@@ -1,186 +1,141 @@
 package com.arbergashi.charts.core;
 
-import com.tngtech.archunit.junit.AnalyzeClasses;
-import com.tngtech.archunit.junit.ArchTest;
-import com.tngtech.archunit.lang.ArchRule;
+import com.arbergashi.charts.core.architecture.CompiledCore;
+import com.arbergashi.charts.render.ChartRenderer;
+import com.arbergashi.charts.render.testing.AllocationFixtures;
+import org.junit.jupiter.api.Test;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.geom.Point2D;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassModel;
+import java.lang.constant.ClassDesc;
+import java.lang.reflect.AccessFlag;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Zero-GC Architecture Tests for ArberCharts v2.0.
+ * Enforces allocation and package boundaries using the JDK class-file API.
+ * Desktop allocations are forbidden throughout renderers and the engine. Reusable
+ * StringBuilder instances may be created during construction or static initialization,
+ * but render methods and their helpers must not create them on each invocation.
  *
- * <p><strong>THESE TESTS ARE MANDATORY AND MUST ALWAYS PASS.</strong>
- *
- * <p>Zero-allocation rendering is the cornerstone of ArberCharts performance.
- * Any violation is a P1 blocker that must be fixed before merge.
- *
- * <h2>What This Enforces</h2>
- * <ul>
- *   <li>No BasicStroke allocation in render methods</li>
- *   <li>No Color allocation in render methods</li>
- *   <li>No Point2D allocation in render methods</li>
- *   <li>No array allocation in hot paths</li>
- *   <li>Proper use of ZeroAllocPool</li>
- * </ul>
- *
- * <h2>Running These Tests</h2>
- * <pre>
- * # Run all architecture tests
- * mvn -pl arbercharts-core test -Dtest=ZeroGcArchitectureTest
- *
- * # Run in CI (fails build on violation)
- * mvn -pl arbercharts-core -Pguidelines-check verify
- * </pre>
- *
- * <h2>If Tests Fail</h2>
- * <ol>
- *   <li>Identify the violating code in the error message</li>
- *   <li>Replace with ZeroAllocPool equivalent</li>
- *   <li>Re-run tests to verify fix</li>
- *   <li>Update renderer documentation</li>
- * </ol>
+ * <p>These structural checks complement runtime allocation tests. They do not claim
+ * to prove that arbitrary code, collection calls, or array operations allocate nothing.</p>
  *
  * @since 2.0.0
- * @see com.arbergashi.charts.engine.allocation.ZeroAllocPool
- * @see <a href="../../../docs/ZERO_GC_POLICY.md">Zero-GC Policy</a>
  */
-@AnalyzeClasses(packages = "com.arbergashi.charts")
-public class ZeroGcArchitectureTest {
+class ZeroGcArchitectureTest {
+    private static final Set<String> DESKTOP_ALLOCATIONS = Set.of(
+        "java.awt.BasicStroke", "java.awt.Color", "java.awt.geom.Point2D",
+        "java.awt.geom.Point2D$Double", "java.awt.geom.Point2D$Float"
+    );
 
-    /**
-     * Renderers MUST NOT allocate BasicStroke objects.
-     *
-     * <p><strong>Violation Example:</strong>
-     * <pre>{@code
-     * // ❌ WRONG
-     * g2.setStroke(new BasicStroke(2.0f));
-     *
-     * // ✅ RIGHT
-     * g2.setStroke(ZeroAllocPool.getStroke(2.0f));
-     * }</pre>
-     */
-    @ArchTest
-    static final ArchRule renderers_must_not_allocate_strokes =
-        noClasses()
-            .that().resideInAPackage("..render..")
-            .and().haveSimpleNameEndingWith("Renderer")
-            .should().callConstructor(BasicStroke.class)
-            .allowEmptyShould(true)
-            .because("Zero-allocation rendering is mandatory. " +
-                     "Use ZeroAllocPool.getStroke() instead. " +
-                     "See docs/ZERO_GC_POLICY.md");
+    @Test
+    void renderers_and_engine_must_not_allocate_desktop_objects() {
+        List<ClassModel> types = CompiledCore.productionClasses().stream()
+            .filter(type -> isRenderType(type) || CompiledCore.name(type).startsWith("com.arbergashi.charts.engine."))
+            .toList();
+        assertFalse(types.isEmpty(), "No production render or engine classes analyzed");
+        List<CompiledCore.ConstructorCall> violations = types.stream()
+            .flatMap(type -> CompiledCore.constructorCalls(type).stream())
+            .filter(call -> DESKTOP_ALLOCATIONS.contains(call.target())).toList();
+        assertTrue(violations.isEmpty(), "Desktop allocation in render/engine code: " + violations);
+    }
 
-    /**
-     * Renderers MUST NOT allocate Color objects.
-     *
-     * <p><strong>Violation Example:</strong>
-     * <pre>{@code
-     * // ❌ WRONG
-     * g2.setColor(new Color(255, 0, 0));
-     *
-     * // ✅ RIGHT
-     * g2.setColor(ZeroAllocPool.getColor(255, 0, 0));
-     * }</pre>
-     */
-    @ArchTest
-    static final ArchRule renderers_must_not_allocate_colors =
-        noClasses()
-            .that().resideInAPackage("..render..")
-            .and().haveSimpleNameEndingWith("Renderer")
-            .should().callConstructor(Color.class)
-            .allowEmptyShould(true)
-            .because("Zero-allocation rendering is mandatory. " +
-                     "Use ZeroAllocPool.getColor() instead. " +
-                     "See docs/ZERO_GC_POLICY.md");
+    @Test
+    void render_methods_and_helpers_must_reuse_string_builders() {
+        List<CompiledCore.ConstructorCall> violations = CompiledCore.productionClasses().stream()
+            .filter(ZeroGcArchitectureTest::isRenderType)
+            .flatMap(type -> stringBuilderViolations(type).stream()).toList();
+        assertTrue(violations.isEmpty(), "Per-call StringBuilder allocation in render code: " + violations);
+    }
 
-    /**
-     * Renderers MUST NOT allocate Point2D objects.
-     *
-     * <p>Use primitive doubles instead of Point2D objects.
-     *
-     * <p><strong>Violation Example:</strong>
-     * <pre>{@code
-     * // ❌ WRONG
-     * Point2D p = new Point2D.Double(x, y);
-     *
-     * // ✅ RIGHT
-     * double px = x;
-     * double py = y;
-     * }</pre>
-     */
-    @ArchTest
-    static final ArchRule renderers_must_not_allocate_points =
-        noClasses()
-            .that().resideInAPackage("..render..")
-            .and().haveSimpleNameEndingWith("Renderer")
-            .should().callConstructor(Point2D.class)
-            .orShould().callConstructor(Point2D.Double.class)
-            .orShould().callConstructor(Point2D.Float.class)
-            .allowEmptyShould(true)
-            .because("Use primitive doubles instead of Point2D. " +
-                     "See docs/ZERO_GC_POLICY.md");
+    @Test
+    void chart_renderer_implementations_must_be_in_the_render_package() {
+        Map<String, ClassModel> types = productionTypes();
+        List<ClassModel> implementations = types.values().stream()
+            .filter(type -> !type.flags().has(AccessFlag.INTERFACE))
+            .filter(CompiledCore::isTopLevel)
+            .filter(type -> implementsChartRenderer(type, types)).toList();
+        assertFalse(implementations.isEmpty(), "No production ChartRenderer implementations analyzed");
+        List<String> violations = implementations.stream().filter(type -> !isRenderType(type))
+            .map(CompiledCore::name).sorted().toList();
+        assertTrue(violations.isEmpty(), "ChartRenderer implementations outside the render package: " + violations);
+    }
 
-    /**
-     * Engine classes MUST NOT allocate BasicStroke in hot paths.
-     *
-     * <p>This is a broader check for the engine package.
-     */
-    @ArchTest
-    static final ArchRule engine_must_not_allocate_strokes =
-        noClasses()
-            .that().resideInAPackage("..engine..")
-            .and().areNotInterfaces()
-            .and().areNotEnums()
-            .should().callConstructor(BasicStroke.class)
-            .allowEmptyShould(true)
-            .because("Engine must use ZeroAllocPool.getStroke() for all strokes. " +
-                     "See docs/ZERO_GC_POLICY.md");
+    @Test
+    void allocation_scan_distinguishes_initialization_from_render_callbacks() {
+        ClassModel setup = CompiledCore.fixture(AllocationFixtures.CachedBuilders.class);
+        List<CompiledCore.ConstructorCall> initialization = CompiledCore.constructorCalls(setup).stream()
+            .filter(call -> call.target().equals("java.lang.StringBuilder")).toList();
+        assertEquals(2, initialization.size(), "Both instance and static initialization must be analyzed");
+        assertEquals(List.of(), stringBuilderViolations(setup));
 
-    /**
-     * Engine classes MUST NOT allocate Color in hot paths.
-     */
-    @ArchTest
-    static final ArchRule engine_must_not_allocate_colors =
-        noClasses()
-            .that().resideInAPackage("..engine..")
-            .and().areNotInterfaces()
-            .and().areNotEnums()
-            .should().callConstructor(Color.class)
-            .allowEmptyShould(true)
-            .because("Engine must use ZeroAllocPool.getColor() for all colors. " +
-                     "See docs/ZERO_GC_POLICY.md");
+        ClassModel render = CompiledCore.fixture(AllocationFixtures.PerCallBuilders.class);
+        Set<String> violatingMethods = stringBuilderViolations(render).stream()
+            .map(CompiledCore.ConstructorCall::method).collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of("render", "drawData", "helper", "constructorReference"), violatingMethods);
 
-    /**
-     * Concrete renderers should exist in the render package.
-     *
-     * <p>This ensures proper package organization.
-     */
-    @ArchTest
-    static final ArchRule renderers_should_be_in_render_package =
-        classes()
-            .that().haveSimpleNameEndingWith("Renderer")
-            .and().areNotInterfaces()
-            .and().areNotInnerClasses()
-            .should().resideInAPackage("..render..")
-            .allowEmptyShould(true)
-            .because("Concrete renderers should be in the render package hierarchy");
+        ClassModel desktop = CompiledCore.fixture(AllocationFixtures.DesktopObjects.class);
+        Set<String> targets = CompiledCore.constructorCalls(desktop).stream()
+            .map(CompiledCore.ConstructorCall::target).filter(DESKTOP_ALLOCATIONS::contains)
+            .collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of("java.awt.BasicStroke", "java.awt.Color", "java.awt.geom.Point2D$Double"), targets);
+    }
 
-    /**
-     * No StringBuilder allocation in render methods.
-     *
-     * <p>Use thread-local StringBuilder pools instead.
-     */
-    @ArchTest
-    static final ArchRule no_string_builder_in_render =
-        noClasses()
-            .that().resideInAPackage("..render..")
-            .should().callConstructor(StringBuilder.class)
-            .allowEmptyShould(true)
-            .because("Use ThreadLocal<StringBuilder> pools. " +
-                     "See docs/ZERO_GC_POLICY.md");
+    @Test
+    void renderer_package_rule_follows_the_interface_hierarchy_instead_of_names() {
+        Map<String, ClassModel> types = productionTypes();
+        ClassModel coordinator = types.get("com.arbergashi.charts.engine.concurrent.VirtualThreadRenderer");
+        assertFalse(implementsChartRenderer(coordinator, types));
+
+        ClassModel misplaced = ClassFile.of().parse(ClassFile.of().build(
+            ClassDesc.of("com.arbergashi.charts.engine.MisplacedPlot"), builder ->
+                builder.withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT)
+                    .withInterfaceSymbols(ClassDesc.of(ChartRenderer.class.getName()))));
+        assertTrue(implementsChartRenderer(misplaced, types));
+        assertFalse(isRenderType(misplaced));
+    }
+
+    private static List<CompiledCore.ConstructorCall> stringBuilderViolations(ClassModel type) {
+        return CompiledCore.constructorCalls(type).stream()
+            .filter(call -> call.target().equals("java.lang.StringBuilder"))
+            .filter(call -> !call.method().equals("<init>") && !call.method().equals("<clinit>"))
+            .toList();
+    }
+
+    private static boolean isRenderType(ClassModel type) {
+        return CompiledCore.name(type).startsWith("com.arbergashi.charts.render.");
+    }
+
+    private static Map<String, ClassModel> productionTypes() {
+        Map<String, ClassModel> types = new HashMap<>();
+        for (ClassModel type : CompiledCore.productionClasses()) {
+            types.put(CompiledCore.name(type), type);
+        }
+        return types;
+    }
+
+    private static boolean implementsChartRenderer(ClassModel type, Map<String, ClassModel> types) {
+        if (type == null) {
+            throw new IllegalStateException("Missing class while checking the renderer hierarchy");
+        }
+        if (CompiledCore.name(type).equals(ChartRenderer.class.getName())) {
+            return true;
+        }
+        for (var implemented : type.interfaces()) {
+            String name = implemented.asInternalName().replace('/', '.');
+            if (name.equals(ChartRenderer.class.getName())
+                || types.containsKey(name) && implementsChartRenderer(types.get(name), types)) {
+                return true;
+            }
+        }
+        return type.superclass().map(parent -> types.get(parent.asInternalName().replace('/', '.')))
+            .map(parent -> implementsChartRenderer(parent, types)).orElse(false);
+    }
 }
-

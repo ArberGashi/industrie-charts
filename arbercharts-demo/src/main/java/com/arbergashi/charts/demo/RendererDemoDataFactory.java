@@ -359,7 +359,8 @@ public final class RendererDemoDataFactory {
 
     private static ChartModel statisticalRendererModel(String simple) {
         return switch (simple) {
-            case "HistogramRenderer", "QQPlotRenderer", "QuantileRegressionRenderer", "ViolinPlotRenderer", "BoxPlotRenderer" -> statisticalModel();
+            case "HistogramRenderer" -> histogramModel();
+            case "QQPlotRenderer", "QuantileRegressionRenderer", "ViolinPlotRenderer", "BoxPlotRenderer" -> statisticalModel();
             case "BandRenderer", "ErrorBarRenderer", "ConfidenceIntervalRenderer", "QuantileBandRenderer", "StatisticalErrorBarRenderer" -> trendAnalysisModel();
             case "BeeswarmRenderer", "DotPlotRenderer", "RidgeLineRenderer", "LiveDistributionOverlayRenderer" -> distributionModel();
             default -> statisticalModel();
@@ -631,6 +632,15 @@ public final class RendererDemoDataFactory {
             double max = sample + 2.2;
             double weight = Math.abs(sample) * 0.45 + 4.0;
             model.setPoint(x, y, min, max, weight, null);
+        }
+        return model;
+    }
+
+    private static DefaultChartModel histogramModel() {
+        DefaultChartModel observations = distributionModel();
+        DefaultChartModel model = new DefaultChartModel("Observation frequencies");
+        for (int i = 0; i < observations.getPointCount(); i++) {
+            model.setPoint(observations.getX(i), 1.0, 1.0, null);
         }
         return model;
     }

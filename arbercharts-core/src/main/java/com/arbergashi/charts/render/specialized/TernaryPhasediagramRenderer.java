@@ -3,13 +3,20 @@ package com.arbergashi.charts.render.specialized;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.api.types.ArberPoint;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.TernaryChartModel;
+
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.render.grid.TernaryGeometry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
+
+import java.util.List;
+
 /**
  * Ternary Phase Diagram Renderer.
  * A triangle plot for mixtures of three components (A, B, C). Uses barycentric coordinates.
@@ -20,6 +27,9 @@ import com.arbergashi.charts.util.ColorUtils;
  *
  */
 public class TernaryPhasediagramRenderer extends BaseRenderer {
+
+    private final TernaryGeometry triangle = new TernaryGeometry();
+    private final ArberPoint point = new ArberPoint();
 
     // Cached theme resources
     private transient int themeKey;
@@ -39,42 +49,33 @@ public class TernaryPhasediagramRenderer extends BaseRenderer {
         ChartTheme theme = getResolvedTheme(context);
         ensureThemeCache(theme);
 
-        double margin = ChartScale.scale(40);
-        double xBase = bounds.getX() + margin;
-        double yBase = bounds.getY() + bounds.getHeight() - margin;
-        double side = Math.min(bounds.getWidth(), bounds.getHeight()) - 2 * margin;
-        if (side <= 1) return;
-
-        double topX = xBase + side / 2.0;
-        double topY = yBase - side * Math.sqrt(3) / 2.0;
-        double leftX = xBase;
-        double leftY = yBase;
-        double rightX = xBase + side;
-        double rightY = yBase;
+        triangle.setBounds(bounds);
+        double topX = triangle.ax();
+        double topY = triangle.ay();
+        double leftX = triangle.bx();
+        double leftY = triangle.by();
+        double rightX = triangle.cx();
+        double rightY = triangle.cy();
 
         canvas.setColor(sepColor);
         drawTriangle(canvas, topX, topY, leftX, leftY, rightX, rightY);
         drawGrid(canvas, topX, topY, leftX, leftY, rightX, rightY);
 
         // Points
+        List<TernaryChartModel.TernaryPoint> compositions = model instanceof TernaryChartModel ternary
+                ? ternary.getTernaryData() : null;
         int count = model.getPointCount();
         if (count > 0) {
-            ArberColor baseColor = getSeriesColor(model);
+            ArberColor baseColor = seriesOrBase(model, context, 0);
             double r = ChartScale.scale(3.0);
             double d = r * 2.0;
             for (int i = 0; i < count; i++) {
-                double a = model.getX(i);
-                double b = model.getY(i);
-                double c = model.getWeight(i);
-                double total = a + b + c;
-                if (total <= 0) continue;
-                double inv = 1.0 / total;
-                a *= inv;
-                b *= inv;
-                c *= inv;
-
-                double px = Math.fma(a, topX, Math.fma(b, leftX, c * rightX));
-                double py = Math.fma(a, topY, Math.fma(b, leftY, c * rightY));
+                double a = compositions != null ? compositions.get(i).getA() : model.getX(i);
+                double b = compositions != null ? compositions.get(i).getB() : model.getY(i);
+                double c = compositions != null ? compositions.get(i).getC() : model.getWeight(i);
+                if (!triangle.map(a, b, c, point)) continue;
+                double px = point.x();
+                double py = point.y();
 
                 if (px < bounds.x() - d || px > bounds.maxX() + d || py < bounds.y() - d || py > bounds.maxY() + d)
                     continue;

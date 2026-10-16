@@ -11,7 +11,7 @@ import com.arbergashi.charts.util.LatencyTracker;
 
 /**
  * Renders a compact p99/p99.9 latency report for circular dashboards.
- * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ * The label is centered along the bottom edge without covering the chart center.
  *
  * @since 1.5.0
  * @author Arber Gashi
@@ -22,7 +22,13 @@ public final class CircularLatencyOverlayRenderer extends BaseRenderer {
     private final LatencyTracker tracker;
     private final StringBuilder builder = new StringBuilder(48);
     private final char[] intBuf = new char[20];
+    private String label = "";
+    private ArberRect textClip;
 
+    /**
+     * Creates a latency label for a circular chart.
+     * @param tracker timing history, or {@code null} to disable the overlay
+     */
     public CircularLatencyOverlayRenderer(LatencyTracker tracker) {
         super("circularLatency");
         this.tracker = tracker;
@@ -30,6 +36,7 @@ public final class CircularLatencyOverlayRenderer extends BaseRenderer {
 
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        if (context == null) return;
         if (tracker == null || tracker.getSampleCount() == 0) return;
         if (!ChartAssets.getBoolean(KEY_ENABLED, true)) return;
 
@@ -44,9 +51,51 @@ public final class CircularLatencyOverlayRenderer extends BaseRenderer {
         builder.append(" | p99.9: ");
         appendMillis(builder, p999);
 
-        // Text rendering lives in the UI bridges. Core only computes the message.
-        ChartTheme theme = (context.getTheme() != null) ? context.getTheme() : getTheme();
-        if (theme == null) return;
+        if (!label.contentEquals(builder)) label = builder.toString();
+        ChartTheme theme = getResolvedTheme(context);
+        canvas.setFont(theme.getBaseFont());
+        canvas.setColor(theme.getAxisLabelColor());
+        float margin = 8f;
+        float lineHeight = canvas.getTextLineHeight();
+        if (bounds.height() < lineHeight + margin * 2) return;
+        float x = (float) Math.max(bounds.x() + margin,
+                bounds.centerX() - canvas.measureTextWidth(label) * 0.5);
+        float y = (float) bounds.maxY() - margin - lineHeight + canvas.getTextAscent();
+        ArberRect previous = canvas.getClip();
+        canvas.setClip(textClip(bounds, previous));
+        try {
+            canvas.drawText(x, y, label);
+        } finally {
+            canvas.setClip(previous);
+        }
+    }
+
+    @Override
+    public boolean supportsEmptyState() {
+        return true;
+    }
+
+    @Override
+    public void renderEmptyState(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        render(canvas, model, context);
+    }
+
+    @Override
+    public boolean isLegendRequired() {
+        return false;
+    }
+
+    private ArberRect textClip(ArberRect bounds, ArberRect previous) {
+        if (previous == null) return bounds;
+        double x = Math.max(bounds.x(), previous.x());
+        double y = Math.max(bounds.y(), previous.y());
+        double w = Math.max(0, Math.min(bounds.maxX(), previous.maxX()) - x);
+        double h = Math.max(0, Math.min(bounds.maxY(), previous.maxY()) - y);
+        if (textClip == null || textClip.x() != x || textClip.y() != y
+                || textClip.width() != w || textClip.height() != h) {
+            textClip = new ArberRect(x, y, w, h);
+        }
+        return textClip;
     }
 
     private void appendMillis(StringBuilder sb, double ms) {

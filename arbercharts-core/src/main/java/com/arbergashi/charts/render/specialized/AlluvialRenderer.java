@@ -21,10 +21,10 @@ import com.arbergashi.charts.util.ColorRegistry;
 public final class AlluvialRenderer extends BaseRenderer {
 
     private String[] nodeIds = new String[0];
-    private int[] nodeX = new int[0];
-    private int[] nodeY = new int[0];
-    private int[] nodeW = new int[0];
-    private int[] nodeH = new int[0];
+    private float[] nodeX = new float[0];
+    private float[] nodeY = new float[0];
+    private float[] nodeW = new float[0];
+    private float[] nodeH = new float[0];
     private int nodesCap = 0;
 
     public AlluvialRenderer() {
@@ -48,29 +48,30 @@ public final class AlluvialRenderer extends BaseRenderer {
         if (n > nodesCap) {
             nodesCap = Math.max(n, nodesCap * 2);
             nodeIds = (String[]) com.arbergashi.charts.tools.RendererAllocationCache.getArray(this, "alluvial.nodeIds", String.class, nodesCap);
-            nodeX = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "alluvial.nodeX", nodesCap);
-            nodeY = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "alluvial.nodeY", nodesCap);
-            nodeW = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "alluvial.nodeW", nodesCap);
-            nodeH = com.arbergashi.charts.tools.RendererAllocationCache.getIntArray(this, "alluvial.nodeH", nodesCap);
+            nodeX = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "alluvial.nodeX", nodesCap);
+            nodeY = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "alluvial.nodeY", nodesCap);
+            nodeW = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "alluvial.nodeW", nodesCap);
+            nodeH = com.arbergashi.charts.tools.RendererAllocationCache.getFloatArray(this, "alluvial.nodeH", nodesCap);
         }
 
         // Layout nodes (simple deterministic layout)
         ArberRect bounds = context.getPlotBounds();
-        int steps = 3;
-        int nodesPerStep = Math.max(1, n / steps);
-        int xStep = Math.max(1, (int) (bounds.width() / (steps)));
-        int yStep = (int) (bounds.height() / (nodesPerStep + 1));
+        if (bounds.width() <= 0 || bounds.height() <= 0) return;
+        int nodesPerStep = Math.max(1, (n + 2) / 3);
+        int steps = (n + nodesPerStep - 1) / nodesPerStep;
+        double cellWidth = bounds.width() / steps;
+        double cellHeight = bounds.height() / nodesPerStep;
+        float width = (float) Math.min(50, cellWidth * 0.8);
+        float height = (float) Math.min(20, cellHeight * 0.8);
 
         for (int i = 0; i < n; i++) {
             int stepIndex = i / nodesPerStep;
             int nodeInStep = i % nodesPerStep;
-            int x = (int) bounds.x() + stepIndex * xStep + xStep / 4;
-            int y = (int) bounds.y() + (nodeInStep + 1) * yStep;
             nodeIds[i] = nodes.get(i).getId();
-            nodeX[i] = x;
-            nodeY[i] = y;
-            nodeW[i] = 50;
-            nodeH[i] = 20;
+            nodeX[i] = (float) (bounds.x() + (stepIndex + 0.5) * cellWidth - width / 2);
+            nodeY[i] = (float) (bounds.y() + (nodeInStep + 0.5) * cellHeight - height / 2);
+            nodeW[i] = width;
+            nodeH[i] = height;
         }
 
         // Draw links (flows) using index lookup (linear search to avoid allocations)
@@ -98,12 +99,12 @@ public final class AlluvialRenderer extends BaseRenderer {
     }
 
     private void drawFlow(ArberCanvas canvas, ChartModel model, PlotContext context, int sIdx, int tIdx, int linkIndex) {
-        int x1 = nodeX[sIdx] + nodeW[sIdx];
-        int y1 = nodeY[sIdx];
-        int x2 = nodeX[tIdx];
-        int y2 = nodeY[tIdx];
-        int y2b = nodeY[tIdx] + nodeH[tIdx];
-        int y1b = nodeY[sIdx] + nodeH[sIdx];
+        float x1 = nodeX[sIdx] + nodeW[sIdx];
+        float y1 = nodeY[sIdx];
+        float x2 = nodeX[tIdx];
+        float y2 = nodeY[tIdx];
+        float y2b = nodeY[tIdx] + nodeH[tIdx];
+        float y1b = nodeY[sIdx] + nodeH[sIdx];
 
         float[] xs = new float[] {x1, x2, x2, x1};
         float[] ys = new float[] {y1, y2, y2b, y1b};

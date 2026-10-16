@@ -24,6 +24,9 @@ final class CommandStreamCanvas implements ArberCanvas {
     static final int OP_DRAW_TEXT = 0x0B;
 
     private final CommandStreamWriter writer;
+    private ArberRect clip;
+    private float strokeWidth = 1f;
+    private int color = 0xFF000000;
 
     CommandStreamCanvas(CommandStreamWriter writer) {
         this.writer = writer;
@@ -32,14 +35,20 @@ final class CommandStreamCanvas implements ArberCanvas {
     @Override
     public void setColor(ArberColor color) {
         if (color == null) return;
+        setArgb(color.argb());
+    }
+
+    private void setArgb(int argb) {
         if (!writer.putByte(OP_SET_COLOR)) return;
-        writer.putInt(color.argb());
+        writer.putInt(argb);
+        color = argb;
     }
 
     @Override
     public void setStroke(float width) {
         if (!writer.putByte(OP_SET_STROKE)) return;
         writer.putFloat(width);
+        strokeWidth = width;
     }
 
     @Override
@@ -102,7 +111,17 @@ final class CommandStreamCanvas implements ArberCanvas {
 
     @Override
     public void drawVoxelField(VoxelBuffer buffer) {
-        // Not encoded in v1 command stream (caller may pre-expand into primitives).
+        if (buffer == null || buffer.x() == null || buffer.y() == null) return;
+        int count = Math.min(buffer.count(), Math.min(buffer.x().length, buffer.y().length));
+        int size = Math.max(1, Math.round(strokeWidth));
+        int savedColor = color;
+        for (int i = 0; i < count; i++) {
+            int voxelColor = buffer.argb() != null && i < buffer.argb().length ? buffer.argb()[i] : savedColor;
+            if (voxelColor != color) setArgb(voxelColor);
+            // Expand into existing v1 primitives so native consumers need no new opcode.
+            fillRect(Math.round(buffer.x()[i]), Math.round(buffer.y()[i]), size, size);
+        }
+        if (color != savedColor) setArgb(savedColor);
     }
 
     @Override
@@ -114,6 +133,7 @@ final class CommandStreamCanvas implements ArberCanvas {
     public void setClip(ArberRect clip) {
         if (clip == null) {
             if (!writer.putByte(OP_CLEAR_CLIP)) return;
+            this.clip = null;
             return;
         }
         if (!writer.putByte(OP_SET_CLIP)) return;
@@ -121,16 +141,17 @@ final class CommandStreamCanvas implements ArberCanvas {
         writer.putFloat((float) clip.y());
         writer.putFloat((float) clip.width());
         writer.putFloat((float) clip.height());
+        this.clip = clip;
     }
 
     @Override
     public ArberRect getClip() {
-        return null;
+        return clip;
     }
 
     @Override
     public void drawText(float x, float y, String text) {
-        if (text == null || text.isEmpty()) return;
+        if (text == null || text.isEmpty() || !Float.isFinite(x) || !Float.isFinite(y)) return;
         byte[] bytes = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         if (!writer.putByte(OP_DRAW_TEXT)) return;
         writer.putFloat(x);

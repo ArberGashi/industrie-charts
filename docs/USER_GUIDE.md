@@ -1,10 +1,10 @@
-# ArberCharts 2.0.0 User Guide
+# ArberCharts 2.2.0 User Guide
 
-ArberCharts 2.0.0 is a high-performance Java charting framework for desktop and server workloads.
+ArberCharts 2.2.0 is a Java charting framework for desktop and server workloads.
 
 ## Requirements
 
-- Java 25
+- Eclipse Temurin JDK 25 from Adoptium
 - Maven 3.9+
 
 ## Modules
@@ -13,19 +13,21 @@ ArberCharts 2.0.0 is a high-performance Java charting framework for desktop and 
 - `arbercharts-swing-bridge`: Swing integration and interactive panel
 - `arbercharts-server-bridge`: headless image rendering for backend services
 - `arbercharts-spring-boot-starter`: Spring Boot auto-configuration
-- `arbercharts-starter`: bundled JVM starter artifact
+- `arbercharts-starter`: bundled JVM artifact built locally; excluded from Maven Central publishing
 
 ## Quick Start
+
+For a Swing application, add the bridge, which includes Core as a dependency:
 
 ```xml
 <dependency>
     <groupId>com.arbergashi</groupId>
-    <artifactId>arbercharts-starter</artifactId>
-    <version>2.0.0</version>
+    <artifactId>arbercharts-swing-bridge</artifactId>
+    <version>2.2.0</version>
 </dependency>
 ```
 
-Build:
+Build from the repository root:
 
 ```bash
 mvn clean package
@@ -40,7 +42,7 @@ mvn -pl arbercharts-core -Pquality-gate validate
 Run demo:
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-2.0.1.jar
+java --add-modules jdk.incubator.vector -jar arbercharts-demo/target/arbercharts-demo-2.2.0.jar
 ```
 
 ## Data Model Contract
@@ -56,6 +58,9 @@ java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts
 
 ## Additional References
 
-- `QUICK_START.md`
-- `RENDERER_CATALOG.md`
-- `LICENSING.md`
+- [Quick Start](QUICK_START.md)
+- [Renderer Catalog](RENDERER_CATALOG.md)
+- [Licensing](LICENSING.md)
+- [Swing Workbench](../arbercharts-demo/docs/WORKBENCH.md)
+- [Spring Boot Workbench](../arbercharts-spring-boot-demo/README.md)
+- [GitHub Issues](https://github.com/ArberGashi/industrie-charts/issues)

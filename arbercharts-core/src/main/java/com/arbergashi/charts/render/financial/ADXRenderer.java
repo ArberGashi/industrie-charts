@@ -10,7 +10,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>ADXRenderer - Average Directional Index</h1>
+ * <h2>ADXRenderer - Average Directional Index</h2>
  *
  * <p>Professional ADX indicator renderer for trend strength measurement.
  * Displays ADX line with +DI and -DI directional indicators.</p>
@@ -48,6 +48,7 @@ public final class ADXRenderer extends BaseRenderer {
 
     // Cached computed series
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
 
     private transient double[] xValues;
@@ -149,18 +150,21 @@ public final class ADXRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n < DEFAULT_PERIOD * 2 + 2) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && xValues != null && adxValues != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && xValues != null && adxValues != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
 
         ensureCapacity(n);

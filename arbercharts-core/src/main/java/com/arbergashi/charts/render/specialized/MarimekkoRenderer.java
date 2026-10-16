@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 /**
- * <h1>MarimekkoRenderer - Marimekko/Mosaic Chart</h1>
+ * <h2>MarimekkoRenderer - Marimekko/Mosaic Chart</h2>
  *
  * <p>Professional Marimekko chart renderer for visualizing two-dimensional categorical data.
  * Both width and height of rectangles represent proportions.</p>

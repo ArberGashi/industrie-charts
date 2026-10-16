@@ -6,10 +6,11 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>OBVRenderer - On-Balance Volume</h1>
+ * <h2>OBVRenderer - On-Balance Volume</h2>
  *
  * <p>Professional OBV indicator renderer for volume-based momentum analysis.
  * Measures buying and selling pressure as a cumulative indicator.</p>
@@ -56,6 +57,7 @@ public final class OBVRenderer extends BaseRenderer {
     private final float[] lineY = new float[2];
     // Cached indicator arrays
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient double[] xValues;
     private transient double[] obvValues;
@@ -122,23 +124,27 @@ public final class OBVRenderer extends BaseRenderer {
     }
 
     /**
-     * Calculates OBV from price (y) and volume (weight) data.
+     * Calculates OBV from price (y) and volume data. Financial models expose
+     * typed volume values; other models provide volume through point weights.
      * OBV values are cached in primitive arrays for performance.
      */
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n < 2) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             preferredRangeValid = false;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && xValues != null && obvValues != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && xValues != null && obvValues != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         preferredRangeValid = false;
 
@@ -159,7 +165,8 @@ public final class OBVRenderer extends BaseRenderer {
         obvs[0] = obv;
 
         for (int i = 1; i < n; i++) {
-            double volume = model.getWeight(i);
+            double volume = model instanceof FinancialChartModel financial
+                    ? financial.getVolume(i) : model.getWeight(i);
             double close = model.getY(i);
             double prevClose = model.getY(i - 1);
 

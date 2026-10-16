@@ -8,7 +8,6 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 import com.arbergashi.charts.engine.spatial.SpatialProjector;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
@@ -40,6 +39,7 @@ public class DefaultGridLayer implements GridLayer {
     // Reusable buffers to avoid per-frame allocations
     private final double[] buf = new double[3];
     private final double[] spatialBuf = new double[3];
+    private final GridBatchCanvas batchCanvas = new GridBatchCanvas();
     private final float[] lineXs = new float[2];
     private final float[] lineYs = new float[2];
     private final NiceScale yMinorScale = new NiceScale(0, 1);
@@ -101,9 +101,9 @@ public class DefaultGridLayer implements GridLayer {
         int w = Math.max(1, (int) Math.ceil(bounds.width()));
         int h = Math.max(1, (int) Math.ceil(bounds.height()));
 
-        // Target spacing in pixels (roughly): ~80px major, ~40px minor
-        int majorXTicks = Math.max(3, Math.min(12, w / 90));
-        int majorYTicks = Math.max(3, Math.min(10, h / 70));
+        // Major ticks share the axis context; minor density adapts to the plot size.
+        int majorXTicks = Math.clamp(context.getRequestedTickCountX(), 2, 1000);
+        int majorYTicks = Math.clamp(context.getRequestedTickCountY(), 2, 1000);
 
         int minorXTicks = Math.max(majorXTicks * 2, Math.min(majorXTicks * 3, w / 45));
         int minorYTicks = Math.max(majorYTicks * 2, Math.min(majorYTicks * 3, h / 35));
@@ -129,7 +129,7 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setColor(minorColor);
         canvas.setStroke(ChartScale.scale(minorStrokeWidth));
         double yMinorSpacing = yMinorScale.getTickSpacing();
-        if (yMinorSpacing > 0) {
+        if (context.isGridVisibleY() && yMinorSpacing > 0) {
             double tick = yMinorScale.getNiceMin();
             double end = yMinorScale.getNiceMax();
             double epsilon = yMinorSpacing * 0.5;
@@ -147,7 +147,7 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setColor(majorColor);
         canvas.setStroke(ChartScale.scale(majorStrokeWidth));
         double yMajorSpacing = yMajorScale.getTickSpacing();
-        if (yMajorSpacing > 0) {
+        if (context.isGridVisibleY() && yMajorSpacing > 0) {
             double tick = yMajorScale.getNiceMin();
             double end = yMajorScale.getNiceMax();
             double epsilon = yMajorSpacing * 0.5;
@@ -166,7 +166,7 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setColor(minorColor);
         canvas.setStroke(ChartScale.scale(minorStrokeWidth));
         double xMinorSpacing = xMinorScale.getTickSpacing();
-        if (xMinorSpacing > 0) {
+        if (context.isGridVisibleX() && xMinorSpacing > 0) {
             double tick = xMinorScale.getNiceMin();
             double end = xMinorScale.getNiceMax();
             double epsilon = xMinorSpacing * 0.5;
@@ -184,7 +184,7 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setColor(majorColor);
         canvas.setStroke(ChartScale.scale(majorStrokeWidth));
         double xMajorSpacing = xMajorScale.getTickSpacing();
-        if (xMajorSpacing > 0) {
+        if (context.isGridVisibleX() && xMajorSpacing > 0) {
             double tick = xMajorScale.getNiceMin();
             double end = xMajorScale.getNiceMax();
             double epsilon = xMajorSpacing * 0.5;
@@ -198,7 +198,7 @@ public class DefaultGridLayer implements GridLayer {
         }
 
         // Zero line
-        if (context.getMinY() <= 0 && context.getMaxY() >= 0) {
+        if (context.isGridVisibleY() && context.getMinY() <= 0 && context.getMaxY() >= 0) {
             mapToPixel(context, context.getMinX(), 0, buf);
             double y = snap(buf[1]);
             canvas.setColor(zeroLineColor);
@@ -217,99 +217,7 @@ public class DefaultGridLayer implements GridLayer {
 
     @Override
     public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        ArberRect bounds = context.getPlotBounds();
-        double minX = bounds.x();
-        double maxX = bounds.maxX();
-        double minY = bounds.y();
-        double maxY = bounds.maxY();
-
-        int w = Math.max(1, (int) Math.ceil(bounds.width()));
-        int h = Math.max(1, (int) Math.ceil(bounds.height()));
-
-        int majorXTicks = Math.max(3, Math.min(12, w / 90));
-        int majorYTicks = Math.max(3, Math.min(10, h / 70));
-        int minorXTicks = Math.max(majorXTicks * 2, Math.min(majorXTicks * 3, w / 45));
-        int minorYTicks = Math.max(majorYTicks * 2, Math.min(majorYTicks * 3, h / 35));
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor base = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA, 0.22f);
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA, 0.42f);
-        ArberColor minorColor = ColorRegistry.applyAlpha(base, minorAlpha);
-        ArberColor majorColor = ColorRegistry.applyAlpha(base, majorAlpha);
-
-        // minor Y
-        yMinorScale.setRange(context.getMinY(), context.getMaxY());
-        yMinorScale.setMaxTicks(minorYTicks);
-        double yMinorSpacing = yMinorScale.getTickSpacing();
-        if (yMinorSpacing > 0) {
-            double tick = yMinorScale.getNiceMin();
-            double end = yMinorScale.getNiceMax();
-            double epsilon = yMinorSpacing * 0.5;
-            builder.setStyleKey(SpatialStyleDescriptor.pack(minorColor.argb(), ChartScale.scale(ChartAssets.getUIFloat(KEY_MINOR_STROKE, 0.55f)), 0, 0));
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += yMinorSpacing) {
-                mapToSpatial(context, context.getMinX(), tick, config.getGridZ(), buf);
-                double y = snap(buf[1]);
-                if (y >= minY && y <= maxY) {
-                    builder.setLineSegment(minX, y, config.getGridZ(), maxX, y, config.getGridZ());
-                }
-            }
-        }
-
-        // major Y
-        yMajorScale.setRange(context.getMinY(), context.getMaxY());
-        yMajorScale.setMaxTicks(majorYTicks);
-        double yMajorSpacing = yMajorScale.getTickSpacing();
-        if (yMajorSpacing > 0) {
-            double tick = yMajorScale.getNiceMin();
-            double end = yMajorScale.getNiceMax();
-            double epsilon = yMajorSpacing * 0.5;
-            builder.setStyleKey(SpatialStyleDescriptor.pack(majorColor.argb(), ChartScale.scale(ChartAssets.getUIFloat(KEY_MAJOR_STROKE, 0.85f)), 0, 0));
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += yMajorSpacing) {
-                mapToSpatial(context, context.getMinX(), tick, config.getGridZ(), buf);
-                double y = snap(buf[1]);
-                if (y >= minY && y <= maxY) {
-                    builder.setLineSegment(minX, y, config.getGridZ(), maxX, y, config.getGridZ());
-                }
-            }
-        }
-
-        // minor X
-        xMinorScale.setRange(context.getMinX(), context.getMaxX());
-        xMinorScale.setMaxTicks(minorXTicks);
-        double xMinorSpacing = xMinorScale.getTickSpacing();
-        if (xMinorSpacing > 0) {
-            double tick = xMinorScale.getNiceMin();
-            double end = xMinorScale.getNiceMax();
-            double epsilon = xMinorSpacing * 0.5;
-            builder.setStyleKey(SpatialStyleDescriptor.pack(minorColor.argb(), ChartScale.scale(ChartAssets.getUIFloat(KEY_MINOR_STROKE, 0.55f)), 0, 0));
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += xMinorSpacing) {
-                mapToSpatial(context, tick, context.getMinY(), config.getGridZ(), buf);
-                double x = snap(buf[0]);
-                if (x >= minX && x <= maxX) {
-                    builder.setLineSegment(x, minY, config.getGridZ(), x, maxY, config.getGridZ());
-                }
-            }
-        }
-
-        // major X
-        xMajorScale.setRange(context.getMinX(), context.getMaxX());
-        xMajorScale.setMaxTicks(majorXTicks);
-        double xMajorSpacing = xMajorScale.getTickSpacing();
-        if (xMajorSpacing > 0) {
-            double tick = xMajorScale.getNiceMin();
-            double end = xMajorScale.getNiceMax();
-            double epsilon = xMajorSpacing * 0.5;
-            builder.setStyleKey(SpatialStyleDescriptor.pack(majorColor.argb(), ChartScale.scale(ChartAssets.getUIFloat(KEY_MAJOR_STROKE, 0.85f)), 0, 0));
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += xMajorSpacing) {
-                mapToSpatial(context, tick, context.getMinY(), config.getGridZ(), buf);
-                double x = snap(buf[0]);
-                if (x >= minX && x <= maxX) {
-                    builder.setLineSegment(x, minY, config.getGridZ(), x, maxY, config.getGridZ());
-                }
-            }
-        }
+        batchCanvas.render(this, builder, context, config != null ? config : gridBatchConfig);
     }
 
     private double snap(double v) {

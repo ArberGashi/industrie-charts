@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * <h1>Modern Sunburst Renderer</h1>
+ * <h2>Modern Sunburst Renderer</h2>
  * <p>
  * Draws a professional, interactive, and zero-allocation sunburst chart for hierarchical data.
  * </p>
@@ -47,19 +47,22 @@ public final class SunburstRenderer extends BaseRenderer {
             return;
         }
 
-        this.rootNode = hierarchicalModel.getRootNode();
-        if (this.displayRoot == null) {
+        if (this.rootNode != hierarchicalModel.getRootNode()) {
+            this.rootNode = hierarchicalModel.getRootNode();
             this.displayRoot = this.rootNode;
+            breadcrumb.clear();
+            hoverPath.clear();
         }
         if (displayRoot == null) return;
 
         ArberRect bounds = context.getPlotBounds();
+        if (bounds == null || bounds.width() <= 0 || bounds.height() <= 0) return;
         double cx = bounds.centerX();
         double cy = bounds.centerY();
         double maxRadius = Math.min(bounds.getWidth(), bounds.getHeight()) / 2.0 * 0.95;
 
         int maxDepth = getCalculatedMaxDepth(displayRoot, 0);
-        double ringThickness = (maxDepth > 0) ? maxRadius / maxDepth : maxRadius;
+        double ringThickness = maxRadius / (maxDepth + 1);
 
         this.renderTheme = getResolvedTheme(context);
         drawNode(canvas, displayRoot, cx, cy, 0, 360, 0, ringThickness, 0, ringThickness, renderTheme);
@@ -86,11 +89,12 @@ public final class SunburstRenderer extends BaseRenderer {
         List<? extends HierarchicalChartModel.Node<?>> children = node.getChildren();
         if (children.isEmpty()) return;
 
-        double totalValue = node.getValue();
-        if (totalValue <= 0) return;
+        double totalValue = childScale(node);
+        if (!(totalValue > 0)) return;
 
         double currentAngle = startAngle;
         for (HierarchicalChartModel.Node<?> child : children) {
+            if (!(child.getValue() > 0) || !Double.isFinite(child.getValue())) continue;
             double childArcAngle = (child.getValue() / totalValue) * arcAngle;
             drawNode(canvas, child, cx, cy, currentAngle, childArcAngle,
                     outerRadius, outerRadius + ringThickness, depth + 1, ringThickness, theme);
@@ -113,6 +117,7 @@ public final class SunburstRenderer extends BaseRenderer {
         if (displayRoot == null) return Collections.emptyList();
 
         ArberRect bounds = context.getPlotBounds();
+        if (bounds == null || bounds.width() <= 0 || bounds.height() <= 0) return Collections.emptyList();
         double cx = bounds.centerX();
         double cy = bounds.centerY();
 
@@ -124,7 +129,8 @@ public final class SunburstRenderer extends BaseRenderer {
 
         double maxRadius = Math.min(bounds.getWidth(), bounds.getHeight()) / 2.0 * 0.95;
         int maxDepth = getCalculatedMaxDepth(displayRoot, 0);
-        double ringThickness = (maxDepth > 0) ? maxRadius / maxDepth : maxRadius;
+        double ringThickness = maxRadius / (maxDepth + 1);
+        if (Math.hypot(dx, dy) > maxRadius) return Collections.emptyList();
 
         List<HierarchicalChartModel.Node<?>> path = new ArrayList<>();
         if (searchNode(displayRoot, 0, 360, angle, Math.sqrt(dx * dx + dy * dy), 0, ringThickness, path)) {
@@ -139,16 +145,17 @@ public final class SunburstRenderer extends BaseRenderer {
         double innerRadius = depth * ringThickness;
         double outerRadius = (depth + 1) * ringThickness;
 
-        if (targetAngle < startAngle || targetAngle > startAngle + arcAngle || targetRadius < innerRadius || targetRadius > outerRadius) {
+        if (targetAngle < startAngle || targetAngle > startAngle + arcAngle || targetRadius < innerRadius) {
             return false;
         }
 
         List<? extends HierarchicalChartModel.Node<?>> children = node.getChildren();
         if (!children.isEmpty()) {
             double currentAngle = startAngle;
-            double totalValue = node.getValue();
+            double totalValue = childScale(node);
             if (totalValue > 0) {
                 for (HierarchicalChartModel.Node<?> child : children) {
+                    if (!(child.getValue() > 0) || !Double.isFinite(child.getValue())) continue;
                     double childArcAngle = (child.getValue() / totalValue) * arcAngle;
                     if (searchNode(child, currentAngle, childArcAngle, targetAngle, targetRadius, depth + 1, ringThickness, path)) {
                         path.add(node);
@@ -159,8 +166,21 @@ public final class SunburstRenderer extends BaseRenderer {
             }
         }
 
-        path.add(node);
-        return true;
+        if (targetRadius <= outerRadius) {
+            path.add(node);
+            return true;
+        }
+        return false;
+    }
+
+    private double childScale(HierarchicalChartModel.Node<?> node) {
+        double total = 0;
+        for (HierarchicalChartModel.Node<?> child : node.getChildren()) {
+            double value = child.getValue();
+            if (Double.isFinite(value) && value > 0) total += value;
+        }
+        double parent = node.getValue();
+        return Double.isFinite(parent) ? Math.max(total, parent) : total;
     }
 
     private void handleDrill(HierarchicalChartModel.Node<?> node) {

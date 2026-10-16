@@ -1,6 +1,7 @@
 package com.arbergashi.charts.render.common;
 
 import com.arbergashi.charts.api.ChartTheme;
+import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
@@ -9,7 +10,7 @@ import com.arbergashi.charts.util.LatencyTracker;
 
 /**
  * Renders a compact performance audit (p99/p99.9) for any chart.
- * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ * Labels and clipping bounds are reused until their content or geometry changes.
  *
  * @since 1.5.0
  * @author Arber Gashi
@@ -20,14 +21,39 @@ public final class PerformanceAuditRenderer {
     private final LatencyTracker tracker;
     private final StringBuilder builder = new StringBuilder(64);
     private final char[] intBuf = new char[20];
+    private String label = "";
+    private ArberRect textClip;
+    private Boolean enabled;
 
+    /**
+     * Creates a performance label for the supplied timing history.
+     * @param tracker latency history, or {@code null} to disable the overlay
+     */
     public PerformanceAuditRenderer(LatencyTracker tracker) {
         this.tracker = tracker;
     }
 
+    /**
+     * Overrides the global activation setting for this overlay instance.
+     * @param enabled whether this overlay should draw when timing samples exist
+     * @return this overlay
+     */
+    public PerformanceAuditRenderer setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        return this;
+    }
+
+    /**
+     * Draws the enabled audit label at the top right of the plotting area.
+     * @param canvas drawing backend
+     * @param context current plot geometry and theme
+     * @param theme explicit theme, or {@code null} to use the context theme
+     */
     public void render(ArberCanvas canvas, PlotContext context, ChartTheme theme) {
+        if (canvas == null || context == null) return;
         if (tracker == null || tracker.getSampleCount() == 0) return;
-        if (!ChartAssets.getBoolean(KEY_ENABLED, false)) return;
+        boolean renderEnabled = enabled != null ? enabled : ChartAssets.getBoolean(KEY_ENABLED, false);
+        if (!renderEnabled) return;
         ArberRect bounds = context.getPlotBounds();
         if (bounds == null || bounds.getWidth() <= 1 || bounds.getHeight() <= 1) return;
 
@@ -39,8 +65,36 @@ public final class PerformanceAuditRenderer {
         builder.append(" | p99.9: ");
         appendMillis(builder, p999);
 
-        // Text rendering is bridge-specific. Core only computes the label.
-        if (theme == null && context.getTheme() == null) return;
+        if (!label.contentEquals(builder)) label = builder.toString();
+        ChartTheme resolved = theme != null ? theme : context.getTheme();
+        if (resolved == null) resolved = ChartThemes.getDarkTheme();
+        canvas.setFont(resolved.getBaseFont());
+        canvas.setColor(resolved.getAxisLabelColor());
+        float margin = 8f;
+        if (bounds.height() < canvas.getTextLineHeight() + margin * 2) return;
+        float x = (float) Math.max(bounds.x() + margin,
+                bounds.maxX() - margin - canvas.measureTextWidth(label));
+        float y = (float) bounds.y() + margin + canvas.getTextAscent();
+        ArberRect previous = canvas.getClip();
+        canvas.setClip(textClip(bounds, previous));
+        try {
+            canvas.drawText(x, y, label);
+        } finally {
+            canvas.setClip(previous);
+        }
+    }
+
+    private ArberRect textClip(ArberRect bounds, ArberRect previous) {
+        if (previous == null) return bounds;
+        double x = Math.max(bounds.x(), previous.x());
+        double y = Math.max(bounds.y(), previous.y());
+        double w = Math.max(0, Math.min(bounds.maxX(), previous.maxX()) - x);
+        double h = Math.max(0, Math.min(bounds.maxY(), previous.maxY()) - y);
+        if (textClip == null || textClip.x() != x || textClip.y() != y
+                || textClip.width() != w || textClip.height() != h) {
+            textClip = new ArberRect(x, y, w, h);
+        }
+        return textClip;
     }
 
     private void appendMillis(StringBuilder sb, double ms) {

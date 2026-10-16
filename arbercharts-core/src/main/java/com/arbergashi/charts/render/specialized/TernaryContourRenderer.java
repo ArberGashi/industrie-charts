@@ -8,10 +8,16 @@ import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.RendererDescriptor;
 import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.TernaryChartModel;
+
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.render.grid.TernaryGeometry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorUtils;
+
+import java.util.List;
+
 /**
  * Ternary Contour Renderer - extends ternary plot with contour/heatmap characteristics.
  *
@@ -32,33 +38,23 @@ public class TernaryContourRenderer extends BaseRenderer {
     }
 
     // reusable transform output to avoid ArberPoint allocations
+    private final TernaryGeometry triangle = new TernaryGeometry();
     private transient final ArberPoint tmp = new ArberPoint();
 
     public TernaryContourRenderer() {
         super("ternaryContour");
     }
 
-    private static void transformTernaryInto(double a, double b, double c, PlotContext context, ArberPoint out) {
-        double sum = a + b + c;
-        if (sum == 0) sum = 1.0;
-        double na = a / sum;
-        double nb = b / sum;
-
-        double side = Math.min(context.getPlotBounds().getWidth(), context.getPlotBounds().getHeight() * 1.15);
-        double height = side * Math.sqrt(3) / 2.0;
-        double x0 = context.getPlotBounds().getCenterX() - side / 2.0;
-        double y0 = context.getPlotBounds().getCenterY() + height / 2.0;
-
-        out.setLocation(x0 + (nb + na / 2.0) * side, y0 - na * height);
-    }
-
     @Override/**
  * @since 1.5.0
  */
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        List<TernaryChartModel.TernaryPoint> compositions = model instanceof TernaryChartModel ternary
+                ? ternary.getTernaryData() : null;
         final int n0 = model.getPointCount();
         if (n0 == 0) return;
 
+        triangle.setBounds(context.getPlotBounds());
         drawTernaryTriangle(canvas, context);
 
         ArberColor baseColor = seriesOrBase(model, context, 0);
@@ -77,10 +73,10 @@ public class TernaryContourRenderer extends BaseRenderer {
 
         // Draw heat layer.
         for (int i = 0; i < n; i += step) {
-            double a = model.getX(i);
-            double b = model.getY(i);
-            double c = model.getWeight(i);
-            transformTernaryInto(a, b, c, context, tmp);
+            double a = compositions != null ? compositions.get(i).getA() : model.getX(i);
+            double b = compositions != null ? compositions.get(i).getB() : model.getY(i);
+            double c = compositions != null ? compositions.get(i).getC() : model.getWeight(i);
+            if (!triangle.map(a, b, c, tmp)) continue;
 
             double intensity = (model.getMax(i) > 0) ? model.getMax(i) : 40.0;
             double r = ChartScale.scale(intensity * 0.40);
@@ -102,10 +98,10 @@ public class TernaryContourRenderer extends BaseRenderer {
         double half = size / 2.0;
 
         for (int i = 0; i < n; i += step) {
-            double a = model.getX(i);
-            double b = model.getY(i);
-            double c = model.getWeight(i);
-            transformTernaryInto(a, b, c, context, tmp);
+            double a = compositions != null ? compositions.get(i).getA() : model.getX(i);
+            double b = compositions != null ? compositions.get(i).getB() : model.getY(i);
+            double c = compositions != null ? compositions.get(i).getC() : model.getWeight(i);
+            if (!triangle.map(a, b, c, tmp)) continue;
             ArberColor pointColor = isMultiColor() ? themeSeries(context, i) : baseColor;
             if (pointColor == null) pointColor = baseColor;
             canvas.setColor(pointColor);
@@ -114,25 +110,17 @@ public class TernaryContourRenderer extends BaseRenderer {
     }
 
     private void drawTernaryTriangle(ArberCanvas canvas, PlotContext context) {
-        double w = context.getPlotBounds().getWidth();
-        double h = context.getPlotBounds().getHeight();
-        double side = Math.min(w, h * 1.15);
-        double height = side * Math.sqrt(3) / 2.0;
-
-        double x0 = context.getPlotBounds().getCenterX() - side / 2.0;
-        double y0 = context.getPlotBounds().getCenterY() + height / 2.0;
-
         ChartTheme theme = getResolvedTheme(context);
         canvas.setColor(theme.getGridColor());
         canvas.setStroke(ChartScale.scale(1.0f));
         float[] xs = RendererAllocationCache.getFloatArray(this, "triX", 4);
         float[] ys = RendererAllocationCache.getFloatArray(this, "triY", 4);
-        xs[0] = (float) x0;
-        ys[0] = (float) y0;
-        xs[1] = (float) (x0 + side);
-        ys[1] = (float) y0;
-        xs[2] = (float) (x0 + side / 2.0);
-        ys[2] = (float) (y0 - height);
+        xs[0] = (float) triangle.ax();
+        ys[0] = (float) triangle.ay();
+        xs[1] = (float) triangle.bx();
+        ys[1] = (float) triangle.by();
+        xs[2] = (float) triangle.cx();
+        ys[2] = (float) triangle.cy();
         xs[3] = xs[0];
         ys[3] = ys[0];
         canvas.drawPolyline(xs, ys, 4);

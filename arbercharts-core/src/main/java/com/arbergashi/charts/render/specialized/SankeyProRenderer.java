@@ -39,10 +39,13 @@ public final class SankeyProRenderer extends BaseRenderer {
         if (count == 0) return;
 
         ArberRect bounds = context.getPlotBounds();
-        double left = bounds.x() + 40;
-        double right = bounds.x() + bounds.width() - 40;
-        double top = bounds.y() + 40;
-        double h = bounds.height() - 80;
+        if (bounds.width() <= 0 || bounds.height() <= 0) return;
+        double marginX = Math.min(40, bounds.width() / 4);
+        double marginY = Math.min(40, bounds.height() / 4);
+        double left = bounds.x() + marginX;
+        double right = bounds.maxX() - marginX;
+        double top = bounds.y() + marginY;
+        double h = bounds.height() - 2 * marginY;
 
         // map node names to y positions (reuse map to avoid allocations)
         Map<String, Double> nodeY = RendererAllocationCache.getMap(this, "sankeypro.nodeY");
@@ -54,13 +57,18 @@ public final class SankeyProRenderer extends BaseRenderer {
             String[] parts = lbl.split(":");
             if (parts.length < 2) continue;
             if (!nodeY.containsKey(parts[0])) {
-                nodeY.put(parts[0], top + (idx * (h / Math.max(1, count))));
+                nodeY.put(parts[0], (double) idx);
                 nodeIndex.put(parts[0], idx++);
             }
             if (!nodeY.containsKey(parts[1])) {
-                nodeY.put(parts[1], top + (idx * (h / Math.max(1, count))));
+                nodeY.put(parts[1], (double) idx);
                 nodeIndex.put(parts[1], idx++);
             }
+        }
+
+        int nodeCount = nodeY.size();
+        for (Map.Entry<String, Double> node : nodeY.entrySet()) {
+            node.setValue(nodeCount == 1 ? bounds.centerY() : top + node.getValue() * h / (nodeCount - 1));
         }
 
         ArberColor baseColor = getSeriesColor(model);
@@ -74,7 +82,9 @@ public final class SankeyProRenderer extends BaseRenderer {
             Double y1 = nodeY.get(parts[0]);
             Double y2 = nodeY.get(parts[1]);
             if (y1 == null || y2 == null) continue;
-            double weight = Math.clamp(model.getY(i), 1.0, 20.0);
+            double value = model.getY(i);
+            if (!Double.isFinite(value)) continue;
+            double weight = Math.min(Math.clamp(value, 1.0, 20.0), 2 * Math.min(marginX, marginY));
             ArberColor linkColor = baseColor;
             if (isMultiColor()) {
                 Integer srcIdx = nodeIndex.get(parts[0]);

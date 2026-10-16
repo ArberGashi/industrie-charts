@@ -33,6 +33,7 @@ public final class HeikinAshiRenderer extends BaseRenderer {
 
     // Cached computed series
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
 
     private transient double[] xValues;
@@ -114,18 +115,21 @@ public final class HeikinAshiRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n == 0) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && xValues != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && xValues != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
 
         ensureCapacity(n);

@@ -1,0 +1,111 @@
+{
+  "artifact": "arbercharts-spring-boot-demo-2.2.0.jar",
+  "artifactSha256": "48a235d6e4eae16ae086d29c2a50adb4e9b15c65eef991751e174d3e8cecdbde",
+  "springBoot": "4.1.1",
+  "java": 25,
+  "runtime": "Eclipse Adoptium",
+  "dataSource": "Synthetic demo data",
+  "capturedOn": "2026-10-16",
+  "capture": "Real browser viewport; unchanged application UI",
+  "width": 1280,
+  "height": 720,
+  "previewSize": "Fit panel",
+  "images": [
+    {
+      "file": "boxplot-dark.jpg",
+      "example": "boxplot",
+      "theme": "dark",
+      "page": "/?example=boxplot&theme=dark",
+      "downloadRequest": "/api/charts/boxplot.png?width=1588&height=628&scale=2&samples=96&theme=dark&download=true",
+      "sha256": "158548d352c38cf2a4f84f32aad760818b4d75dad992dbf9c2de1affdc7dd55c"
+    },
+    {
+      "file": "boxplot-light.jpg",
+      "example": "boxplot",
+      "theme": "light",
+      "page": "/?example=boxplot&theme=light",
+      "downloadRequest": "/api/charts/boxplot.png?width=1588&height=628&scale=2&samples=96&theme=light&download=true",
+      "sha256": "b4c33c2c8242e8039708f13c616020a488810008c15b4be8a3182513f455622a"
+    },
+    {
+      "file": "candlestick-dark.jpg",
+      "example": "candlestick",
+      "theme": "dark",
+      "page": "/?example=candlestick&theme=dark",
+      "downloadRequest": "/api/charts/candlestick.png?width=1588&height=628&scale=2&samples=96&theme=dark&download=true",
+      "sha256": "0ecef9a9550c25164a513a863b409fc4f7ebd1265bab3fc1c33c91598fdf1b21"
+    },
+    {
+      "file": "candlestick-light.jpg",
+      "example": "candlestick",
+      "theme": "light",
+      "page": "/?example=candlestick&theme=light",
+      "downloadRequest": "/api/charts/candlestick.png?width=1588&height=628&scale=2&samples=96&theme=light&download=true",
+      "sha256": "f8006ce5d4ea81e91c787bbad5b1b513fad392f5e033b548ad1dcb3387050bfc"
+    },
+    {
+      "file": "donut-dark.jpg",
+      "example": "donut",
+      "theme": "dark",
+      "page": "/?example=donut&theme=dark",
+      "downloadRequest": "/api/charts/donut.png?width=1588&height=628&scale=2&samples=256&theme=dark&download=true",
+      "sha256": "56ab0a6897181454579ac69ca57e90b71f504510ab44fd0d988352681eeb1f20"
+    },
+    {
+      "file": "donut-light.jpg",
+      "example": "donut",
+      "theme": "light",
+      "page": "/?example=donut&theme=light",
+      "downloadRequest": "/api/charts/donut.png?width=1588&height=628&scale=2&samples=256&theme=light&download=true",
+      "sha256": "a9c49cba6c02a08a9b9dadb13e8cf2ce0736a01fd8a2c29827b35ce18012a914"
+    },
+    {
+      "file": "heatmap-dark.jpg",
+      "example": "heatmap",
+      "theme": "dark",
+      "page": "/?example=heatmap&theme=dark",
+      "downloadRequest": "/api/charts/heatmap.png?width=1588&height=592&scale=2&samples=1024&theme=dark&download=true",
+      "sha256": "11f2a262a94df6878507d3e9cbdef50708586cb9f31e1d0a1b219c22964c8d5f"
+    },
+    {
+      "file": "heatmap-light.jpg",
+      "example": "heatmap",
+      "theme": "light",
+      "page": "/?example=heatmap&theme=light",
+      "downloadRequest": "/api/charts/heatmap.png?width=1588&height=592&scale=2&samples=1024&theme=light&download=true",
+      "sha256": "82f1173301c4320e4dfac3725a78006a285d27449002209e54f993687332c98c"
+    },
+    {
+      "file": "kde-dark.jpg",
+      "example": "kde",
+      "theme": "dark",
+      "page": "/?example=kde&theme=dark",
+      "downloadRequest": "/api/charts/kde.png?width=1588&height=592&scale=2&samples=256&theme=dark&download=true",
+      "sha256": "3ae4fdb31749310ba6ceb9286f571a328e1b87e8f9b711a5d18948c5805a2222"
+    },
+    {
+      "file": "kde-light.jpg",
+      "example": "kde",
+      "theme": "light",
+      "page": "/?example=kde&theme=light",
+      "downloadRequest": "/api/charts/kde.png?width=1588&height=592&scale=2&samples=256&theme=light&download=true",
+      "sha256": "ac5b348b215f86fd868586f259ada58afb4642c3ad5a9ef35b95c6343ab49493"
+    },
+    {
+      "file": "radar-dark.jpg",
+      "example": "radar",
+      "theme": "dark",
+      "page": "/?example=radar&theme=dark",
+      "downloadRequest": "/api/charts/radar.png?width=1588&height=592&scale=2&samples=96&theme=dark&download=true",
+      "sha256": "04800e13a986c7fdd2a98574c8316306a841ca1608d88f36e451a8b3a49994ca"
+    },
+    {
+      "file": "radar-light.jpg",
+      "example": "radar",
+      "theme": "light",
+      "page": "/?example=radar&theme=light",
+      "downloadRequest": "/api/charts/radar.png?width=1588&height=592&scale=2&samples=96&theme=light&download=true",
+      "sha256": "83240ee37e5f3b407f01046d34ece6f57acc33c1d4830201bcff738cc9f1e5bf"
+    }
+  ]
+}

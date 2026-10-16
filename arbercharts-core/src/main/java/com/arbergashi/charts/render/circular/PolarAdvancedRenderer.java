@@ -7,12 +7,13 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.render.grid.PolarGeometry;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 import java.util.Optional;
 /**
- * <h1>Modern Stacked Polar Renderer</h1>
+ * <h2>Modern Stacked Polar Renderer</h2>
  * <p>
  * Draws a stacked polar area chart, ideal for comparing multiple series across different categories.
  * Adheres to strict zero-allocation guidelines.
@@ -49,7 +50,7 @@ public final class PolarAdvancedRenderer extends BaseRenderer {
         ArberRect b = context.getPlotBounds();
         double cx = b.centerX();
         double cy = b.centerY();
-        double maxRadius = Math.min(b.width(), b.height()) / 2.0 * 0.85;
+        double maxRadius = PolarGeometry.radius(b);
         double angleStep = 360.0 / n;
 
         double[] yData = model.getYData();

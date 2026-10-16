@@ -30,6 +30,7 @@ public final class MACDRenderer extends BaseRenderer {
     private final float[] lineY = new float[2];
 
     // Cached computed series
+    private ChartModel cachedModel;
     private long lastModelStamp = -1;
     private int cachedPointCount;
     private double[] xValues;
@@ -188,9 +189,10 @@ public final class MACDRenderer extends BaseRenderer {
 
     private void ensureCache(ChartModel model) {
         final long stamp = model.getUpdateStamp();
-        if (stamp == lastModelStamp && cachedPointCount == model.getPointCount()) {
+        if (cachedModel == model && stamp == lastModelStamp && cachedPointCount == model.getPointCount()) {
             return;
         }
+        cachedModel = model;
         lastModelStamp = stamp;
         cachedPointCount = model.getPointCount();
         final int n = cachedPointCount;

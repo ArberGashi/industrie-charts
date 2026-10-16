@@ -1,5 +1,7 @@
 package com.arbergashi.charts.engine.spatial;
 
+import java.util.Arrays;
+
 /**
  * Builds render-ready path batches from spatial buffers with clipping transitions.
  *
@@ -79,6 +81,7 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
 
     public SpatialPathBatchBuilder reset() {
         batch.setPointCount(0);
+        if (moveMask != null) Arrays.fill(moveMask, 0L);
         lastVisible = false;
         lastPointValid = false;
         return this;
@@ -121,6 +124,7 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
         if (clippingMode == ClippingMode.CLAMP) {
             return true;
         }
+        count = Math.min(count, buffer.getPointCapacity());
         double[] in = buffer.getInputCoords();
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;
@@ -151,13 +155,20 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
     @Override
     public void accept(SpatialBuffer buffer, int count) {
         if (buffer == null || count <= 0) return;
-        if (!isChunkPotentiallyVisible(buffer, count)) {
+        count = Math.min(count, buffer.getPointCapacity());
+        if (!lastPointValid && !isChunkPotentiallyVisible(buffer, count)) {
             lastVisible = false;
-            lastPointValid = false;
+            double[] in = buffer.getInputCoords();
+            int offset = (count - 1) * 3;
+            lastX = in[offset];
+            lastY = in[offset + 1];
+            lastZ = in[offset + 2];
+            lastPointValid = Double.isFinite(lastX) && Double.isFinite(lastY) && Double.isFinite(lastZ);
             return;
         }
-        batch.ensureCapacity(batch.getPointCount() + count);
-        ensureMoveMaskCapacity(batch.getPointCount() + count);
+        batch.ensureCapacity(batch.getPointCount() + count * 2);
+        batch.ensureStyleCapacity(batch.getCapacity());
+        ensureMoveMaskCapacity(batch.getPointCount() + count * 2);
 
         double[] in = buffer.getInputCoords();
         double[] xs = batch.getXData();
@@ -165,9 +176,15 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
         int outIndex = batch.getPointCount();
 
         for (int i = 0, j = 0; i < count; i++, j += 3) {
+            if (buffer.isPathStart(i)) resetPathState();
+            long pointStyle = buffer.getPointStyleKey(i, currentStyleKey);
             double x = in[j];
             double y = in[j + 1];
             double z = in[j + 2];
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+                resetPathState();
+                continue;
+            }
             double clippedZ = clippingStrategy.getCalculatedZ(z, zMin);
             if (!clippingStrategy.isVisible(z, zMin)) {
                 if (lastPointValid && lastVisible) {
@@ -179,7 +196,8 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
                         double cy = lastY + t * (y - lastY);
                         xs[outIndex] = cx;
                         ys[outIndex] = cy;
-                        batch.setStyleKey(outIndex, currentStyleKey);
+                        batch.setStyleKey(outIndex, pointStyle);
+                        clearMoveFlag(outIndex);
                         outIndex++;
                     }
                 }
@@ -199,7 +217,8 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
                         double cy = lastY + t * (y - lastY);
                         xs[outIndex] = cx;
                         ys[outIndex] = cy;
-                        batch.setStyleKey(outIndex, currentStyleKey);
+                        batch.setStyleKey(outIndex, pointStyle);
+                        clearMoveFlag(outIndex);
                         setMoveFlag(outIndex);
                         outIndex++;
                         lastVisible = true;
@@ -207,7 +226,8 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
                 }
             xs[outIndex] = x;
             ys[outIndex] = y;
-            batch.setStyleKey(outIndex, currentStyleKey);
+            batch.setStyleKey(outIndex, pointStyle);
+            clearMoveFlag(outIndex);
             if (!lastVisible) {
                 setMoveFlag(outIndex);
             }
@@ -252,7 +272,7 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
     private void ensureMoveMaskCapacity(int requiredPoints) {
         int words = (requiredPoints + 63) >>> 6;
         if (moveMask == null || moveMask.length < words) {
-            moveMask = new long[Math.max(1, words)];
+            moveMask = moveMask == null ? new long[Math.max(1, words)] : Arrays.copyOf(moveMask, words);
         }
         moveMaskWords = words;
     }
@@ -263,5 +283,9 @@ public final class SpatialPathBatchBuilder implements SpatialChunkConsumer {
         if (moveMask != null && word < moveMaskWords) {
             moveMask[word] |= (1L << bit);
         }
+    }
+
+    private void clearMoveFlag(int index) {
+        moveMask[index >>> 6] &= ~(1L << (index & 63));
     }
 }

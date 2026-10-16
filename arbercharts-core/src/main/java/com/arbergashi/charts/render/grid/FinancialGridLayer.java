@@ -8,7 +8,6 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
 import com.arbergashi.charts.engine.spatial.SpatialProjector;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
@@ -36,6 +35,7 @@ public class FinancialGridLayer implements GridLayer {
 
     private final double[] buf = new double[2];
     private final double[] spatialBuf = new double[3];
+    private final GridBatchCanvas batchCanvas = new GridBatchCanvas();
     private final float[] lineXs = new float[2];
     private final float[] lineYs = new float[2];
     private final NiceScale yMinorScale = new NiceScale(0, 1);
@@ -76,15 +76,6 @@ public class FinancialGridLayer implements GridLayer {
         out[1] = spatialBuf[1];
     }
 
-    private void mapToSpatial(PlotContext context, double x, double y, double z, double[] out) {
-        if (spatialProjector == null) {
-            context.mapToPixel(x, y, out);
-            out[2] = z;
-            return;
-        }
-        spatialProjector.getCalculatedProjection(x, y, z, out);
-    }
-
     @Override
     public void renderGrid(ArberCanvas canvas, PlotContext context) {
         ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
@@ -112,9 +103,9 @@ public class FinancialGridLayer implements GridLayer {
         ArberColor zeroColor = ColorRegistry.applyAlpha(base, zeroAlpha);
         ArberColor volumeColor = ColorRegistry.applyAlpha(base, volumeSepAlpha);
 
-        int majorYTicks = Math.max(4, Math.min(10, h / 70));
+        int majorYTicks = Math.clamp(context.getRequestedTickCountY(), 2, 1000);
         int minorYTicks = Math.max(majorYTicks * 2, Math.min(majorYTicks * 3, h / 35));
-        int majorXTicks = Math.max(4, Math.min(12, w / 90));
+        int majorXTicks = Math.clamp(context.getRequestedTickCountX(), 2, 1000);
         int minorXTicks = Math.max(majorXTicks * 2, Math.min(majorXTicks * 3, w / 45));
 
         // Horizontal lines
@@ -144,7 +135,7 @@ public class FinancialGridLayer implements GridLayer {
         drawScaleX(canvas, context, xMajorScale, minX, maxX, minY, maxY);
 
         // Zero line
-        if (context.getMinY() <= 0 && context.getMaxY() >= 0) {
+        if (context.isGridVisibleY() && context.getMinY() <= 0 && context.getMaxY() >= 0) {
             mapToPixel(context, context.getMinX(), 0, buf);
             double y = snap(buf[1]);
             canvas.setColor(zeroColor);
@@ -156,7 +147,7 @@ public class FinancialGridLayer implements GridLayer {
         double sepY = minY + (maxY - minY) * 0.75;
         canvas.setColor(volumeColor);
         canvas.setStroke(ChartScale.scale(minorStrokeWidth));
-        drawLine(canvas, minX, sepY, maxX, sepY);
+        if (context.isGridVisibleY()) drawLine(canvas, minX, sepY, maxX, sepY);
 
         // Frame
         canvas.setColor(frameColor);
@@ -169,48 +160,11 @@ public class FinancialGridLayer implements GridLayer {
 
     @Override
     public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        ArberRect bounds = context.getPlotBounds();
-        double minX = bounds.x();
-        double maxX = bounds.maxX();
-        double minY = bounds.y();
-        double maxY = bounds.maxY();
-
-        int w = Math.max(1, (int) Math.ceil(bounds.width()));
-        int h = Math.max(1, (int) Math.ceil(bounds.height()));
-
-        int majorYTicks = Math.max(4, Math.min(10, h / 70));
-        int minorYTicks = Math.max(majorYTicks * 2, Math.min(majorYTicks * 3, h / 35));
-        int majorXTicks = Math.max(4, Math.min(12, w / 90));
-        int minorXTicks = Math.max(majorXTicks * 2, Math.min(majorXTicks * 3, w / 45));
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor base = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA, 0.20f);
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA, 0.42f);
-        float minorStrokeWidth = ChartAssets.getUIFloat(KEY_MINOR_STROKE, 0.55f);
-        float majorStrokeWidth = ChartAssets.getUIFloat(KEY_MAJOR_STROKE, 0.85f);
-        ArberColor minorColor = ColorRegistry.applyAlpha(base, minorAlpha);
-        ArberColor majorColor = ColorRegistry.applyAlpha(base, majorAlpha);
-
-        yMinorScale.setRange(context.getMinY(), context.getMaxY());
-        yMinorScale.setMaxTicks(minorYTicks);
-        drawScaleYBatch(builder, context, config, yMinorScale, minorColor, ChartScale.scale(minorStrokeWidth), minX, maxX, minY, maxY);
-
-        yMajorScale.setRange(context.getMinY(), context.getMaxY());
-        yMajorScale.setMaxTicks(majorYTicks);
-        drawScaleYBatch(builder, context, config, yMajorScale, majorColor, ChartScale.scale(majorStrokeWidth), minX, maxX, minY, maxY);
-
-        xMinorScale.setRange(context.getMinX(), context.getMaxX());
-        xMinorScale.setMaxTicks(minorXTicks);
-        drawScaleXBatch(builder, context, config, xMinorScale, minorColor, ChartScale.scale(minorStrokeWidth), minX, maxX, minY, maxY);
-
-        xMajorScale.setRange(context.getMinX(), context.getMaxX());
-        xMajorScale.setMaxTicks(majorXTicks);
-        drawScaleXBatch(builder, context, config, xMajorScale, majorColor, ChartScale.scale(majorStrokeWidth), minX, maxX, minY, maxY);
+        batchCanvas.render(this, builder, context, config != null ? config : gridBatchConfig);
     }
 
     private void drawScaleY(ArberCanvas canvas, PlotContext context, NiceScale scale, double minX, double maxX, double minY, double maxY) {
+        if (!context.isGridVisibleY()) return;
         double spacing = scale.getTickSpacing();
         if (!(spacing > 0)) return;
         double tick = scale.getNiceMin();
@@ -226,6 +180,7 @@ public class FinancialGridLayer implements GridLayer {
     }
 
     private void drawScaleX(ArberCanvas canvas, PlotContext context, NiceScale scale, double minX, double maxX, double minY, double maxY) {
+        if (!context.isGridVisibleX()) return;
         double spacing = scale.getTickSpacing();
         if (!(spacing > 0)) return;
         double tick = scale.getNiceMin();
@@ -236,40 +191,6 @@ public class FinancialGridLayer implements GridLayer {
             double x = snap(buf[0]);
             if (x >= minX && x <= maxX) {
                 drawLine(canvas, x, minY, x, maxY);
-            }
-        }
-    }
-
-    private void drawScaleYBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config,
-                                 NiceScale scale, ArberColor color, float strokeWidth, double minX, double maxX, double minY, double maxY) {
-        double spacing = scale.getTickSpacing();
-        if (!(spacing > 0)) return;
-        double tick = scale.getNiceMin();
-        double end = scale.getNiceMax();
-        double epsilon = spacing * 0.5;
-        builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-        for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += spacing) {
-            mapToSpatial(context, context.getMinX(), tick, config.getGridZ(), buf);
-            double y = snap(buf[1]);
-            if (y >= minY && y <= maxY) {
-                builder.setLineSegment(minX, y, config.getGridZ(), maxX, y, config.getGridZ());
-            }
-        }
-    }
-
-    private void drawScaleXBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config,
-                                 NiceScale scale, ArberColor color, float strokeWidth, double minX, double maxX, double minY, double maxY) {
-        double spacing = scale.getTickSpacing();
-        if (!(spacing > 0)) return;
-        double tick = scale.getNiceMin();
-        double end = scale.getNiceMax();
-        double epsilon = spacing * 0.5;
-        builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-        for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += spacing) {
-            mapToSpatial(context, tick, context.getMinY(), config.getGridZ(), buf);
-            double x = snap(buf[0]);
-            if (x >= minX && x <= maxX) {
-                builder.setLineSegment(x, minY, config.getGridZ(), x, maxY, config.getGridZ());
             }
         }
     }

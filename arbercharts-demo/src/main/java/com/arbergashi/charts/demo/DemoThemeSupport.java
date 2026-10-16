@@ -8,6 +8,7 @@ import com.arbergashi.charts.util.ChartAssets;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.fonts.inter.FlatInterFont;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -47,13 +48,8 @@ final class DemoThemeSupport {
         System.setProperty("flatlaf.useWindowDecorations", "true");
         JFrame.setDefaultLookAndFeelDecorated(true);
         JDialog.setDefaultLookAndFeelDecorated(true);
-        try {
-            Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
-            java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");
-            installMethod.invoke(null);
-        } catch (Exception e) {
-            // Inter font not available - will use system fonts
-        }
+        FlatInterFont.installLazy();
+        FlatLaf.setPreferredFontFamily(FlatInterFont.FAMILY);
 
         String theme = normalizeTheme(System.getProperty("demo.theme", "dark").toLowerCase(Locale.US));
         if ("light".equals(theme)) {
@@ -62,7 +58,7 @@ final class DemoThemeSupport {
             FlatDarkLaf.setup();
         }
 
-        Font interFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getBaseFont();
+        Font interFont = UIManager.getFont("defaultFont").deriveFont(13f);
         UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, 12.5f));
         UIManager.put("defaultFont", interFont);
 
@@ -89,15 +85,16 @@ final class DemoThemeSupport {
     }
 
     static DemoPalette currentPalette() {
-        Color window = uiColor("Panel.background", "control");
-        Color content = uiColor("Panel.background", "control");
-        Color surface = uiColor("TextField.background", "Panel.background");
+        Color window = uiColor("Demo.windowBackground", "Panel.background");
+        Color content = uiColor("Demo.contentBackground", "Panel.background");
+        Color surface = uiColor("Demo.surfaceBackground", "TextField.background");
         Color sidebar = uiColor("Tree.background", "Panel.background");
         Color border = uiColor("Component.borderColor", "Separator.foreground");
         Color foreground = uiColor("Label.foreground", "textText");
         Color muted = uiColor("Component.grayForeground", "Label.disabledForeground");
         Color softMuted = withAlpha(muted, 210);
-        return new DemoPalette(window, content, surface, sidebar, border, foreground, muted, softMuted);
+        Color accent = uiColor("Component.linkColor", "Component.focusColor");
+        return new DemoPalette(window, content, surface, sidebar, border, foreground, muted, softMuted, accent);
     }
 
     static ChartTheme buildChartTheme(String themeName) {

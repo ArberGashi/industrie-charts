@@ -29,10 +29,21 @@ public class HeatmapContourRenderer extends BaseRenderer {
         super("heatmap_contour");
     }
 
+    /**
+     * Returns whether colors are interpolated between palette stops.
+     * @return {@code true} for continuous colors, {@code false} for four intensity bands
+     */
     public boolean isInterpolate() {
         return interpolate;
     }
 
+    /**
+     * Selects continuous color interpolation or four equally sized intensity bands.
+     * Cell positions and values are unchanged; this option does not interpolate spatial samples.
+     *
+     * @param interpolate {@code true} to blend palette colors (the default)
+     * @return this renderer
+     */
     public HeatmapContourRenderer setInterpolate(boolean interpolate) {
         this.interpolate = interpolate;
         return this;
@@ -49,9 +60,11 @@ public class HeatmapContourRenderer extends BaseRenderer {
         double minZ = Double.POSITIVE_INFINITY, maxZ = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < count; i++) {
             double v = model.getWeight(i);
+            if (!Double.isFinite(v) || !Double.isFinite(model.getX(i)) || !Double.isFinite(model.getY(i))) continue;
             if (v < minZ) minZ = v;
             if (v > maxZ) maxZ = v;
         }
+        if (!Double.isFinite(minZ)) return;
         double rangeZ = Math.max(1e-10, maxZ - minZ);
 
         double avgStepX = context.rangeX() / Math.sqrt(Math.max(1, count));
@@ -63,7 +76,9 @@ public class HeatmapContourRenderer extends BaseRenderer {
         for (int i = 0; i < count; i++) {
             double x = model.getX(i);
             double y = model.getY(i);
-            double intensity = (model.getWeight(i) - minZ) / rangeZ;
+            double value = model.getWeight(i);
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(value)) continue;
+            double intensity = (value - minZ) / rangeZ;
             ArberColor c = getColorForIntensity(intensity, context);
             canvas.setColor(c);
 
@@ -76,7 +91,9 @@ public class HeatmapContourRenderer extends BaseRenderer {
             double w = Math.abs(pSize[0] - pPixel[0]);
             double h = Math.abs(pSize[1] - pPixel[1]);
 
-            canvas.fillRect((float) pPixel[0], (float) pPixel[1], (float) Math.max(1.0, w), (float) Math.max(1.0, h));
+            if (!Double.isFinite(w) || !Double.isFinite(h)) continue;
+            canvas.fillRect((float) Math.min(pPixel[0], pSize[0]), (float) Math.min(pPixel[1], pSize[1]),
+                    (float) Math.max(1.0, w), (float) Math.max(1.0, h));
         }
     }
 
@@ -96,6 +113,12 @@ public class HeatmapContourRenderer extends BaseRenderer {
             c1 = ColorUtils.applyAlpha(base, 0.45f);
             c2 = ColorUtils.applyAlpha(base, 0.65f);
             c3 = ColorUtils.applyAlpha(base, 0.85f);
+        }
+        if (!interpolate) {
+            if (intensity < 0.25) return c0;
+            if (intensity < 0.5) return c1;
+            if (intensity < 0.75) return c2;
+            return c3;
         }
         if (intensity <= 0) return c0;
         if (intensity >= 1) return c3;

@@ -70,6 +70,16 @@ public interface ChartRenderer {
     }
 
     /**
+     * Optional X-range override for autoscaling derived data.
+     *
+     * @param model the layer model
+     * @return {minX, maxX}, or {@code null} to use the model X-values
+     */
+    default double[] getPreferredXRange(ChartModel model) {
+        return null;
+    }
+
+    /**
      * Optional Y-range override for autoscaling.
      *
      * <p>Renderers may return a {minY, maxY} array when the visible range should be based on

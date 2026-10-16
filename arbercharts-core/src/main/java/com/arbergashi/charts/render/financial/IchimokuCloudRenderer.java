@@ -8,7 +8,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>IchimokuCloudRenderer</h1>
+ * <h2>IchimokuCloudRenderer</h2>
  * <p>
  * Implements the Ichimoku Kinko Hyo indicator (Cloud Chart).
  * Consists of:
@@ -20,7 +20,7 @@ import com.arbergashi.charts.util.ColorRegistry;
  *     <li>Chikou Span (Lagging Span)</li>
  *     <li>Kumo (Cloud) - The area between Span A and Span B</li>
  * </ul>
- * </p>
+ *
  *
  * @author Arber Gashi
  * @since 2025-06-01

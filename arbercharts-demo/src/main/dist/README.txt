@@ -1,16 +1,20 @@
-ArberCharts Swing Demo (Endkunden-JAR)
+Industrie Charts Swing Demo @PROJECT_VERSION@
 
-Voraussetzungen
-- Java 25+ (empfohlen: gleiche Version wie beim Build)
+Runtime
+- Eclipse Temurin 25 from Eclipse Adoptium.
+- Use an existing installation when available. No commercial JDK is required.
+- https://adoptium.net/
 
-Start (macOS/Linux)
+Start on macOS/Linux
   ./run-demo.sh
 
-Start (Windows)
+Start on Windows
   run-demo.bat
 
-Manueller Start
-  java --add-modules jdk.incubator.vector -jar arbercharts-demo-*.jar
+Manual start
+  java --add-modules jdk.incubator.vector -jar @DEMO_JAR@
 
-Hinweis
-- Die Demo nutzt die Vector API (Incubator). Ohne --add-modules kann die JVM die Klassen nicht aufloesen.
+This directory belongs to one build version. Its launchers select the exact
+JAR produced with them, even when older distributions exist elsewhere.
+The Vector API flag enables optional acceleration; the library also supports
+a scalar fallback when the module is unavailable.

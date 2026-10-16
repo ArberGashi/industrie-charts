@@ -1,48 +1,39 @@
-# GraalVM Audit (arbercharts-core)
+# GraalVM metadata audit
 
-Status: generated configs for native-image shared library preparation.
+This describes native-image metadata ownership in the **2.2.0** tree. The normal JVM build uses Eclipse Temurin 25. GraalVM SDK dependencies and metadata do not require replacing the installed JDK, and their presence does not prove that a native library has been built or validated.
 
-## Scope
-- Target artifact: **arbercharts-core** only.
-- Native-image goal: **shared library** (`.so/.dylib/.dll`).
-- Config location: `arbercharts-core/src/main/resources/META-INF/native-image/com.arbergashi/charts-core/`.
-- Output: **audit report + reflect/resource configs**.
+## Core scope
 
-## Reflection Findings
-### ServiceLoader
-- `com.arbergashi.charts.core.rendering.ArberBridgeFactory` uses `ServiceLoader`.
-- Resource config includes `META-INF/services/.*` to allow provider discovery at runtime.
+The native API targets `arbercharts-core` as a shared library (`.so`, `.dylib` or `.dll`). Core metadata remains under:
 
-### Explicit reflection (Class.forName / reflection calls)
-1) `com.arbergashi.charts.api.forensic.PlaybackFactory`
-   - `com.arbergashi.charts.engine.forensic.DeterministicPlaybackManager`
-   - `com.arbergashi.charts.engine.forensic.ChronosPlaybackDrive`
-   - `com.arbergashi.charts.engine.forensic.StreamPlaybackDriveImpl`
-   - Configured with `allDeclaredConstructors=true` (conditional on typeReachable).
+```text
+arbercharts-core/src/main/resources/META-INF/native-image/com.arbergashi/charts-core/
+```
 
-2) `com.arbergashi.charts.api.ViewportAuditExtractor`
-   - Optional PDFBox usage via reflection:
-     - `org.apache.pdfbox.pdmodel.PDDocument`
-     - `org.apache.pdfbox.pdmodel.PDDocumentInformation`
-   - Configured with method lists, conditional on typeReachable (safe when PDFBox absent).
+`reflect-config.json` retains conditional constructor metadata for the playback implementations selected reflectively by `PlaybackFactory`:
 
-### MethodHandles
-- `com.arbergashi.charts.model.CircularChartModel` uses `MethodHandles` for VarHandle. No explicit reflection config required.
+- `com.arbergashi.charts.engine.forensic.DeterministicPlaybackManager`
+- `com.arbergashi.charts.engine.forensic.ChronosPlaybackDrive`
+- `com.arbergashi.charts.engine.forensic.StreamPlaybackDriveImpl`
 
-## Resource Findings
-### Resource bundles
-- Base bundle: `i18n.charts`
-- Included in `resource-config.json`.
+`resource-config.json` includes the `i18n.charts` bundle, `i18n/*.properties`, and `META-INF/services/*`. Provider descriptors belong to the module implementing a provider. `ArberBridgeFactory` discovers canvas provider metadata, while `SimpleChart.show()` discovers `ChartDisplayProvider`; provider discovery does not create a canvas automatically.
 
-### Properties
-- `i18n/charts.properties`
-- `i18n/charts_en.properties`
+`CircularChartModel` uses `MethodHandles` to create VarHandles. This is separate from the explicit reflective construction covered by the playback configuration.
 
-## Generated Configs
-- `reflect-config.json`
-- `resource-config.json`
+## Desktop export metadata
 
-## Notes / Recommendations
-- If additional reflective entry points are introduced, update `reflect-config.json`.
-- Keep ServiceLoader provider files in bridge modules; resource config pattern already includes `META-INF/services/.*`.
-- Consider removing `arbercharts-core/src/main/resources/.DS_Store` to keep native resources clean.
+`ViewportAuditExtractor` moves to `arbercharts-swing-bridge` while retaining the package `com.arbergashi.charts.api`. Its ImageIO and optional PDFBox integration no longer belong to the Core artifact. The associated PDFBox reflection entries now reside in:
+
+```text
+arbercharts-swing-bridge/src/main/resources/META-INF/native-image/com.arbergashi/arbercharts-swing-bridge/reflect-config.json
+```
+
+The entries describe the current reflective calls to `PDDocument.load(File)`, `getDocumentInformation()`, `close()`, and `PDDocumentInformation.getCustomMetadataValue(String)`. They are conditional on the PDFBox types being reachable. This records the current implementation; it is not a compatibility claim for every PDFBox version. An application enabling PDF metadata extraction must validate its selected optional PDFBox version and the resulting native executable separately.
+
+## Validation limits
+
+The [architecture checks](VERIFICATION_STRATEGY.md#jdk-based-architecture-checks) verify that production Core bytecode has no `java.desktop` or bridge dependency. The server bridge still uses Java2D and ImageIO, even in headless mode. These are JVM dependency assertions, not native-image execution tests.
+
+A native release still needs a build with the intended native-image toolchain, target-platform loading tests, C entry-point and command-stream checks, and explicit resource/provider/reflection coverage. Existing binary files or a successful JVM build do not establish that an embedded native library matches the current source revision. No native-image build or new native deployment is claimed by this metadata update.
+
+See [Rendering architecture](RENDERING_ARCHITECTURE.md) for module ownership and migration details, and [Dependency updates](DEPENDENCY_UPDATES.md) for the current SDK and build-tool baseline.

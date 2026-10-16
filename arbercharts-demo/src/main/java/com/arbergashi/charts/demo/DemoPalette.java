@@ -10,5 +10,6 @@ record DemoPalette(
         Color border,
         Color foreground,
         Color muted,
-        Color softMuted
+        Color softMuted,
+        Color accent
 ) {}

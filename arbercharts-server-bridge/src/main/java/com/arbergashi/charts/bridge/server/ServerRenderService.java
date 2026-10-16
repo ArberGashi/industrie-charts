@@ -24,15 +24,15 @@ import io.micrometer.core.instrument.Timer;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.awt.image.DirectColorModel;
-import java.awt.image.WritableRaster;
-import java.util.Arrays;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayDeque;
 
 /**
  * Headless render service with a lightweight session pool.
+ *
+ * <p>Returned images own their pixel data independently of the pool. Close the
+ * service when it is no longer needed to release its drawing contexts.</p>
  */
-public final class ServerRenderService {
+public final class ServerRenderService implements AutoCloseable {
     static {
         com.arbergashi.charts.render.RendererBootstrap.ensureRegistered();
     }
@@ -160,10 +160,25 @@ public final class ServerRenderService {
         RenderSession session = pool.acquire();
         try {
             session.ensureCanvas(width, height);
-            Arrays.fill(session.canvas.pixels(), 0);
+            session.canvas.reset();
 
             ArberRect bounds = new ArberRect(0, 0, width, height);
-            if (Double.isNaN(viewMinY) && Double.isNaN(viewMaxY) && model instanceof FinancialChartModel fin) {
+            ChartRenderer resolved = renderer != null ? renderer : selectRenderer(model);
+            if (Double.isNaN(viewMinX) || Double.isNaN(viewMaxX)) {
+                double[] preferred = resolved.getPreferredXRange(model);
+                if (isValidRange(preferred)) {
+                    if (Double.isNaN(viewMinX)) viewMinX = preferred[0];
+                    if (Double.isNaN(viewMaxX)) viewMaxX = preferred[1];
+                }
+            }
+            if (Double.isNaN(viewMinY) || Double.isNaN(viewMaxY)) {
+                double[] preferred = resolved.getPreferredYRange(model);
+                if (isValidRange(preferred)) {
+                    if (Double.isNaN(viewMinY)) viewMinY = preferred[0];
+                    if (Double.isNaN(viewMaxY)) viewMaxY = preferred[1];
+                }
+            }
+            if ((Double.isNaN(viewMinY) || Double.isNaN(viewMaxY)) && model instanceof FinancialChartModel fin) {
                 double[] lows = fin.getLowData();
                 double[] highs = fin.getHighData();
                 int count = Math.min(fin.getPointCount(), Math.min(lows.length, highs.length));
@@ -185,8 +200,8 @@ public final class ServerRenderService {
                         min -= pad;
                         max += pad;
                     }
-                    viewMinY = min;
-                    viewMaxY = max;
+                    if (Double.isNaN(viewMinY)) viewMinY = min;
+                    if (Double.isNaN(viewMaxY)) viewMaxY = max;
                 }
             }
 
@@ -201,7 +216,6 @@ public final class ServerRenderService {
                     null
             );
 
-            ChartRenderer resolved = renderer != null ? renderer : selectRenderer(model);
             if (resolved instanceof SpatialChunkRenderer spatialRenderer) {
                 renderSpatial(session, spatialRenderer, model, context);
             } else {
@@ -244,6 +258,16 @@ public final class ServerRenderService {
 
     public long getPoolContentionCount() {
         return pool.contentionCount();
+    }
+
+    /**
+     * Releases idle drawing contexts and rejects new render requests.
+     * In-flight renders may finish; their contexts are released on return.
+     * Repeated calls have no effect.
+     */
+    @Override
+    public void close() {
+        pool.close();
     }
 
     private static ChartRenderer selectRenderer(ChartModel model) {
@@ -306,8 +330,14 @@ public final class ServerRenderService {
             outX[outCount] = (float) xs[i];
             outY[outCount] = (float) ys[i];
             outCount++;
+            drawSpatialMarker(session, style, (float) xs[i], (float) ys[i]);
         }
         flushSpatial(session.canvas, outX, outY, outCount);
+    }
+
+    private static boolean isValidRange(double[] range) {
+        return range != null && range.length >= 2 && Double.isFinite(range[0])
+                && Double.isFinite(range[1]) && range[0] < range[1];
     }
 
     private static void applyDefaultSpatialStyle(ImageBufferCanvas canvas, DefaultPlotContext context) {
@@ -320,6 +350,32 @@ public final class ServerRenderService {
         }
         canvas.setColor(color);
         canvas.setStroke(1.5f);
+    }
+
+    private static void drawSpatialMarker(RenderSession session, long style, float x, float y) {
+        ImageBufferCanvas canvas = session.canvas;
+        switch (SpatialStyleDescriptor.unpackMarkerId(style)) {
+            case 1 -> {
+                canvas.drawLine(x - 2, y, x + 2, y);
+                canvas.drawLine(x, y - 2, x, y + 2);
+            }
+            case 2 -> canvas.fillRect(x - 1, y - 1, 3, 3);
+            case SpatialStyleDescriptor.MARKER_OCTAGON -> {
+                float radius = SpatialStyleDescriptor.unpackStrokeWidth(style) * 0.5f;
+                for (int i = 0; i < 8; i++) {
+                    double angle = i * Math.PI * 0.25;
+                    session.markerX[i] = (float) (x + Math.cos(angle) * radius);
+                    session.markerY[i] = (float) (y + Math.sin(angle) * radius);
+                }
+                canvas.fillPolygon(session.markerX, session.markerY, 8);
+            }
+            case SpatialStyleDescriptor.MARKER_SQUARE -> {
+                float size = SpatialStyleDescriptor.unpackStrokeWidth(style);
+                canvas.fillRect(x - size * 0.5f, y - size * 0.5f, size, size);
+            }
+            default -> {
+            }
+        }
     }
 
     private static void applySpatialStyle(ImageBufferCanvas canvas, long styleKey) {
@@ -339,24 +395,11 @@ public final class ServerRenderService {
     private static BufferedImage toImage(ImageBufferCanvas canvas) {
         int width = canvas.width();
         int height = canvas.height();
-        int[] pixels = canvas.pixels();
-
-        DirectColorModel colorModel = new DirectColorModel(
-                32,
-                0x00FF0000,
-                0x0000FF00,
-                0x000000FF,
-                0xFF000000
-        );
-        WritableRaster raster = WritableRaster.createPackedRaster(
-                new DataBufferInt(pixels, pixels.length),
-                width,
-                height,
-                width,
-                new int[]{0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000},
-                null
-        );
-        return new BufferedImage(colorModel, raster, false, null);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        int[] output = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+        // Results outlive the pooled session, including PNG encoding after release.
+        System.arraycopy(canvas.pixels(), 0, output, 0, output.length);
+        return image;
     }
 
     private static final class RenderSession {
@@ -365,10 +408,21 @@ public final class ServerRenderService {
         private float[] spatialY = new float[0];
         private final float[] quadX = new float[4];
         private final float[] quadY = new float[4];
+        private final float[] markerX = new float[8];
+        private final float[] markerY = new float[8];
 
         void ensureCanvas(int width, int height) {
             if (canvas == null || canvas.width() != width || canvas.height() != height) {
-                canvas = new ImageBufferCanvas(width, height);
+                ImageBufferCanvas replacement = new ImageBufferCanvas(width, height);
+                close();
+                canvas = replacement;
+            }
+        }
+
+        void close() {
+            if (canvas != null) {
+                canvas.close();
+                canvas = null;
             }
         }
 
@@ -424,39 +478,58 @@ public final class ServerRenderService {
     }
 
     private static final class RenderSessionPool {
-        private final ArrayBlockingQueue<RenderSession> queue;
-        private final java.util.concurrent.atomic.AtomicInteger active = new java.util.concurrent.atomic.AtomicInteger();
-        private final java.util.concurrent.atomic.AtomicLong contention = new java.util.concurrent.atomic.AtomicLong();
+        private final ArrayDeque<RenderSession> queue = new ArrayDeque<>();
+        private final int capacity;
+        private int active;
+        private long contention;
+        private boolean closed;
 
         RenderSessionPool(int size) {
-            this.queue = new ArrayBlockingQueue<>(size);
+            this.capacity = size;
         }
 
-        RenderSession acquire() {
-            RenderSession session = queue.poll();
-            if (session == null) {
-                contention.incrementAndGet();
+        synchronized RenderSession acquire() {
+            if (closed) {
+                throw new IllegalStateException("Render service is closed");
             }
-            active.incrementAndGet();
-            return (session != null) ? session : new RenderSession();
+            RenderSession session = queue.pollFirst();
+            if (session == null) {
+                contention++;
+                session = new RenderSession();
+            }
+            active++;
+            return session;
         }
 
-        void release(RenderSession session) {
+        synchronized void release(RenderSession session) {
             if (session == null) return;
-            active.decrementAndGet();
-            queue.offer(session);
+            active--;
+            if (closed || queue.size() >= capacity) {
+                session.close();
+            } else {
+                queue.addLast(session);
+            }
         }
 
-        int activeCount() {
-            return active.get();
+        synchronized void close() {
+            if (closed) return;
+            closed = true;
+            RenderSession session;
+            while ((session = queue.pollFirst()) != null) {
+                session.close();
+            }
         }
 
-        int idleCount() {
+        synchronized int activeCount() {
+            return active;
+        }
+
+        synchronized int idleCount() {
             return queue.size();
         }
 
-        long contentionCount() {
-            return contention.get();
+        synchronized long contentionCount() {
+            return contention;
         }
     }
 }

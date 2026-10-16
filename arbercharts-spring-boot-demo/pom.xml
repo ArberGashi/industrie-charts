@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.arbergashi</groupId>
+        <artifactId>arber-charts-parent</artifactId>
+        <version>2.2.0</version>
+    </parent>
+
+    <artifactId>arbercharts-spring-boot-demo</artifactId>
+    <name>ArberCharts Spring Boot Demo</name>
+    <description>Local chart workbench backed by the server rendering bridge.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.arbergashi</groupId>
+            <artifactId>arbercharts-spring-boot-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.arbergashi.charts.springdemo.ChartWorkbenchApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals><goal>repackage</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>${maven.antrun.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>stage-spring-demo</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${maven.multiModuleProjectDirectory}/dist/releases/spring-boot/${project.version}"/>
+                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                                      tofile="${maven.multiModuleProjectDirectory}/dist/releases/spring-boot/${project.version}/${project.build.finalName}.jar"
+                                      overwrite="true"/>
+                                <copy file="${basedir}/README.md"
+                                      todir="${maven.multiModuleProjectDirectory}/dist/releases/spring-boot/${project.version}"
+                                      overwrite="true"/>
+                                <copy todir="${maven.multiModuleProjectDirectory}/dist/releases/spring-boot/${project.version}/docs"
+                                      overwrite="true">
+                                    <fileset dir="${basedir}/docs"/>
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>central-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <configuration><skipPublishing>true</skipPublishing></configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

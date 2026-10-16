@@ -12,7 +12,7 @@ import com.arbergashi.charts.util.ColorUtils;
 
 /**
  * Draws a predictive extension beyond the latest point.
- * Part of the Zero-Allocation Render Path. High-frequency execution safe.
+ * Reuses segment geometry between frames.
  *
  * @since 1.5.0
  * @author Arber Gashi
@@ -30,6 +30,8 @@ public final class PredictivePathRenderer extends BaseRenderer {
 
     private double smoothedDx = 0.0;
     private double smoothedDy = 0.0;
+    private final float[] lineX = new float[3];
+    private final float[] lineY = new float[3];
 
     private final Style style;
 
@@ -47,18 +49,15 @@ public final class PredictivePathRenderer extends BaseRenderer {
      */
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
-        final int n0 = model.getPointCount();
-        if (n0 < 2) return;
-
-        double[] xData = model.getXData();
-        double[] yData = model.getYData();
-        final int n = Math.min(n0, Math.min(xData.length, yData.length));
+        final int n = model.getPointCount();
         if (n < 2) return;
 
-        double x1 = xData[n - 1];
-        double y1 = yData[n - 1];
-        double x0 = xData[n - 2];
-        double y0 = yData[n - 2];
+        double x1 = model.getX(n - 1);
+        double y1 = model.getY(n - 1);
+        double x0 = model.getX(n - 2);
+        double y0 = model.getY(n - 2);
+        if (!Double.isFinite(x0) || !Double.isFinite(y0)
+                || !Double.isFinite(x1) || !Double.isFinite(y1)) return;
 
         double smoothing = ChartAssets.getFloat(KEY_SMOOTHING, 0.85f);
         smoothedDx = PredictiveMath.smoothDelta(smoothedDx, x1 - x0, smoothing);
@@ -67,6 +66,7 @@ public final class PredictivePathRenderer extends BaseRenderer {
         int lookahead = ChartAssets.getInt(KEY_LOOKAHEAD, 32);
         double x2 = PredictiveMath.extrapolate(x1, smoothedDx, lookahead);
         double y2 = PredictiveMath.extrapolate(y1, smoothedDy, lookahead);
+        if (!Double.isFinite(x2) || !Double.isFinite(y2)) return;
 
         double[] p0 = pBuffer();
         double[] p1 = pBuffer4();
@@ -79,7 +79,7 @@ public final class PredictivePathRenderer extends BaseRenderer {
         canvas.setStroke(ChartScale.scale(1.4f));
 
         if (style == Style.BAR) {
-            drawBarGhost(canvas, context, p0[0], p0[1], p1[0], p1[1]);
+            drawBarGhost(canvas, context, x1, y1, x2, y2);
             return;
         }
         if (style == Style.STEP) {
@@ -90,20 +90,25 @@ public final class PredictivePathRenderer extends BaseRenderer {
     }
 
     private void drawLinearGhost(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
-        float[] xs = { (float) x0, (float) x1 };
-        float[] ys = { (float) y0, (float) y1 };
-        canvas.drawPolyline(xs, ys, 2);
+        lineX[0] = (float) x0;
+        lineX[1] = (float) x1;
+        lineY[0] = (float) y0;
+        lineY[1] = (float) y1;
+        canvas.drawPolyline(lineX, lineY, 2);
     }
 
     private void drawStepGhost(ArberCanvas canvas, double x0, double y0, double x1, double y1) {
-        float[] xs = { (float) x0, (float) x1, (float) x1 };
-        float[] ys = { (float) y0, (float) y0, (float) y1 };
-        canvas.drawPolyline(xs, ys, 3);
+        lineX[0] = (float) x0;
+        lineX[1] = (float) x1;
+        lineX[2] = (float) x1;
+        lineY[0] = (float) y0;
+        lineY[1] = (float) y0;
+        lineY[2] = (float) y1;
+        canvas.drawPolyline(lineX, lineY, 3);
     }
 
     private void drawBarGhost(ArberCanvas canvas, PlotContext context, double x0, double y0, double x1, double y1) {
-        double spacing = Math.max(1e-9, x1 - x0);
-        double width = Math.abs(spacing) * 0.7;
+        double width = Math.max(1e-9, Math.abs(x1 - x0)) * 0.7;
         double baseValue = 0.0;
         if (baseValue < context.getMinY() || baseValue > context.getMaxY()) {
             baseValue = context.getMinY();
@@ -118,7 +123,8 @@ public final class PredictivePathRenderer extends BaseRenderer {
         double ry = Math.min(pb0[1], pb1[1]);
         double rw = Math.abs(pb1[0] - pb0[0]);
         double rh = Math.abs(pb1[1] - pb0[1]);
-        if (rw <= 0 || rh <= 0) return;
+        if (!Double.isFinite(rx) || !Double.isFinite(ry)
+                || !Double.isFinite(rw) || !Double.isFinite(rh) || rw <= 0 || rh <= 0) return;
 
         canvas.fillRect((float) rx, (float) ry, (float) rw, (float) rh);
     }

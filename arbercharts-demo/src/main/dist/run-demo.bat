@@ -1,17 +1,10 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 set "DIR=%~dp0"
-set "JAR="
-
-for %%F in ("%DIR%arbercharts-demo-*.jar") do (
-  set "JAR=%%~fF"
-  goto :found
-)
-
-:found
-if "%JAR%"=="" (
-  echo Could not find arbercharts-demo-*.jar next to this script.
+set "JAR=%DIR%@DEMO_JAR@"
+if not exist "%JAR%" (
+  echo Could not find @DEMO_JAR@ next to this script.
   exit /b 1
 )
 

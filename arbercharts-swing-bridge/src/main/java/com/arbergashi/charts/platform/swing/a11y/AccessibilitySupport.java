@@ -42,6 +42,7 @@ import java.awt.event.KeyListener;
  *
  * <h2>Keyboard Shortcuts</h2>
  * <table>
+ *   <caption>Chart keyboard navigation</caption>
  *   <tr><th>Key</th><th>Action</th></tr>
  *   <tr><td>Tab</td><td>Focus next data point</td></tr>
  *   <tr><td>Shift+Tab</td><td>Focus previous data point</td></tr>
@@ -56,6 +57,7 @@ import java.awt.event.KeyListener;
  * @see <a href="https://www.w3.org/WAI/WCAG21/quickref/">WCAG 2.1 Guidelines</a>
  */
 public final class AccessibilitySupport {
+    private static final System.Logger LOGGER = System.getLogger(AccessibilitySupport.class.getName());
 
     private AccessibilitySupport() {
         // Utility class
@@ -208,29 +210,29 @@ public final class AccessibilitySupport {
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_UP:
                     // v2.0.1: Navigate to previous data point
-                    System.out.println("Accessibility: Previous data point (not yet implemented)");
+                    LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Previous data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_RIGHT:
                 case KeyEvent.VK_DOWN:
                     // v2.0.1: Navigate to next data point
-                    System.out.println("Accessibility: Next data point (not yet implemented)");
+                    LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Next data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_HOME:
                     // v2.0.1: Jump to first data point
-                    System.out.println("Accessibility: First data point (not yet implemented)");
+                    LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: First data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_END:
                     // v2.0.1: Jump to last data point
-                    System.out.println("Accessibility: Last data point (not yet implemented)");
+                    LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Last data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_ENTER:
                 case KeyEvent.VK_SPACE:
                     // v2.0.1: Activate/select current data point
-                    System.out.println("Accessibility: Select data point (not yet implemented)");
+                    LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Select data point (not yet implemented)");
                     break;
             }
         }

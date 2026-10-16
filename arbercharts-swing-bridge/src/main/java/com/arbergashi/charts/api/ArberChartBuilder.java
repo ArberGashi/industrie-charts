@@ -15,8 +15,6 @@ import com.arbergashi.charts.render.statistical.LiveDistributionOverlayRenderer;
 import com.arbergashi.charts.render.statistical.QuantileBandRenderer;
 import com.arbergashi.charts.render.common.PhysicalScaleRenderer;
 import com.arbergashi.charts.render.standard.LineRenderer;
-import com.arbergashi.charts.render.standard.AreaRenderer;
-import com.arbergashi.charts.render.standard.ScatterRenderer;
 import com.arbergashi.charts.render.standard.PredictivePathRenderer;
 import com.arbergashi.charts.render.standard.StepRenderer;
 import com.arbergashi.charts.render.standard.StepAreaRenderer;

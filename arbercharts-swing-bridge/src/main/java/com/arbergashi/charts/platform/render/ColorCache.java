@@ -14,6 +14,6 @@ public final class ColorCache {
     }
 
     public static Color get(int argb) {
-        return CACHE.computeIfAbsent(argb, Color::new);
+        return CACHE.computeIfAbsent(argb, value -> new Color(value, true));
     }
 }

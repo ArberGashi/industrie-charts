@@ -6,12 +6,9 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
-
 
 /**
  * Polar grid layer.
@@ -44,7 +41,7 @@ public final class PolarGridLayer extends DefaultGridLayer {
         double maxY = bounds.maxY();
         double cx = (minX + maxX) * 0.5;
         double cy = (minY + maxY) * 0.5;
-        double radius = Math.min(bounds.width(), bounds.height()) * 0.5 * 0.92;
+        double radius = PolarGeometry.radius(bounds);
 
         ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
         ArberColor gridBase = theme.getGridColor();
@@ -58,10 +55,10 @@ public final class PolarGridLayer extends DefaultGridLayer {
         float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
                 ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
 
-        int rings = ChartAssets.getInt(KEY_RINGS,
-                Math.max(3, Math.min(8, (int) Math.round(radius / 40.0))));
-        int spokes = ChartAssets.getInt(KEY_SPOKES,
-                Math.max(8, Math.min(24, (int) Math.round(radius / 25.0))));
+        int rings = Math.clamp(ChartAssets.getInt(KEY_RINGS,
+                Math.max(3, Math.min(8, (int) Math.round(radius / 40.0)))), 1, 64);
+        int spokes = Math.clamp(ChartAssets.getInt(KEY_SPOKES,
+                Math.max(8, Math.min(24, (int) Math.round(radius / 25.0)))), 4, 360);
 
         ArberColor minorColor = ColorRegistry.applyAlpha(gridBase, minorAlpha);
         ArberColor majorColor = ColorRegistry.applyAlpha(gridBase, majorAlpha);
@@ -85,61 +82,6 @@ public final class PolarGridLayer extends DefaultGridLayer {
         }
     }
 
-    @Override
-    public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        GridBatchConfig effective = (config != null) ? config : getGridBatchConfig();
-        builder.setZMin(effective.getZMin())
-                .setClippingMode(effective.getClippingMode());
-
-        ArberRect bounds = context.getPlotBounds();
-        double minX = bounds.minX();
-        double maxX = bounds.maxX();
-        double minY = bounds.minY();
-        double maxY = bounds.maxY();
-        double cx = (minX + maxX) * 0.5;
-        double cy = (minY + maxY) * 0.5;
-        double radius = Math.min(bounds.width(), bounds.height()) * 0.5 * 0.92;
-
-        int rings = ChartAssets.getInt(KEY_RINGS,
-                Math.max(3, Math.min(8, (int) Math.round(radius / 40.0))));
-        int spokes = ChartAssets.getInt(KEY_SPOKES,
-                Math.max(8, Math.min(24, (int) Math.round(radius / 25.0))));
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor gridBase = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.minorAlpha", 0.08f));
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.majorAlpha", Math.min(0.25f, minorAlpha + 0.12f)));
-        float minorStroke = ChartAssets.getUIFloat(KEY_MINOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.minorStrokeWidth", 0.6f));
-        float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
-
-        for (int i = 1; i <= rings; i++) {
-            double r = radius * i / rings;
-            boolean isMajor = (i == rings) || (i % Math.max(1, rings / 2) == 0);
-            int argb = ColorRegistry.applyAlpha(gridBase, isMajor ? majorAlpha : minorAlpha).argb();
-            float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-            long styleKey = SpatialStyleDescriptor.pack(argb, strokeWidth, 0, 0);
-            builder.setStyleKey(styleKey);
-            addCircleSegments(builder, cx, cy, r, 120);
-        }
-
-        for (int i = 0; i < spokes; i++) {
-            double angle = (Math.PI * 2.0) * i / spokes;
-            double px = cx + Math.cos(angle) * radius;
-            double py = cy - Math.sin(angle) * radius;
-            boolean isMajor = (i % Math.max(1, spokes / 4) == 0);
-            int argb = ColorRegistry.applyAlpha(gridBase, isMajor ? majorAlpha : minorAlpha).argb();
-            float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-            long styleKey = SpatialStyleDescriptor.pack(argb, strokeWidth, 2, 0);
-            builder.setStyleKey(styleKey);
-            builder.setLineSegment(cx, cy, 1.0, px, py, 1.0);
-        }
-    }
-
     private void drawCircle(ArberCanvas canvas, double cx, double cy, double radius, int segments) {
         double prevX = 0;
         double prevY = 0;
@@ -149,21 +91,6 @@ public final class PolarGridLayer extends DefaultGridLayer {
             double py = cy - Math.sin(t) * radius;
             if (i > 0) {
                 drawLine(canvas, prevX, prevY, px, py);
-            }
-            prevX = px;
-            prevY = py;
-        }
-    }
-
-    private void addCircleSegments(SpatialPathBatchBuilder builder, double cx, double cy, double radius, int segments) {
-        double prevX = 0;
-        double prevY = 0;
-        for (int i = 0; i <= segments; i++) {
-            double t = (Math.PI * 2.0) * i / segments;
-            double px = cx + Math.cos(t) * radius;
-            double py = cy - Math.sin(t) * radius;
-            if (i > 0) {
-                builder.setLineSegment(prevX, prevY, 1.0, px, py, 1.0);
             }
             prevX = px;
             prevY = py;

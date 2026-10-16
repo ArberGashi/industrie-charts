@@ -9,7 +9,9 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ColorUtils;
 /**
  * Spectrogram Renderer - ArberGashi Engine.
- * High-performance visualization of frequency spectra over time using a reusable pixel buffer.
+ * Visualizes sample intensity across time using a reusable color lookup table.
+ * Each output column uses the largest finite sample in its proportional source interval,
+ * preserving narrow peaks when several samples share one column.
  *
  * @author Arber Gashi
  * @since 2026-01-01
@@ -52,6 +54,7 @@ public class SpectrogramRenderer extends BaseRenderer {
             maxVal = -Double.MAX_VALUE;
             for (int i = 0; i < limit; i++) {
                 double v = yData[i];
+                if (!Double.isFinite(v)) continue;
                 if (v < minVal) minVal = v;
                 if (v > maxVal) maxVal = v;
             }
@@ -60,11 +63,14 @@ public class SpectrogramRenderer extends BaseRenderer {
         double range = maxVal - minVal;
         if (range <= 0) range = 1.0;
 
-        int pointsPerPixel = Math.max(1, limit / w);
-
         for (int x = 0; x < w; x++) {
-            int pointIdx = Math.min(limit - 1, x * pointsPerPixel);
-            double val = yData[pointIdx];
+            int start = (int) ((long) x * limit / w);
+            int end = Math.max(start + 1, (int) ((long) (x + 1) * limit / w));
+            double val = Double.NEGATIVE_INFINITY;
+            for (int i = start; i < Math.min(limit, end); i++) {
+                if (Double.isFinite(yData[i])) val = Math.max(val, yData[i]);
+            }
+            if (!Double.isFinite(val)) continue;
 
             float intensity = (float) ((val - minVal) / range);
             ArberColor color = mapToColor(intensity);

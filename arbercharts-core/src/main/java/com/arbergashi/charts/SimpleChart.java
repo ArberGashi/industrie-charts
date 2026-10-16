@@ -6,54 +6,28 @@ import com.arbergashi.charts.render.ChartRenderer;
 import java.util.function.Supplier;
 
 /**
- * Simplified chart API with fluent interface.
+ * Fluent convenience API for line-chart data and display.
  *
- * <p><strong>Design Philosophy:</strong> Developer should be able to create
- * production-ready charts in 2-5 lines of code.
+ * <p>Create an instance through {@link Charts#lineChart()} or
+ * {@link Charts#lineChart(int)}. Manual data insertion and display through the
+ * Swing bridge are implemented. Streaming and file-export helpers always throw
+ * {@link UnsupportedOperationException}.
  *
- * <h2>Feature Highlights</h2>
- * <ul>
- *   <li><strong>Fluent API:</strong> Method chaining for readability</li>
- *   <li><strong>Sensible Defaults:</strong> Works without configuration</li>
- *   <li><strong>Type-Safe:</strong> Compile-time validation</li>
- *   <li><strong>Zero-GC:</strong> Inherited from core framework</li>
- * </ul>
+ * <p>The bundled display provider uses the title as the window title. It does
+ * not apply the subtitle, axis-label or theme values stored by this facade.
+ * Configure {@code ArberChartPanel} from {@code arbercharts-swing-bridge}
+ * directly for those presentation features. For PNG output, use
+ * {@code ServerRenderService} from {@code arbercharts-server-bridge} with an
+ * application-owned model. The
+ * <a href="https://github.com/ArberGashi/industrie-charts/blob/main/docs/QUICK_START.md">quick start</a>
+ * contains working examples of both approaches.
  *
- * <h2>Quick Examples</h2>
- *
- * <h3>Minimal Line Chart</h3>
- * <pre>{@code
- * Charts.lineChart()
- *     .addData(1, 10, 2, 20, 3, 15)
- *     .show();
- * }</pre>
- *
- * <h3>Styled Chart</h3>
+ * <h2>Line Chart Example</h2>
  * <pre>{@code
  * Charts.lineChart()
  *     .title("Sales 2026")
- *     .subtitle("Q1 Performance")
- *     .xLabel("Month")
- *     .yLabel("Revenue (CHF)")
- *     .theme("obsidian")
- *     .addData(1, 100, 2, 150, 3, 200)
+ *     .addData(1, 10, 2, 20, 3, 15)
  *     .show();
- * }</pre>
- *
- * <h3>Real-Time Streaming</h3>
- * <pre>{@code
- * Charts.streamingLineChart(1000)
- *     .title("CPU Usage")
- *     .updateInterval(100)
- *     .startStreaming(() -> getCpuUsage())
- *     .show();
- * }</pre>
- *
- * <h3>Export to PNG</h3>
- * <pre>{@code
- * Charts.lineChart()
- *     .addData(data)
- *     .exportToPNG("chart.png");
  * }</pre>
  *
  * @since 2.0.0
@@ -79,7 +53,9 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the chart title.
+     * Sets the title passed to the display provider.
+     *
+     * <p>The bundled Swing provider uses this value as the window title.
      *
      * @param title the title text
      * @return this chart for chaining
@@ -90,7 +66,10 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the chart subtitle.
+     * Stores a subtitle value without changing the displayed chart.
+     *
+     * <p>The bundled display provider does not apply this value. Configure the
+     * presentation directly in the chart host.
      *
      * @param subtitle the subtitle text
      * @return this chart for chaining
@@ -101,7 +80,10 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the X-axis label.
+     * Stores an X-axis label without changing the displayed chart.
+     *
+     * <p>The bundled display provider does not apply this value. Configure the
+     * axis directly in the chart host.
      *
      * @param label the X-axis label
      * @return this chart for chaining
@@ -112,7 +94,10 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the Y-axis label.
+     * Stores a Y-axis label without changing the displayed chart.
+     *
+     * <p>The bundled display provider does not apply this value. Configure the
+     * axis directly in the chart host.
      *
      * @param label the Y-axis label
      * @return this chart for chaining
@@ -123,14 +108,11 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the visual theme.
+     * Stores a theme name without changing the displayed chart.
      *
-     * <p>Available themes:
-     * <ul>
-     *   <li><strong>dark</strong> - Dark background (default)</li>
-     *   <li><strong>light</strong> - Light background</li>
-     *   <li><strong>obsidian</strong> - Professional dark theme</li>
-     * </ul>
+     * <p>The bundled display provider does not apply or validate this value.
+     * Configure {@code ArberChartPanel.setTheme(ChartTheme)} directly in the
+     * Swing host with a theme from {@link com.arbergashi.charts.api.ChartThemes}.
      *
      * @param theme the theme name
      * @return this chart for chaining
@@ -204,7 +186,11 @@ public class SimpleChart {
     }
 
     /**
-     * Enables real-time streaming mode.
+     * Records the streaming-enabled flag without starting data production.
+     *
+     * <p>Automatic streaming is not implemented. Calling
+     * {@link #startStreaming(Supplier)} always throws
+     * {@link UnsupportedOperationException}; this flag does not schedule updates.
      *
      * @return this chart for chaining
      */
@@ -214,7 +200,10 @@ public class SimpleChart {
     }
 
     /**
-     * Sets the streaming update interval in milliseconds.
+     * Stores the requested streaming interval in milliseconds.
+     *
+     * <p>Automatic streaming is not implemented, so this value does not schedule
+     * updates or change the display refresh rate.
      *
      * @param intervalMs update interval (default: 100ms = 10 Hz)
      * @return this chart for chaining
@@ -225,16 +214,15 @@ public class SimpleChart {
     }
 
     /**
-     * Starts streaming data from a supplier.
+     * Reserved supplier-based streaming operation; not implemented.
      *
-     * <h2>Example</h2>
-     * <pre>{@code
-     * chart.startStreaming(() -> sensor.readTemperature());
-     * }</pre>
+     * <p>No data producer is started. Supply points explicitly with
+     * {@link #addPoint(double, double)} or manage a chart model and its update
+     * lifecycle directly in the host application.
      *
      * @param dataSource supplier that provides new Y values
-     * @return this chart for chaining
-     * @throws UnsupportedOperationException streaming not yet implemented
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public SimpleChart startStreaming(Supplier<Double> dataSource) {
         this.dataSource = dataSource;
@@ -282,11 +270,16 @@ public class SimpleChart {
 
 
     /**
-     * Exports the chart to PNG file.
+     * Reserved PNG-export convenience operation; not implemented.
      *
-     * @param filename the output filename
-     * @return this chart for chaining
-     * @throws UnsupportedOperationException export not yet implemented
+     * <p>No file is written. Render an application-owned model with
+     * {@code ServerRenderService.renderToPng} from
+     * {@code arbercharts-server-bridge}, or export a Swing panel through
+     * {@code ChartExportService.exportPng} from {@code arbercharts-swing-bridge}.
+     *
+     * @param filename requested output filename; not used
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public SimpleChart exportToPNG(String filename) {
         throw new UnsupportedOperationException(
@@ -296,11 +289,15 @@ public class SimpleChart {
     }
 
     /**
-     * Exports the chart to SVG file.
+     * Reserved SVG-export convenience operation; not implemented.
      *
-     * @param filename the output filename
-     * @return this chart for chaining
-     * @throws UnsupportedOperationException export not yet implemented
+     * <p>No file is written. Swing applications can use
+     * {@code ChartExportService.exportSvg} from {@code arbercharts-swing-bridge}
+     * with the optional {@code org.jfree:jfreesvg} backend on the classpath.
+     *
+     * @param filename requested output filename; not used
+     * @return never returns normally
+     * @throws UnsupportedOperationException always
      */
     public SimpleChart exportToSVG(String filename) {
         throw new UnsupportedOperationException(

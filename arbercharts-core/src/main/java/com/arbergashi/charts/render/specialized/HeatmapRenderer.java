@@ -116,8 +116,8 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
 
         double stepX = (maxX - minX) / cols;
         double stepY = (maxY - minY) / rows;
-        int c = (int) ((data[0] - minX) / stepX);
-        int r = (int) ((data[1] - minY) / stepY);
+        int c = Math.min(cols - 1, (int) ((data[0] - minX) / stepX));
+        int r = Math.min(rows - 1, (int) ((data[1] - minY) / stepY));
         if (c < 0 || c >= cols || r < 0 || r >= rows) return java.util.Optional.empty();
 
         double binMinX = minX + c * stepX;
@@ -134,7 +134,8 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
         for (int i = 0; i < limit; i++) {
             double x = xData[i];
             double y = yData[i];
-            if (x >= binMinX && x < binMaxX && y >= binMinY && y < binMaxY) {
+            if (x >= binMinX && (x < binMaxX || (c == cols - 1 && x <= maxX))
+                    && y >= binMinY && (y < binMaxY || (r == rows - 1 && y <= maxY))) {
                 hits++;
             }
         }
@@ -162,15 +163,6 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
         this.gridMinY = minY;
         this.gridMaxY = maxY;
 
-        // Auto range for colors.
-        minVal = Double.MAX_VALUE;
-        maxVal = -Double.MAX_VALUE;
-        for (double[] row : data) {
-            for (double v : row) {
-                if (v < minVal) minVal = v;
-                if (v > maxVal) maxVal = v;
-            }
-        }
         return this;
     }
 
@@ -181,7 +173,17 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
         ensureLut(context);
         // Mode decision: explicit grid or automatic binning?
         if (gridData != null && gridData.length > 0) {
-            drawGrid(canvas, gridData, gridMinX, gridMaxX, gridMinY, gridMaxY, context);
+            minVal = Double.POSITIVE_INFINITY;
+            maxVal = Double.NEGATIVE_INFINITY;
+            for (double[] row : gridData) {
+                if (row == null) continue;
+                for (double value : row) {
+                    if (!Double.isFinite(value)) continue;
+                    minVal = Math.min(minVal, value);
+                    maxVal = Math.max(maxVal, value);
+                }
+            }
+            drawGrid(canvas, gridData, gridMinX, gridMaxX, gridMinY, gridMaxY, context, false);
         } else {
             drawDensityFromModel(canvas, model, context);
         }
@@ -193,6 +195,8 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
 
         int cols = ChartAssets.getInt("chart.heatmap.cols", 64);
         int rows = ChartAssets.getInt("chart.heatmap.rows", 64);
+
+        if (cols <= 0 || rows <= 0) return;
 
         // Temporary grid for binning (stack/heap, depends on resolution).
         // For zero-allocation, this could be cached when cols/rows do not change.
@@ -209,6 +213,7 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
 
         double[] xData = model.getXData();
         double[] yData = model.getYData();
+        count = Math.min(count, Math.min(xData.length, yData.length));
 
         double maxBin = 0;
 
@@ -216,7 +221,8 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
             double x = xData[i];
             double y = yData[i];
 
-            if (x < minX || x >= maxX || y < minY || y >= maxY) continue;
+            if (!Double.isFinite(x) || !Double.isFinite(y)
+                    || x < minX || x > maxX || y < minY || y > maxY) continue;
 
             int c = (int) ((x - minX) / rangeX * cols);
             int r = (int) ((y - minY) / rangeY * rows);
@@ -236,16 +242,19 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
             this.minVal = 0;
             this.maxVal = maxBin;
 
-            drawGrid(canvas, bins, minX, maxX, minY, maxY, context);
+            drawGrid(canvas, bins, minX, maxX, minY, maxY, context, true);
 
             this.minVal = oldMin;
             this.maxVal = oldMax;
         }
     }
 
-    private void drawGrid(ArberCanvas canvas, double[][] data, double minX, double maxX, double minY, double maxY, PlotContext context) {
+    private void drawGrid(ArberCanvas canvas, double[][] data, double minX, double maxX, double minY, double maxY,
+                          PlotContext context, boolean density) {
         int rows = data.length;
+        if (rows == 0 || data[0] == null) return;
         int cols = data[0].length;
+        if (cols == 0 || !(maxX > minX) || !(maxY > minY)) return;
 
         double stepX = (maxX - minX) / cols;
         double stepY = (maxY - minY) / rows;
@@ -258,31 +267,33 @@ public class HeatmapRenderer extends BaseRenderer implements ChartRenderer {
 
         // Iterate over the grid.
         for (int r = 0; r < rows; r++) {
+            if (data[r] == null) continue;
             double y = minY + r * stepY;
             // Y-Culling
             if (y + stepY < context.getMinY() || y > context.getMaxY()) continue;
 
-            for (int c = 0; c < cols; c++) {
+            for (int c = 0; c < Math.min(cols, data[r].length); c++) {
                 double x = minX + c * stepX;
                 // X-Culling
                 if (x + stepX < context.getMinX() || x > context.getMaxX()) continue;
 
                 double val = data[r][c];
-                if (val <= minVal) continue; // Skip empty/low cells
+                if (!Double.isFinite(val) || (density && val <= 0)) continue;
 
                 // Compute color (simple heatmap gradient: blue -> green -> red).
-                float norm = (float) MathUtils.clamp((val - minVal) / (maxVal - minVal), 0, 1);
+                float norm = maxVal > minVal
+                        ? (float) MathUtils.clamp((val - minVal) / (maxVal - minVal), 0, 1) : 0.5f;
                 int colorIdx = (int) (norm * 255);
                 canvas.setColor(colorLut[colorIdx]);
 
-                // Pixel-Koordinaten berechnen
+                // Map both corners so inverted axes retain positive cell dimensions.
                 context.mapToPixel(x, y, p0);
                 context.mapToPixel(x + stepX, y + stepY, p1);
 
-                float px = (float) p0[0];
-                float py = (float) p1[1]; // p1 is top in plot coordinates
-                float pw = (float) Math.ceil(p1[0] - p0[0]);
-                float ph = (float) Math.ceil(p0[1] - p1[1]);
+                float px = (float) Math.min(p0[0], p1[0]);
+                float py = (float) Math.min(p0[1], p1[1]);
+                float pw = (float) Math.ceil(Math.abs(p1[0] - p0[0]));
+                float ph = (float) Math.ceil(Math.abs(p0[1] - p1[1]));
 
                 canvas.fillRect(px, py, pw, ph);
             }

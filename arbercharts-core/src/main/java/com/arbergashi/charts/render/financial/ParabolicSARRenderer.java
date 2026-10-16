@@ -9,7 +9,7 @@ import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>ParabolicSARRenderer - Parabolic Stop and Reverse</h1>
+ * <h2>ParabolicSARRenderer - Parabolic Stop and Reverse</h2>
  *
  * <p>Professional Parabolic SAR renderer for stop-loss and trend reversal points.
  * Displays dots above (downtrend) or below (uptrend) price bars.</p>
@@ -35,6 +35,7 @@ public final class ParabolicSARRenderer extends BaseRenderer {
 
     // Cached indicator arrays (x + sar + trend flag)
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient double[] xValues;
     private transient double[] sarValues;
@@ -111,18 +112,21 @@ public final class ParabolicSARRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n < 3) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && xValues != null && sarValues != null && uptrend != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && xValues != null && sarValues != null && uptrend != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
 
         // Ensure each array exists and has enough capacity.

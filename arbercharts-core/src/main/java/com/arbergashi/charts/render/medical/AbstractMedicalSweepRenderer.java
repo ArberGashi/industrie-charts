@@ -47,43 +47,36 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (!(model instanceof CircularFastMedicalModel circleModel)) return;
+        int size = circleModel.getRawSize();
+        if (size < 2) return;
         double[] rawX = circleModel.getXData();
         double[] rawY = circleModel.getRawChannelArray(getChannelIndex());
         int head = circleModel.getRawHeadIndex();
         int capacity = circleModel.getRawCapacity();
-        int gapEnd = (head + gapWidth) % capacity;
-        boolean wrap = head > gapEnd;
-        ensureBufferCapacity(capacity);
-        boolean firstPointAfterGap = true;
+        ensureBufferCapacity(size);
+        canvas.setColor(getResolvedWaveColor(model, context));
+        canvas.setStroke(strokeWidth);
         int count = 0;
-        for (int i = 0; i < capacity; i++) {
-            if (wrap ? (i >= head || i < gapEnd) : (i >= head && i < gapEnd)) {
-                if (count > 1) {
-                    canvas.setColor(getResolvedWaveColor(model, context));
-                    canvas.setStroke(strokeWidth);
-                    canvas.drawPolyline(pathX, pathY, count);
-                }
+        // Before the first wrap, only [0, size) contains samples. A full ring uses every slot.
+        for (int i = 0; i < size; i++) {
+            boolean skip = MedicalSweepSupport.isInGap(i, head, capacity, gapWidth)
+                    || !Double.isFinite(rawX[i]) || !Double.isFinite(rawY[i]);
+            if (i == head || skip) {
+                if (count > 1) canvas.drawPolyline(pathX, pathY, count);
                 count = 0;
-                firstPointAfterGap = true;
+            }
+            if (skip) continue;
+            context.mapToPixel(rawX[i], rawY[i], sharedCoord);
+            if (!Double.isFinite(sharedCoord[0]) || !Double.isFinite(sharedCoord[1])) {
+                if (count > 1) canvas.drawPolyline(pathX, pathY, count);
+                count = 0;
                 continue;
             }
-            context.mapToPixel(rawX[i], rawY[i], sharedCoord);
-            if (firstPointAfterGap) {
-                pathX[count] = (float) sharedCoord[0];
-                pathY[count] = (float) sharedCoord[1];
-                count++;
-                firstPointAfterGap = false;
-            } else {
-                pathX[count] = (float) sharedCoord[0];
-                pathY[count] = (float) sharedCoord[1];
-                count++;
-            }
+            pathX[count] = (float) sharedCoord[0];
+            pathY[count] = (float) sharedCoord[1];
+            count++;
         }
-        if (count > 1) {
-            canvas.setColor(getResolvedWaveColor(model, context));
-            canvas.setStroke(strokeWidth);
-            canvas.drawPolyline(pathX, pathY, count);
-        }
+        if (count > 1) canvas.drawPolyline(pathX, pathY, count);
     }
 
     protected ArberColor getResolvedWaveColor(ChartModel model, PlotContext context) {
@@ -122,6 +115,8 @@ public abstract class AbstractMedicalSweepRenderer extends com.arbergashi.charts
         double[] coord = this.sharedCoord;
         for (int i = 0; i < size; i++) {
             int idx = (head - size + i + capacity) % capacity;
+            if (MedicalSweepSupport.isInGap(idx, head, capacity, gapWidth)
+                    || !Double.isFinite(rawX[idx]) || !Double.isFinite(rawY[idx])) continue;
             context.mapToPixel(rawX[idx], rawY[idx], coord);
             double dx = coord[0] - pixel.x();
             double dy = coord[1] - pixel.y();

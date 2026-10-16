@@ -5,16 +5,20 @@ import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.FinancialChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>VolumeProfileRenderer</h1>
+ * <h2>VolumeProfileRenderer</h2>
  * <p>
  * Draws a Volume Profile (Volume at Price) on the side of the chart.
  * Helps identify price levels with high trading activity (Point of Control).
  * </p>
+ * <p>Financial models provide volume through {@link FinancialChartModel#getVolume(int)}.
+ * Other models use the configured value component, falling back to point weights.
+ * Missing or non-positive financial volume is omitted.</p>
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -66,8 +70,9 @@ public final class VolumeProfileRenderer extends BaseRenderer {
             final double y = model.getY(i);
             if (!Double.isFinite(y)) continue;
 
-            double vol = model.getValue(i, volumeComponent);
-            if (!Double.isFinite(vol) || vol <= 0.0) {
+            double vol = model instanceof FinancialChartModel financial
+                    ? financial.getVolume(i) : model.getValue(i, volumeComponent);
+            if (!(model instanceof FinancialChartModel) && (!Double.isFinite(vol) || vol <= 0.0)) {
                 vol = model.getWeight(i);
             }
             if (!Double.isFinite(vol) || vol <= 0.0) continue;

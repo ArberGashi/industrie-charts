@@ -12,7 +12,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import java.util.Optional;
 /**
- * <h1>CandlestickRenderer - Professional OHLC Visualization</h1>
+ * <h2>CandlestickRenderer - Professional OHLC Visualization</h2>
  *
  * <p>Enterprise-grade candlestick renderer for financial data visualization
  * with proper OHLC (Open-High-Low-Close) representation.</p>

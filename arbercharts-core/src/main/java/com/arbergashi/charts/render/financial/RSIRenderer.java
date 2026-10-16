@@ -10,7 +10,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>RSIRenderer - Relative Strength Index</h1>
+ * <h2>RSIRenderer - Relative Strength Index</h2>
  *
  * <p>Professional RSI indicator renderer for momentum analysis.
  * Displays RSI line with overbought/oversold zones.</p>
@@ -63,6 +63,7 @@ public final class RSIRenderer extends BaseRenderer {
 
     // Cached indicator values (kept reusable to avoid allocations on every repaint)
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     @SuppressWarnings("FieldMayBeFinal")
     private double[] rsiValues = new double[0];
@@ -234,18 +235,21 @@ public final class RSIRenderer extends BaseRenderer {
     }
 
     private void ensureRSICache(ChartModel model, int period) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n <= period) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && cachedPeriod == period) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && cachedPeriod == period) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         cachedPeriod = period;
 

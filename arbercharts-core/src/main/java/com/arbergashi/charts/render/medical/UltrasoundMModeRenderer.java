@@ -5,11 +5,13 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
-import com.arbergashi.charts.model.FastMedicalModel;
+import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
  * Ultrasound M-mode renderer: visualizes M-mode ultrasound as a scrolling heatmap.
+ * Requires a circular medical model with depth in channel 0 and intensity (0-255)
+ * in channel 1. Models without both channels produce no output.
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -33,20 +35,24 @@ public class UltrasoundMModeRenderer extends BaseRenderer {
  * @since 1.5.0
  */
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
-        if (!(model instanceof FastMedicalModel fastModel)) return;
+        if (!(model instanceof CircularFastMedicalModel fastModel) || fastModel.getChannelCount() < 2) return;
         ChartTheme theme = getResolvedTheme(context);
         ensurePalette(theme);
         int size = fastModel.getPointCount();
-        if (size < 2) return;
+        if (size == 0) return;
         double minY = context.getMinY();
         canvas.setStroke(1.0f);
         for (int i = 0; i < size; i++) {
             double xVal = fastModel.getX(i);
             double yVal = fastModel.getY(i, 0); // Y: tissue depth
+            double intensityVal = fastModel.getY(i, 1);
+            if (!Double.isFinite(xVal) || !Double.isFinite(yVal) || !Double.isFinite(intensityVal)) continue;
             context.mapToPixel(xVal, minY, sharedDest1);
             context.mapToPixel(xVal, yVal, sharedDest2);
+            if (!Double.isFinite(sharedDest1[0]) || !Double.isFinite(sharedDest1[1])
+                    || !Double.isFinite(sharedDest2[0]) || !Double.isFinite(sharedDest2[1])) continue;
             // Intensity from the model (e.g., channel 1 as gray value).
-            int intensity = (int) Math.max(0, Math.min(255, fastModel.getY(i, 1)));
+            int intensity = (int) Math.max(0, Math.min(255, intensityVal));
             canvas.setColor(grayPalette[intensity]);
             lineX[0] = (float) sharedDest1[0];
             lineY[0] = (float) sharedDest1[1];

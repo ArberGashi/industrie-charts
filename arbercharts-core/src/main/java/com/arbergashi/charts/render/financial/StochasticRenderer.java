@@ -9,7 +9,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>StochasticRenderer - Stochastic Oscillator (%K and %D)</h1>
+ * <h2>StochasticRenderer - Stochastic Oscillator (%K and %D)</h2>
  *
  * <p>Professional Stochastic oscillator renderer for momentum analysis.
  * Displays %K (fast) and %D (slow) lines with overbought/oversold zones.</p>
@@ -64,6 +64,7 @@ public final class StochasticRenderer extends BaseRenderer {
 
     // Cached indicator arrays
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient int cachedKPeriod = DEFAULT_K_PERIOD;
     private transient int cachedDPeriod = DEFAULT_D_PERIOD;
@@ -231,19 +232,22 @@ public final class StochasticRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model, int kPeriod, int dPeriod) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         // Need at least one full %K window and one full %D window.
         if (n <= kPeriod) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && cachedKPeriod == kPeriod && cachedDPeriod == dPeriod) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && cachedKPeriod == kPeriod && cachedDPeriod == dPeriod) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         cachedKPeriod = kPeriod;
         cachedDPeriod = dPeriod;

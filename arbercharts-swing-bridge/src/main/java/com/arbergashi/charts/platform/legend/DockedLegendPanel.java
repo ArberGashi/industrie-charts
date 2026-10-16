@@ -11,8 +11,10 @@ import com.arbergashi.charts.render.legend.LegendChartContext;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
 /**
  * Docked legend container.
  *

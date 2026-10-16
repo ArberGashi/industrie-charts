@@ -47,6 +47,7 @@
  *
  * <h2>Keyboard Shortcuts</h2>
  * <table border="1">
+ *   <caption>Chart keyboard navigation</caption>
  *   <tr>
  *     <th>Key</th>
  *     <th>Action</th>

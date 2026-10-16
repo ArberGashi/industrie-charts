@@ -2,10 +2,10 @@
 set -eu
 
 DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-JAR="$(ls "$DIR"/arbercharts-demo-*.jar 2>/dev/null | head -n 1 || true)"
+JAR="$DIR/@DEMO_JAR@"
 
-if [ -z "${JAR:-}" ]; then
-  echo "Could not find arbercharts-demo-*.jar next to this script."
+if [ ! -f "$JAR" ]; then
+  echo "Could not find @DEMO_JAR@ next to this script."
   exit 1
 fi
 

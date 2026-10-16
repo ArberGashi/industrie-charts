@@ -10,7 +10,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
- * <h1>FibonacciRenderer - Fibonacci Retracement Levels</h1>
+ * <h2>FibonacciRenderer - Fibonacci Retracement Levels</h2>
  *
  * <p>Professional Fibonacci retracement renderer for technical analysis.
  * Displays key Fibonacci levels based on swing high and swing low.</p>
@@ -57,6 +57,7 @@ public final class FibonacciRenderer extends BaseRenderer {
     private final float[] lineX = new float[2];
     private final float[] lineY = new float[2];
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient SwingPoints cachedSwing;
 
@@ -167,18 +168,21 @@ public final class FibonacciRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model, int n) {
+        final long stamp = model.getUpdateStamp();
         if (n < 2) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             cachedSwing = null;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && cachedSwing != null) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && cachedSwing != null) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         cachedSwing = findSwingPoints(model, n);
     }

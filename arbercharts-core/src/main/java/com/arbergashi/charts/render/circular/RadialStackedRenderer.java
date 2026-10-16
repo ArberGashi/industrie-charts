@@ -13,7 +13,7 @@ import com.arbergashi.charts.util.ColorRegistry;
 import java.util.Optional;
 
 /**
- * <h1>Modern Stacked Radial Bar Renderer</h1>
+ * <h2>Modern Stacked Radial Bar Renderer</h2>
  * <p>
  * Draws a stacked radial bar chart, ideal for comparing composite values across categories.
  * Adheres to strict zero-allocation guidelines.
@@ -68,20 +68,22 @@ public final class RadialStackedRenderer extends BaseRenderer {
 
         double maxY = Math.max(1e-9, context.getMaxY());
         for (int i = 0; i < n; i++) {
-            double startAngle = i * angleStep - 90 - barWidth / 2.0;
+            double startAngle = 90 - i * angleStep + barWidth / 2.0;
 
             double prevValue = model.getX(i);
             double currentValue = model.getY(i);
 
-            double r1 = (prevValue / maxY) * getPlotRadius(context);
-            double r2 = ((prevValue + currentValue) / maxY) * getPlotRadius(context);
+            if (!Double.isFinite(prevValue) || !Double.isFinite(currentValue) || !Double.isFinite(maxY)) continue;
+            double r1 = Math.max(0, Math.min(1, prevValue / maxY)) * getPlotRadius(context);
+            double r2 = Math.max(0, Math.min(1, (prevValue + currentValue) / maxY)) * getPlotRadius(context);
+            if (r2 <= r1) continue;
 
             ArberColor color = getSeriesColor(model);
             if (i == hoverCategory) {
                 color = ColorRegistry.adjustBrightness(color, 1.1);
             }
 
-            drawSegment(canvas, context, r1, r2, startAngle, barWidth, color);
+            drawSegment(canvas, context, r1, r2, startAngle, -barWidth, color);
         }
     }
 
@@ -123,13 +125,17 @@ public final class RadialStackedRenderer extends BaseRenderer {
         double dx = pixel.x() - cx;
         double dy = pixel.y() - cy;
 
-        double angle = Math.toDegrees(Math.atan2(dy, dx)) + 90;
-        if (angle < 0) angle += 360;
+        double angle = (Math.toDegrees(Math.atan2(dy, dx)) + 450) % 360;
 
         double angleStep = 360.0 / n;
-        int index = (int) (angle / angleStep);
+        int index = (int) ((angle + angleStep / 2.0) / angleStep) % n;
+        double offset = ((angle - index * angleStep + 540) % 360) - 180;
+        double radius = Math.hypot(dx, dy);
+        double maxY = Math.max(1e-9, context.getMaxY());
+        double r1 = Math.max(0, Math.min(1, model.getX(index) / maxY)) * getPlotRadius(context);
+        double r2 = Math.max(0, Math.min(1, (model.getX(index) + model.getY(index)) / maxY)) * getPlotRadius(context);
 
-        if (index >= 0 && index < n) {
+        if (Math.abs(offset) <= angleStep * 0.3 && r2 > r1 && radius >= r1 && radius <= r2) {
             hoverCategory = index;
             return Optional.of(index);
         }

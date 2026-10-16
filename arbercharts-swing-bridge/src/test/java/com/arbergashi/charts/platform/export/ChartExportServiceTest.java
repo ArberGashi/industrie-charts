@@ -29,18 +29,34 @@ public class ChartExportServiceTest {
     }
 
     @Test
-    public void testExportPngWithPreferredSize() {
+    public void testExportPngWithPreferredSize() throws Exception {
         ArberChartPanel panel = createTestPanel();
         panel.setPreferredSize(new java.awt.Dimension(500, 400));
-        // Panel ist nicht realized (Breite/Höhe = 0)
+        // The component has not been realized or laid out.
         assertEquals(0, panel.getWidth());
 
         File outputFile = tempDir.resolve("test_export_pref.png").toFile();
         ChartExportService.exportPng(panel, outputFile);
 
         assertTrue(outputFile.exists());
-        // Da das Bild 500x400 skaliert sein sollte, sollte es größer sein als ein leeres Bild
-        assertTrue(outputFile.length() > 0);
+        java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(outputFile);
+        assertEquals(500, image.getWidth());
+        assertEquals(400, image.getHeight());
+        int opaque = 0;
+        int content = 0;
+        int background = image.getRGB(0, 0);
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int pixel = image.getRGB(x, y);
+                if ((pixel >>> 24) != 0) opaque++;
+                if (pixel != background) content++;
+            }
+        }
+        assertEquals(500 * 400, opaque);
+        assertTrue(content > 100, "Export must contain chart lines, axes, and laid-out children");
+        assertEquals(0, panel.getWidth(), "Temporary export sizing must be restored");
+        assertEquals(0, panel.getHeight());
+        assertEquals(0, panel.getOverlayCanvasForTesting().getWidth());
     }
 
     @Test

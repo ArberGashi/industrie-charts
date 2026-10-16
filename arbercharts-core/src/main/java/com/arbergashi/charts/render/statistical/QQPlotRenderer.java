@@ -9,7 +9,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>QQPlotRenderer - Quantile-Quantile Plot</h1>
+ * <h2>QQPlotRenderer - Quantile-Quantile Plot</h2>
  *
  * <p>Professional Q-Q plot renderer for distribution comparison.
  * Compares sample quantiles against theoretical distribution quantiles.</p>

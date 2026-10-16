@@ -6,7 +6,9 @@ import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.ChartRenderer;
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 /**
  * Swing implementation of {@link ChartDisplayProvider}.

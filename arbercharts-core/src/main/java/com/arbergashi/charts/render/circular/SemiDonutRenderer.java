@@ -8,6 +8,7 @@ import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 import com.arbergashi.charts.util.MathUtils;
@@ -15,7 +16,7 @@ import com.arbergashi.charts.util.MathUtils;
 import java.util.Optional;
 
 /**
- * <h1>Modern Semi-Donut Renderer</h1>
+ * <h2>Modern Semi-Donut Renderer</h2>
  * <p>
  * Draws a professional, interactive semi-donut chart, ideal for progress indicators and KPIs.
  * Adheres to strict zero-allocation guidelines.
@@ -47,9 +48,10 @@ public final class SemiDonutRenderer extends BaseRenderer {
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         if (model != null && model.getPointCount() > 0) {
-            double modelMax = context.getMaxY();
-            if (modelMax <= 0) modelMax = 100.0;
-            this.value = model.getY(0) / modelMax;
+            double min = context.getMinY();
+            double range = context.getMaxY() - min;
+            this.value = Double.isFinite(range) && range > 0
+                    ? (model.getY(0) - min) / range : model.getY(0) / 100.0;
         }
 
         ArberRect b = context.getPlotBounds();
@@ -68,11 +70,12 @@ public final class SemiDonutRenderer extends BaseRenderer {
     private void drawTrack(ArberCanvas canvas, double cx, double cy, double outerR, ChartTheme t) {
         canvas.setStroke((float) ChartScale.scale(12f));
         canvas.setColor(ColorRegistry.applyAlpha(t.getGridColor(), 0.5f));
-        drawArcPolyline(canvas, cx, cy, outerR, 180, 180);
+        drawArcPolyline(canvas, cx, cy, outerR, 180, -180);
     }
 
     private void drawValueArc(ArberCanvas canvas, double cx, double cy, double outerR, ChartTheme theme) {
-        double t = MathUtils.clamp(this.value, 0, 1);
+        double t = Double.isFinite(this.value) ? MathUtils.clamp(this.value, 0, 1) : 0;
+        if (t == 0) return;
         double sweepAngle = t * 180.0;
 
         canvas.setStroke((float) ChartScale.scale(12f));
@@ -92,8 +95,8 @@ public final class SemiDonutRenderer extends BaseRenderer {
 
     private void drawArcPolyline(ArberCanvas canvas, double cx, double cy, double r, double startDeg, double sweepDeg) {
         int segments = Math.max(12, (int) (Math.abs(sweepDeg) / 4.0));
-        float[] xs = new float[segments + 1];
-        float[] ys = new float[segments + 1];
+        float[] xs = RendererAllocationCache.getFloatArray(this, "semi.arc.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "semi.arc.y", segments + 1);
         double step = sweepDeg / segments;
         for (int i = 0; i <= segments; i++) {
             double a = Math.toRadians(startDeg + step * i);
@@ -114,7 +117,6 @@ public final class SemiDonutRenderer extends BaseRenderer {
         double cx = b.centerX();
         double cy = b.centerY() + diameter * 0.10;
         double outerR = diameter * 0.5;
-        double innerR = outerR * 0.60;
 
         double px = pixel.x();
         double py = pixel.y();
@@ -122,29 +124,17 @@ public final class SemiDonutRenderer extends BaseRenderer {
         double dx = px - cx;
         double dy = py - cy;
         double dist = Math.hypot(dx, dy);
-        if (dist < innerR || dist > outerR) return Optional.empty();
+        if (Math.abs(dist - outerR) > ChartScale.scale(6f)) return Optional.empty();
 
         double angleDeg = Math.toDegrees(Math.atan2(cy - py, px - cx));
         if (angleDeg < 0) angleDeg += 360.0;
         if (angleDeg < 0 || angleDeg > 180) return Optional.empty();
 
-        double prop = (180.0 - angleDeg) / 180.0;
-        int n = model.getPointCount();
-        double total = 0.0;
-        for (int i = 0; i < n; i++) total += Math.abs(model.getWeight(i));
-        if (total <= 0) return Optional.empty();
-
-        double target = prop * total;
-        double cum = 0.0;
-        for (int i = 0; i < n; i++) {
-            cum += Math.abs(model.getWeight(i));
-            if (target <= cum) return Optional.of(i);
-        }
-        return Optional.empty();
+        return Optional.of(0);
     }
 
     public SemiDonutRenderer setValue(double value) {
-        this.value = MathUtils.clamp(value, 0.0, 1.0);
+        this.value = Double.isFinite(value) ? MathUtils.clamp(value, 0.0, 1.0) : 0;
         return this;
     }
 }

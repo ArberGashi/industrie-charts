@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Lightweight tooltip overlay styled like the legend (eckig, business-friendly).
+ * Lightweight tooltip overlay styled like the legend, with square corners.
  */
 public final class TooltipOverlay extends JComponent {
     private ChartTheme theme = ChartThemes.getDarkTheme();

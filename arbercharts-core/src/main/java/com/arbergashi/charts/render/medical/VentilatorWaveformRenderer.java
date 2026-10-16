@@ -5,13 +5,17 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.FastMedicalModel;
 import com.arbergashi.charts.render.BaseRenderer;
 
 import java.util.function.Function;
 /**
  * Ventilator waveform renderer: visualizes pressure, volume, and flow curves.
- * Renders three synchronized traces with zero-allocation hot paths.
+ * Renders up to three synchronized traces with zero-allocation hot paths.
+ * Circular medical models supply their available channels; scalar medical models
+ * supply one trace. Missing channels are omitted, and missing samples or a restart
+ * of the time axis split a trace.
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -52,22 +56,35 @@ public class VentilatorWaveformRenderer extends BaseRenderer {
         ensureColors(theme);
         int totalPoints = fastModel.getPointCount();
         if (totalPoints < 2) return;
+        int channelCount = fastModel instanceof CircularFastMedicalModel medical
+                ? Math.min(3, medical.getChannelCount()) : 1;
         ensureBufferCapacity(totalPoints);
-        for (int i = 0; i < totalPoints; i++) {
-            double x = fastModel.getX(i);
-            for (int c = 0; c < 3; c++) {
-                double yVal = fastModel.getY(i, c);
-                context.mapToPixel(x, yVal, sharedPixelCoord);
-                double xPix = sharedPixelCoord[0];
-                double yPix = sharedPixelCoord[1];
-                pathX[c][i] = (float) xPix;
-                pathY[c][i] = (float) yPix;
-            }
-        }
-        for (int c = 0; c < 3; c++) {
+        for (int c = 0; c < channelCount; c++) {
             canvas.setColor(colors[c]);
             canvas.setStroke(1.5f);
-            canvas.drawPolyline(pathX[c], pathY[c], totalPoints);
+            int count = 0;
+            double previousX = Double.NaN;
+            for (int i = 0; i < totalPoints; i++) {
+                double x = fastModel.getX(i);
+                double yVal = fastModel.getY(i, c);
+                boolean missing = !Double.isFinite(x) || !Double.isFinite(yVal);
+                if (missing || x < previousX) {
+                    if (count > 1) canvas.drawPolyline(pathX[c], pathY[c], count);
+                    count = 0;
+                }
+                previousX = x;
+                if (missing) continue;
+                context.mapToPixel(x, yVal, sharedPixelCoord);
+                if (!Double.isFinite(sharedPixelCoord[0]) || !Double.isFinite(sharedPixelCoord[1])) {
+                    if (count > 1) canvas.drawPolyline(pathX[c], pathY[c], count);
+                    count = 0;
+                    continue;
+                }
+                pathX[c][count] = (float) sharedPixelCoord[0];
+                pathY[c][count] = (float) sharedPixelCoord[1];
+                count++;
+            }
+            if (count > 1) canvas.drawPolyline(pathX[c], pathY[c], count);
         }
     }
 

@@ -17,7 +17,7 @@ import com.arbergashi.charts.util.PredictiveMath;
 import java.util.List;
 
 /**
- * <h1>Modern Gauge Renderer</h1>
+ * <h2>Modern Gauge Renderer</h2>
  * <p>
  * Draws a professional, highly configurable radial gauge, adhering to strict zero-allocation guidelines.
  * </p>

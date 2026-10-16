@@ -128,7 +128,7 @@ public final class ChartAssets {
      *   <li>Test cleanup between runs</li>
      *   <li>Resetting user overrides back to framework defaults</li>
      * </ul>
-     * </p>
+     *
      *
      * @param key property key (must not be {@code null} or blank)
      */

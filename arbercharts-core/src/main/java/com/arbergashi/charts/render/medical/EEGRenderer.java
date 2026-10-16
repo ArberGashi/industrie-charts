@@ -4,13 +4,17 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.CircularFastMedicalModel;
+import com.arbergashi.charts.model.SignalChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
 /**
  * EEG renderer: visualizes multi-channel electroencephalogram (EEG) data.
- * Supports multiple channels with optimized vertical scaling.
+ * Draws simultaneous channels over the same logical time range in separate vertical bands.
+ * Circular medical and signal models expose their channel count; other models are treated
+ * as a single channel. The configured count limits the number of displayed channels.
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -36,29 +40,43 @@ public class EEGRenderer extends BaseRenderer {
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
         int count = model.getPointCount();
         if (count < 2) return;
-        int n = Math.max(1, channelCount);
-        int pointsPerChannel = count / n;
-        double[] xData = model.getXData();
-        double[] yData = model.getYData();
-        float[] xs = RendererAllocationCache.getFloatArray(this, "eeg.x", Math.max(2, pointsPerChannel));
-        float[] ys = RendererAllocationCache.getFloatArray(this, "eeg.y", Math.max(2, pointsPerChannel));
+        int available = model instanceof CircularFastMedicalModel medical ? medical.getChannelCount()
+                : model instanceof SignalChartModel signal ? signal.getChannelCount() : 1;
+        int n = Math.min(Math.max(1, channelCount), available);
+        if (n == 0) return;
+        float[] xs = RendererAllocationCache.getFloatArray(this, "eeg.x", count);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "eeg.y", count);
+        double centerY = context.getMinY() * 0.5 + context.getMaxY() * 0.5;
+        double bandHeight = (context.getMaxY() - context.getMinY()) / n;
         for (int ch = 0; ch < n; ch++) {
             int cCount = 0;
-            for (int i = 0; i < pointsPerChannel; i++) {
-                int idx = ch * pointsPerChannel + i;
-                if (idx >= count) break;
-                double yOffset = (ch + 0.5) / n * (context.getMaxY() - context.getMinY()) + context.getMinY();
-                context.mapToPixel(xData[idx], yData[idx] + yOffset, dest);
+            double previousX = Double.NaN;
+            double yOffset = context.getMinY() + (ch + 0.5) * bandHeight;
+            ArberColor color = ColorRegistry.of(80, 80, Math.min(255, 80 + 20 * ch), 255);
+            canvas.setColor(color);
+            canvas.setStroke(ChartScale.scale(1.2f));
+            for (int i = 0; i < count; i++) {
+                double x = model.getX(i);
+                double value = model instanceof SignalChartModel signal
+                        ? signal.getValue(i, ch) : model.getY(i, ch);
+                boolean missing = !Double.isFinite(x) || !Double.isFinite(value);
+                if (missing || x < previousX) {
+                    if (cCount > 1) canvas.drawPolyline(xs, ys, cCount);
+                    cCount = 0;
+                }
+                previousX = x;
+                if (missing) continue;
+                context.mapToPixel(x, yOffset + (value - centerY) / n, dest);
+                if (!Double.isFinite(dest[0]) || !Double.isFinite(dest[1])) {
+                    if (cCount > 1) canvas.drawPolyline(xs, ys, cCount);
+                    cCount = 0;
+                    continue;
+                }
                 xs[cCount] = (float) dest[0];
                 ys[cCount] = (float) dest[1];
                 cCount++;
             }
-            ArberColor c = ColorRegistry.of(80, 80, Math.min(255, 80 + 20 * ch), 255);
-            canvas.setColor(c);
-            canvas.setStroke(ChartScale.scale(1.2f));
-            if (cCount > 1) {
-                canvas.drawPolyline(xs, ys, cCount);
-            }
+            if (cCount > 1) canvas.drawPolyline(xs, ys, cCount);
         }
     }
 }

@@ -1,8 +1,5 @@
 package com.arbergashi.charts.render.grid;
 
-import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
-
 /**
  * Statistical grid layer.
  *
@@ -12,8 +9,5 @@ import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
  * @author Arber Gashi
  */
 public final class StatisticalGridLayer extends DefaultGridLayer {
-    @Override
-    public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        super.renderGridBatch(builder, context, config);
-    }
+
 }

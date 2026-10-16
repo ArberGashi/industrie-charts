@@ -8,6 +8,8 @@ import com.arbergashi.charts.internal.RendererDescriptor;
 import com.arbergashi.charts.platform.render.RendererRegistry;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+
+import java.util.Arrays;
 /**
  * Renko renderer.
  *
@@ -35,6 +37,7 @@ public final class RenkoRenderer extends BaseRenderer {
 
     private final double[] px = new double[2];
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient double cachedBrick;
     private transient int cachedBoundsW;
@@ -116,10 +119,11 @@ public final class RenkoRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model, PlotContext context, double brick, ArberRect bounds) {
+        final long stamp = model.getUpdateStamp();
         final int nPts = model.getPointCount();
 
-        // cache invalidation: data size + theme-independent geometry + brick size
-        if (cachedModel == model
+        // Rebuild for changed data, brick size, or the viewport-dependent brick limit.
+        if (cachedModel == model && cachedUpdateStamp == stamp
                 && cachedPointCount == nPts
                 && cachedBrick == brick
                 && cachedBoundsW == (int) Math.round(bounds.width())
@@ -131,6 +135,7 @@ public final class RenkoRenderer extends BaseRenderer {
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = nPts;
         cachedBrick = brick;
         cachedBoundsW = (int) Math.round(bounds.width());
@@ -171,6 +176,6 @@ public final class RenkoRenderer extends BaseRenderer {
 
     private void ensureCapacity(int min) {
         if (brickPrices.length >= min) return;
-        brickPrices = new double[min];
+        brickPrices = Arrays.copyOf(brickPrices, min);
     }
 }

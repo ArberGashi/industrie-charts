@@ -42,28 +42,19 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
 
         List<double[]> data = mdModel.getMultiDimensionalData();
         List<String> labels = mdModel.getDimensionLabels();
-        if (data.isEmpty()) return;
+        if (data.isEmpty() || labels.isEmpty()) return;
 
         int dimensions = labels.size();
         ArberRect bounds = context.getPlotBounds();
-        double axisSpacing = bounds.width() / (dimensions - 1);
-        double plotX = bounds.x();
+        double axisSpacing = dimensions > 1 ? bounds.width() / (dimensions - 1) : 0.0;
+        double plotX = dimensions > 1 ? bounds.x() : bounds.centerX();
         double plotY = bounds.y();
         double plotHeight = bounds.height();
 
         // Find min/max for each dimension for normalization
         double[] minValues = RendererAllocationCache.getDoubleArray(this, "minValues", dimensions);
         double[] maxValues = RendererAllocationCache.getDoubleArray(this, "maxValues", dimensions);
-        for (int i = 0; i < dimensions; i++) {
-            minValues[i] = Double.MAX_VALUE;
-            maxValues[i] = Double.MIN_VALUE;
-        }
-        for (double[] point : data) {
-            for (int i = 0; i < dimensions; i++) {
-                if (point[i] < minValues[i]) minValues[i] = point[i];
-                if (point[i] > maxValues[i]) maxValues[i] = point[i];
-            }
-        }
+        findRanges(data, dimensions, minValues, maxValues);
 
         float baseAlpha = 0.28f;
         float dimAlpha = 0.06f;
@@ -78,6 +69,7 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
         // Draw the polylines for each data point
         for (int p = 0; p < data.size(); p++) {
             double[] point = data.get(p);
+            if (!isCompletePoint(point, dimensions)) continue;
             for (int i = 0; i < dimensions; i++) {
                 double x = plotX + i * axisSpacing;
                 double range = maxValues[i] - minValues[i];
@@ -93,7 +85,11 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
             ArberColor lineColor = isMultiColor() ? themeSeries(context, p) : baseColor;
             if (lineColor == null) lineColor = baseColor;
             canvas.setColor(ColorUtils.applyAlpha(lineColor, alpha));
-            canvas.drawPolyline(xs, ys, dimensions);
+            if (dimensions == 1) {
+                canvas.fillRect(xs[0] - 2, ys[0] - 2, 4, 4);
+            } else {
+                canvas.drawPolyline(xs, ys, dimensions);
+            }
         }
 
         // Draw the vertical axes
@@ -119,23 +115,14 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
 
         int dimensions = labels.size();
         ArberRect bounds = context.getPlotBounds();
-        double axisSpacing = bounds.width() / (dimensions - 1);
-        double plotX = bounds.x();
+        double axisSpacing = dimensions > 1 ? bounds.width() / (dimensions - 1) : 0.0;
+        double plotX = dimensions > 1 ? bounds.x() : bounds.centerX();
         double plotY = bounds.y();
         double plotHeight = bounds.height();
 
         double[] minValues = RendererAllocationCache.getDoubleArray(this, "minValues", dimensions);
         double[] maxValues = RendererAllocationCache.getDoubleArray(this, "maxValues", dimensions);
-        for (int i = 0; i < dimensions; i++) {
-            minValues[i] = Double.MAX_VALUE;
-            maxValues[i] = Double.MIN_VALUE;
-        }
-        for (double[] point : data) {
-            for (int i = 0; i < dimensions; i++) {
-                if (point[i] < minValues[i]) minValues[i] = point[i];
-                if (point[i] > maxValues[i]) maxValues[i] = point[i];
-            }
-        }
+        findRanges(data, dimensions, minValues, maxValues);
 
         double minDistSq = Double.MAX_VALUE;
         int bestIndex = -1;
@@ -144,6 +131,7 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
 
         for (int p = 0; p < data.size(); p++) {
             double[] point = data.get(p);
+            if (!isCompletePoint(point, dimensions)) continue;
             double prevX = 0.0;
             double prevY = 0.0;
             boolean hasPrev = false;
@@ -153,7 +141,13 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
                 double normalized = (range == 0) ? 0.5 : (point[i] - minValues[i]) / range;
                 double y = plotY + plotHeight * (1 - normalized);
 
-                if (hasPrev) {
+                if (dimensions == 1) {
+                    double distSq = distanceToSegmentSq(px, py, x, y, x, y);
+                    if (distSq < minDistSq) {
+                        minDistSq = distSq;
+                        bestIndex = p;
+                    }
+                } else if (hasPrev) {
                     double distSq = distanceToSegmentSq(px, py, prevX, prevY, x, y);
                     if (distSq < minDistSq) {
                         minDistSq = distSq;
@@ -178,6 +172,28 @@ public final class ParallelCoordinatesRenderer extends BaseRenderer {
     @Override
     public void clearHover() {
         hoverIndex = -1;
+    }
+
+    private static void findRanges(List<double[]> data, int dimensions, double[] minValues, double[] maxValues) {
+        for (int i = 0; i < dimensions; i++) {
+            minValues[i] = Double.POSITIVE_INFINITY;
+            maxValues[i] = Double.NEGATIVE_INFINITY;
+        }
+        for (double[] point : data) {
+            if (!isCompletePoint(point, dimensions)) continue;
+            for (int i = 0; i < dimensions; i++) {
+                minValues[i] = Math.min(minValues[i], point[i]);
+                maxValues[i] = Math.max(maxValues[i], point[i]);
+            }
+        }
+    }
+
+    private static boolean isCompletePoint(double[] point, int dimensions) {
+        if (point == null || point.length < dimensions) return false;
+        for (int i = 0; i < dimensions; i++) {
+            if (!Double.isFinite(point[i])) return false;
+        }
+        return true;
     }
 
     private static double distanceToSegmentSq(double px, double py, double x1, double y1, double x2, double y2) {

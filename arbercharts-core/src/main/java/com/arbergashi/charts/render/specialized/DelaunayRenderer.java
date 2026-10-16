@@ -3,7 +3,6 @@ package com.arbergashi.charts.render.specialized;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberPoint;
-import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.internal.HitTestUtils;
 import com.arbergashi.charts.internal.RendererDescriptor;
@@ -39,9 +38,9 @@ public final class DelaunayRenderer extends BaseRenderer {
     private transient final AtomicLong computeStamp = new AtomicLong();
     private transient double[] xs;
     private transient double[] ys;
-    private transient volatile int[] cachedEdgeA;
-    private transient volatile int[] cachedEdgeB;
-    private transient volatile int cachedKey = 0;
+    private transient volatile EdgeCache cachedEdges;
+
+    private record EdgeCache(long key, int[] edgeA, int[] edgeB) { }
     private transient int[] gridHead;
     private transient int[] gridNext;
     private transient double[] bestD;
@@ -61,12 +60,16 @@ public final class DelaunayRenderer extends BaseRenderer {
             ys = RendererAllocationCache.getDoubleArray(this, "ys", n);
         }
 
+        long key = n;
         double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY;
         double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < n; i++) {
             context.mapToPixel(model.getX(i), model.getY(i), pix);
             double px = pix[0];
             double py = pix[1];
+            if (!Double.isFinite(px) || !Double.isFinite(py)) return;
+            key = (key ^ Double.doubleToLongBits(px)) * 0x100000001b3L;
+            key = (key ^ Double.doubleToLongBits(py)) * 0x100000001b3L;
             xs[i] = px;
             ys[i] = py;
             if (px < minX) minX = px;
@@ -87,19 +90,17 @@ public final class DelaunayRenderer extends BaseRenderer {
         final int kFinal = k;
 
         int sampleLimit = 5000;
-        ArberRect b = context.getPlotBounds();
-        int key = java.util.Objects.hash(n, (int) b.x(), (int) b.y(), (int) b.width(), (int) b.height());
-
+        EdgeCache cache = cachedEdges;
         if (n > 800) {
-            if (cachedEdgeA != null && cachedKey == key) {
-                drawCachedEdges(canvas, context, baseColor, n);
+            if (cache != null && cache.key() == key) {
+                drawCachedEdges(canvas, context, baseColor, n, cache);
                 return;
             }
-            if (cachedKey != key) {
+            if (cache == null || cache.key() != key) {
                 long now = System.nanoTime();
                 if (!computing.get() && (now - lastComputeNanos) > COMPUTE_COOLDOWN_NANOS && computing.compareAndSet(false, true)) {
                     lastComputeNanos = now;
-                    final int keyFinal = key;
+                    final long keyFinal = key;
                     final long stamp = computeStamp.incrementAndGet();
 
                     final int step;
@@ -144,7 +145,7 @@ public final class DelaunayRenderer extends BaseRenderer {
                 originalIdx[si] = i;
                 si++;
             }
-            KDTree tree = buildKDTree(sxs, sys);
+            KDTree tree = buildKDTree(sxs, sys, si);
             for (int i = 0; i < si; i++) {
                 int[] neighbors = tree.kNearest(i, k + 1);
                 if (neighbors == null) continue;
@@ -250,9 +251,9 @@ public final class DelaunayRenderer extends BaseRenderer {
         }
     }
 
-    private void drawCachedEdges(ArberCanvas canvas, PlotContext context, ArberColor baseColor, int n) {
-        int[] ea = cachedEdgeA;
-        int[] eb = cachedEdgeB;
+    private void drawCachedEdges(ArberCanvas canvas, PlotContext context, ArberColor baseColor, int n, EdgeCache cache) {
+        int[] ea = cache.edgeA();
+        int[] eb = cache.edgeB();
         int ec = Math.min(ea.length, eb.length);
         for (int ei = 0; ei < ec; ei++) {
             int a = ea[ei];
@@ -287,13 +288,13 @@ public final class DelaunayRenderer extends BaseRenderer {
         return this;
     }
 
-    private void getComputedDelaunayBackground(final double[] sxsBuf, final double[] sysBuf, final int[] originalIdxBuf, final int siFinal, final long stamp, final int keyFinal, final int k) {
+    private void getComputedDelaunayBackground(final double[] sxsBuf, final double[] sysBuf, final int[] originalIdxBuf, final int siFinal, final long stamp, final long keyFinal, final int k) {
         try {
             final double[] sxs = Arrays.copyOf(sxsBuf, siFinal);
             final double[] sys = Arrays.copyOf(sysBuf, siFinal);
             final int[] originalIdx = Arrays.copyOf(originalIdxBuf, siFinal);
 
-            KDTree tree = buildKDTree(sxs, sys);
+            KDTree tree = buildKDTree(sxs, sys, siFinal);
 
             int maxEdges = Math.max(1, siFinal * k);
             int[] ea = new int[maxEdges];
@@ -318,9 +319,7 @@ public final class DelaunayRenderer extends BaseRenderer {
             }
 
             if (stamp == computeStamp.get()) {
-                cachedEdgeA = ea;
-                cachedEdgeB = eb;
-                cachedKey = keyFinal;
+                cachedEdges = new EdgeCache(keyFinal, ea, eb);
             }
         } catch (Throwable ex) {
             // ignore
@@ -329,8 +328,8 @@ public final class DelaunayRenderer extends BaseRenderer {
         }
     }
 
-    private static KDTree buildKDTree(double[] xs, double[] ys) {
-        return new KDTree(xs, ys);
+    private static KDTree buildKDTree(double[] xs, double[] ys, int count) {
+        return new KDTree(xs, ys, count);
     }
 
     private static final class KDTree {
@@ -339,8 +338,8 @@ public final class DelaunayRenderer extends BaseRenderer {
         private final double[] xs, ys;
         private final Node root;
 
-        KDTree(double[] xs, double[] ys) {
-            this.n = xs.length;
+        KDTree(double[] xs, double[] ys, int count) {
+            this.n = count;
             this.xs = xs;
             this.ys = ys;
             this.idx = new int[n];

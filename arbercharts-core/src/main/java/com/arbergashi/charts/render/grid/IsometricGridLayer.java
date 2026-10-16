@@ -6,12 +6,9 @@ import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
-import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
-import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 import com.arbergashi.charts.util.ColorRegistry;
-
 
 /**
  * Isometric grid layer.
@@ -55,40 +52,14 @@ public final class IsometricGridLayer extends DefaultGridLayer {
         float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
                 ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
         double spacing = ChartAssets.getFloat(KEY_SPACING, 40.0f);
+        if (!Double.isFinite(spacing) || spacing <= 0) spacing = 40.0;
+        spacing = Math.max(1.0, spacing);
         int majorEvery = Math.max(2, ChartAssets.getInt(KEY_MAJOR_EVERY, 5));
 
         ArberColor minorColor = ColorRegistry.applyAlpha(gridBase, minorAlpha);
         ArberColor majorColor = ColorRegistry.applyAlpha(gridBase, majorAlpha);
 
         renderIsometricLines(canvas, bounds, spacing, majorEvery, minorColor, majorColor, minorStroke, majorStroke);
-    }
-
-    @Override
-    public void renderGridBatch(SpatialPathBatchBuilder builder, PlotContext context, GridBatchConfig config) {
-        if (builder == null || context == null) return;
-        GridBatchConfig effective = (config != null) ? config : getGridBatchConfig();
-        builder.setZMin(effective.getZMin())
-                .setClippingMode(effective.getClippingMode());
-
-        ArberRect bounds = context.getPlotBounds();
-        double spacing = ChartAssets.getFloat(KEY_SPACING, 40.0f);
-        int majorEvery = Math.max(2, ChartAssets.getInt(KEY_MAJOR_EVERY, 5));
-
-        ChartTheme theme = context.getTheme() != null ? context.getTheme() : ChartThemes.getDarkTheme();
-        ArberColor gridBase = theme.getGridColor();
-        float minorAlpha = ChartAssets.getUIFloat(KEY_MINOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.minorAlpha", 0.08f));
-        float majorAlpha = ChartAssets.getUIFloat(KEY_MAJOR_ALPHA,
-                ChartAssets.getFloat("Chart.defaultGrid.majorAlpha", Math.min(0.25f, minorAlpha + 0.12f)));
-        float minorStroke = ChartAssets.getUIFloat(KEY_MINOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.minorStrokeWidth", 0.6f));
-        float majorStroke = ChartAssets.getUIFloat(KEY_MAJOR_STROKE,
-                ChartAssets.getFloat("Chart.defaultGrid.majorStrokeWidth", 0.8f));
-
-        ArberColor minorColor = ColorRegistry.applyAlpha(gridBase, minorAlpha);
-        ArberColor majorColor = ColorRegistry.applyAlpha(gridBase, majorAlpha);
-
-        renderIsometricLines(builder, bounds, spacing, majorEvery, minorColor, majorColor, minorStroke, majorStroke);
     }
 
     private void renderIsometricLines(ArberCanvas canvas, ArberRect bounds, double spacing, int majorEvery,
@@ -100,8 +71,8 @@ public final class IsometricGridLayer extends DefaultGridLayer {
 
         double width = bounds.width();
         double height = bounds.height();
-        int vCount = Math.max(2, (int) Math.ceil(width / spacing));
-        int dCount = Math.max(2, (int) Math.ceil((width + height) / spacing));
+        int vCount = Math.clamp((int) Math.floor(width / spacing), 0, 10000);
+        int dCount = Math.clamp((int) Math.ceil((width + height) / spacing), 2, 10000);
 
         // Vertical lines
         for (int i = 0; i <= vCount; i++) {
@@ -122,50 +93,6 @@ public final class IsometricGridLayer extends DefaultGridLayer {
         for (int i = -dCount; i <= dCount; i++) {
             double b = minY + ISO_SLOPE * minX + i * spacing;
             drawClippedLine(canvas, minX, minY, maxX, maxY, -ISO_SLOPE, b, i, majorEvery, minorColor, majorColor, minorStroke, majorStroke);
-        }
-    }
-
-    private void renderIsometricLines(SpatialPathBatchBuilder builder, ArberRect bounds, double spacing, int majorEvery,
-                                      ArberColor minorColor, ArberColor majorColor, float minorStroke, float majorStroke) {
-        double minX = bounds.minX();
-        double maxX = bounds.maxX();
-        double minY = bounds.minY();
-        double maxY = bounds.maxY();
-
-        double width = bounds.width();
-        double height = bounds.height();
-        int vCount = Math.max(2, (int) Math.ceil(width / spacing));
-        int dCount = Math.max(2, (int) Math.ceil((width + height) / spacing));
-
-        for (int i = 0; i <= vCount; i++) {
-            double x = minX + i * spacing;
-            boolean isMajor = (i % majorEvery == 0);
-            ArberColor color = isMajor ? majorColor : minorColor;
-            float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-            builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-            builder.setLineSegment(x, minY, 1.0, x, maxY, 1.0);
-        }
-
-        for (int i = -dCount; i <= dCount; i++) {
-            double b = minY - ISO_SLOPE * minX + i * spacing;
-            if (clipLine(minX, minY, maxX, maxY, ISO_SLOPE, b, clipBuf)) {
-                boolean isMajor = (Math.abs(i) % majorEvery == 0);
-                ArberColor color = isMajor ? majorColor : minorColor;
-                float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-                builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-                builder.setLineSegment(clipBuf[0], clipBuf[1], 1.0, clipBuf[2], clipBuf[3], 1.0);
-            }
-        }
-
-        for (int i = -dCount; i <= dCount; i++) {
-            double b = minY + ISO_SLOPE * minX + i * spacing;
-            if (clipLine(minX, minY, maxX, maxY, -ISO_SLOPE, b, clipBuf)) {
-                boolean isMajor = (Math.abs(i) % majorEvery == 0);
-                ArberColor color = isMajor ? majorColor : minorColor;
-                float strokeWidth = ChartScale.scale(isMajor ? majorStroke : minorStroke);
-                builder.setStyleKey(SpatialStyleDescriptor.pack(color.argb(), strokeWidth, 0, 0));
-                builder.setLineSegment(clipBuf[0], clipBuf[1], 1.0, clipBuf[2], clipBuf[3], 1.0);
-            }
         }
     }
 
@@ -213,9 +140,18 @@ public final class IsometricGridLayer extends DefaultGridLayer {
         if (count < 4) return false;
         out[0] = clipPts[0];
         out[1] = clipPts[1];
-        out[2] = clipPts[2];
-        out[3] = clipPts[3];
-        return true;
+        double farthest = -1.0;
+        for (int i = 2; i < count; i += 2) {
+            double dx = clipPts[i] - out[0];
+            double dy = clipPts[i + 1] - out[1];
+            double distance = dx * dx + dy * dy;
+            if (distance > farthest) {
+                farthest = distance;
+                out[2] = clipPts[i];
+                out[3] = clipPts[i + 1];
+            }
+        }
+        return farthest > 0.0;
     }
 
     private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {

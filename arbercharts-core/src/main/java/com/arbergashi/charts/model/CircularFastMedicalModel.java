@@ -117,6 +117,15 @@ public class CircularFastMedicalModel extends FastMedicalModel {
         return capacity;
     }
 
+    /**
+     * Returns the number of simultaneous Y channels stored for each sample.
+     *
+     * @return channel count supplied when the model was created
+     */
+    public int getChannelCount() {
+        return channels;
+    }
+
     public int getSweepIndex() {
         return sweepIndex;
     }

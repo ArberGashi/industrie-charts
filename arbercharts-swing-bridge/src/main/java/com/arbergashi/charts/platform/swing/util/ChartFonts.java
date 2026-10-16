@@ -177,7 +177,7 @@ public final class ChartFonts {
     }
 
     /**
-     * Resets the cached font. Call this if the L&F changes.
+     * Resets the cached font. Call this if the look and feel changes.
      */
     public static void resetCache() {
         synchronized (ChartFonts.class) {

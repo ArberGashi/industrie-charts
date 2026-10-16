@@ -13,8 +13,8 @@ import java.util.List;
 /**
  * Point &amp; Figure advanced renderer.
  *
- * <p>Simplified variant intended for demos. Uses a fixed box size and reversal setting to build
- * a classic Point &amp; Figure column chart.</p>
+ * <p>Simplified variant intended for demos. Derives the box size from one fiftieth
+ * of the visible Y range and starts a new column after a three-box reversal.</p>
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -22,6 +22,7 @@ import java.util.List;
  *
  */
 public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
+    private static final int REVERSAL_BOXES = 3;
 
     static {
         RendererRegistry.register("point_and_figure_advanced", new RendererDescriptor("point_and_figure_advanced", "renderer.point_and_figure_advanced", "/icons/point_and_figure.svg"), PointAndFigureAdvancedRenderer::new);
@@ -50,7 +51,14 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
 
         for (int idx = 0; idx < count; idx++) {
             double price = model.getY(idx);
-            if (direction >= 0 && price >= currentColBase + box) {
+            if (!Double.isFinite(price)) continue;
+            if (!Double.isFinite(currentColBase)) {
+                currentColBase = price;
+                continue;
+            }
+            double risingThreshold = box * (direction < 0 ? REVERSAL_BOXES : 1);
+            double fallingThreshold = box * (direction > 0 ? REVERSAL_BOXES : 1);
+            if (price >= currentColBase + risingThreshold) {
                 int boxes = (int) ((price - currentColBase) / box);
                 for (int i = 0; i < boxes; i++) {
                     directions.add(1);
@@ -58,7 +66,7 @@ public final class PointAndFigureAdvancedRenderer extends BaseRenderer {
                 }
                 currentColBase += boxes * box;
                 direction = 1;
-            } else if (direction <= 0 && price <= currentColBase - box) {
+            } else if (price <= currentColBase - fallingThreshold) {
                 int boxes = (int) ((currentColBase - price) / box);
                 for (int i = 0; i < boxes; i++) {
                     directions.add(-1);

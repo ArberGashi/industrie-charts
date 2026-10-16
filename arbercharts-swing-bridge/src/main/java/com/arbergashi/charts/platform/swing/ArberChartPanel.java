@@ -4,6 +4,9 @@ import com.arbergashi.charts.api.AnomalyEvent;
 import com.arbergashi.charts.api.AnomalyListener;
 import com.arbergashi.charts.api.AnimationProfile;
 import com.arbergashi.charts.api.AxisConfig;
+import com.arbergashi.charts.api.ChartFocus;
+import com.arbergashi.charts.domain.render.AxisRole;
+import com.arbergashi.charts.render.legend.LayerLegendContext;
 import com.arbergashi.charts.api.AxisGapModel;
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.ChartThemes;
@@ -52,10 +55,31 @@ import com.arbergashi.charts.platform.export.ChartExportService;
 import com.arbergashi.charts.platform.ui.HighPrecisionCrosshair;
 import com.arbergashi.charts.platform.ui.TooltipOverlay;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import java.awt.AlphaComposite;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Composite;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
@@ -67,10 +91,11 @@ import java.util.Optional;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 /**
- * <h1>ArberChartPanel</h1>
+ * <h2>ArberChartPanel</h2>
  * <p>
  * High-performance Swing panel for rendering charts with multiple layers.
  * This panel is the primary UI component of the framework.
@@ -97,11 +122,13 @@ public class ArberChartPanel extends JPanel {
      * Internal container for a renderable layer.
      */
     private static class RenderLayer {
+        final String id;
         final ChartModel model;
         final ChartRenderer renderer;
         final ChartModelListener listener;
 
-        RenderLayer(ChartModel model, ChartRenderer renderer, ChartModelListener listener) {
+        RenderLayer(String id, ChartModel model, ChartRenderer renderer, ChartModelListener listener) {
+            this.id = id;
             this.model = model;
             this.renderer = renderer;
             this.listener = listener;
@@ -124,8 +151,15 @@ public class ArberChartPanel extends JPanel {
     // Caching for Zero-Allocation Axis Rendering
     private final NiceScale cachedScaleX = new NiceScale(0, 1);
     private final NiceScale cachedScaleY = new NiceScale(0, 1);
+    private final NiceScale cachedScaleSecondaryY = new NiceScale(0, 1);
+    private final NiceScale measurementScale = new NiceScale(0, 1);
+    private final double[] secondaryRangeBuffer = new double[2];
     private final double[] axisMapBuffer = new double[2];
     private transient PlotContext contextCache;
+    private transient PlotContext secondaryContextCache;
+    private int contextWidth = -1;
+    private int contextHeight = -1;
+    private double logicalPixelsPerMm = PhysicalScaleResolver.logicalPixelsPerMillimeter(null);
     private transient boolean cacheDirty = true;
     private transient long lastModelStamp = -1;
     private final SpatialPathBatchBuilder spatialPathBatchBuilder = new SpatialPathBatchBuilder();
@@ -140,7 +174,7 @@ public class ArberChartPanel extends JPanel {
     // add:
     private InteractiveLegendOverlay interactiveLegendOverlay;
     private DockedLegendPanel dockedLegendPanel;
-    private LegendConfig legendConfig = LegendConfig.DEFAULT;
+    private LegendConfig legendConfig = LegendConfig.overlay(LegendPosition.TOP_LEFT);
     private JComponent overlayCanvas;
     private final LayerVisibilityModel layerVisibility = new LayerVisibilityModel();
     private ChartExportHandler exportHandler;
@@ -158,7 +192,8 @@ public class ArberChartPanel extends JPanel {
     private boolean externalRenderSurface = false;
     private boolean crosshairEnabled = true;
     private boolean legendVisible = true;
-    private boolean animationsEnabled = true;
+    private boolean animationsEnabled = !Boolean.getBoolean("arbercharts.reduceMotion");
+    private boolean modelListenersAttached = true;
     private Locale locale = Locale.getDefault();
     private AxisConfig xAxisConfig = new AxisConfig();
     private AxisConfig yAxisConfig = new AxisConfig();
@@ -174,7 +209,10 @@ public class ArberChartPanel extends JPanel {
     private volatile double physicalPixelsPerMm = Double.NaN;
     private boolean frozen;
     private double freezeScrub;
-    private final JLabel freezeMeasurementLabel = new JLabel();
+    private final JLabel freezeMeasurementLabel = new JLabel() {
+        @Override
+        public boolean contains(int x, int y) { return false; }
+    };
     private boolean freezeMeasureArmed;
     private double freezeMeasureStartX;
     private final double[] freezeMeasureScratch = new double[2];
@@ -182,9 +220,10 @@ public class ArberChartPanel extends JPanel {
     private com.arbergashi.charts.api.forensic.StreamPlaybackDrive streamPlaybackDrive;
 
     // --- Animation State ---
-    private Timer zoomAnimationTimer;
-    private long zoomAnimationStart = -1L;
-    private static final long ZOOM_ANIMATION_DURATION_MS = 250L;
+    private final Timer zoomAnimationTimer;
+    private final LongSupplier animationClock;
+    private long zoomAnimationStart;
+    private static final long ZOOM_ANIMATION_DURATION_NANOS = 180_000_000L;
     private double animFromMinX, animFromMaxX, animToMinX, animToMaxX;
 
     /**
@@ -199,12 +238,31 @@ public class ArberChartPanel extends JPanel {
      * @param initialRenderer The renderer responsible for visualizing the data.
      */
     public ArberChartPanel(ChartModel initialModel, ChartRenderer initialRenderer) {
+        this(initialModel, initialRenderer, System::nanoTime);
+    }
+
+    ArberChartPanel(ChartModel initialModel, ChartRenderer initialRenderer, LongSupplier animationClock) {
+        this.animationClock = animationClock;
+        zoomAnimationTimer = new Timer(16, _ -> advanceZoomAnimation(animationClock.getAsLong()));
+        zoomAnimationTimer.setCoalesce(true);
+        addHierarchyListener(event -> {
+            if ((event.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && !isShowing()) {
+                stopZoomAnimation(true);
+                if (crosshair != null) crosshair.hideCrosshair();
+            }
+        });
         // Use absolute layout for precise overlay positioning
         setLayout(new BorderLayout());
         setOpaque(false);
 
         // Create a dedicated canvas for the chart + overlays.
-        overlayCanvas = new JPanel(null);
+        overlayCanvas = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                super.paintComponent(graphics);
+                if (!externalRenderSurface) renderChart((Graphics2D) graphics.create());
+            }
+        };
         overlayCanvas.setOpaque(false);
         add(overlayCanvas, BorderLayout.CENTER);
 
@@ -254,14 +312,15 @@ public class ArberChartPanel extends JPanel {
         // Set layer index for color differentiation in multi-layer charts
         if (renderer instanceof BaseRenderer) {
             ((BaseRenderer) renderer).setLayerIndex(layers.size());
+            ((BaseRenderer) renderer).setTheme(theme);
         }
 
         ChartModelListener listener = () -> {
             cacheDirty = true;
             repaint();
         };
-        model.setChangeListener(listener);
-        layers.add(new RenderLayer(model, renderer, listener));
+        if (modelListenersAttached) model.setChangeListener(listener);
+        layers.add(new RenderLayer(nextLayerId(renderer), model, renderer, listener));
 
         // Auto-scale if it's the first layer or view is not set
         if (Double.isNaN(viewMinX)) {
@@ -287,8 +346,8 @@ public class ArberChartPanel extends JPanel {
             cacheDirty = true;
             repaint();
         };
-        model.setChangeListener(listener);
-        preDataLayers.add(new RenderLayer(model, renderer, listener));
+        if (modelListenersAttached) model.setChangeListener(listener);
+        preDataLayers.add(new RenderLayer(nextLayerId(renderer), model, renderer, listener));
     }
 
     /**
@@ -310,6 +369,8 @@ public class ArberChartPanel extends JPanel {
      */
     public ArberChartPanel setCoordinateTransformer(com.arbergashi.charts.api.CoordinateTransformer transformer) {
         this.coordinateTransformer = transformer;
+        cacheDirty = true;
+        repaint();
         return this;
     }
 
@@ -331,7 +392,8 @@ public class ArberChartPanel extends JPanel {
     }
 
     /**
-     * Returns the most recent physical pixels-per-millimeter measurement.
+     * Returns the most recent device-pixel density measurement.
+     * Plot coordinates use the logical density returned by {@link PlotContext#getPixelsPerMillimeter()}.
      */
     public double getPhysicalPixelsPerMillimeter() {
         return physicalPixelsPerMm;
@@ -358,10 +420,14 @@ public class ArberChartPanel extends JPanel {
      * <p>Listeners are removed and the panel is repainted.</p>
      */
     public void clearLayers() {
-        for (RenderLayer layer : layers) {
-            layer.model.removeChangeListener(layer.listener);
+        stopZoomAnimation(false);
+        if (modelListenersAttached) {
+            for (RenderLayer layer : layers) layer.model.removeChangeListener(layer.listener);
+            for (RenderLayer layer : preDataLayers) layer.model.removeChangeListener(layer.listener);
         }
         layers.clear();
+        preDataLayers.clear();
+        layerVisibility.clear();
         cacheDirty = true;
         repaint();
     }
@@ -382,6 +448,28 @@ public class ArberChartPanel extends JPanel {
         return this;
     }
 
+    private String nextLayerId(ChartRenderer renderer) {
+        String base = renderer instanceof BaseRenderer br ? br.getId() : renderer.getClass().getSimpleName();
+        String id = base;
+        int suffix = 2;
+        while (hasLayerId(id)) id = base + "#" + suffix++;
+        return id;
+    }
+
+    private boolean hasLayerId(String id) {
+        for (RenderLayer layer : layers) if (layer.id.equals(id)) return true;
+        for (RenderLayer layer : preDataLayers) if (layer.id.equals(id)) return true;
+        return false;
+    }
+
+    private void layoutMeasurementLabel() {
+        if (overlayCanvas == null || freezeMeasurementLabel == null) return;
+        Dimension size = freezeMeasurementLabel.getPreferredSize();
+        int width = Math.min(Math.max(0, overlayCanvas.getWidth() - 16), size.width + 12);
+        freezeMeasurementLabel.setBounds(Math.max(0, overlayCanvas.getWidth() - width - 8),
+                6, width, size.height + 6);
+    }
+
     // --- Initialization ---
 
     private void initializeOverlays() {
@@ -394,13 +482,32 @@ public class ArberChartPanel extends JPanel {
 
         // 2. Crosshair
         crosshair = new HighPrecisionCrosshair();
+        crosshair.setAnimationsEnabled(animationsEnabled);
         crosshair.setVisible(true);
         crosshair.setEnabled(true);
         overlayCanvas.add(crosshair);
 
         // 3. Legend (overlay by default; can be docked)
         // Provide a minimal data view so legend components can query model/renderers.
-        legendContext = new LegendChartContext() {
+        legendContext = new LayerLegendContext() {
+            @Override
+            public List<Entry> getEntries() {
+                java.util.List<Entry> entries = new java.util.ArrayList<>();
+                for (RenderLayer layer : layers) {
+                    if (layer.renderer instanceof BaseRenderer renderer) {
+                        String name = layer.model.getName();
+                        if (name == null || name.isBlank()) name = renderer.getName();
+                        entries.add(new Entry(layer.id, name, layer.model, renderer));
+                    }
+                }
+                return entries;
+            }
+
+            @Override
+            public PlotContext getContext(Entry entry) {
+                return getLayerContext(entry.renderer());
+            }
+
             @Override
             public ChartModel getModel() {
                 return layers.isEmpty() ? null : layers.getFirst().model;
@@ -421,16 +528,43 @@ public class ArberChartPanel extends JPanel {
         // Replace legacy legend overlay with the interactive legend.
         interactiveLegendOverlay = new InteractiveLegendOverlay(legendContext, theme);
         interactiveLegendOverlay.setVisibilityResolver(layerVisibility::isVisible);
+        interactiveLegendOverlay.setLegendActionListener(createLegendActions());
         interactiveLegendOverlay.setVisible(legendVisible);
         overlayCanvas.add(interactiveLegendOverlay);
 
         // Z-order: tooltip on top
         overlayCanvas.setComponentZOrder(tooltipOverlay, 0);
-        overlayCanvas.setComponentZOrder(crosshair, 1);
-        overlayCanvas.setComponentZOrder(interactiveLegendOverlay, 2);
+        overlayCanvas.setComponentZOrder(interactiveLegendOverlay, 1);
+        overlayCanvas.setComponentZOrder(crosshair, 2);
+        freezeMeasurementLabel.setVisible(false);
+        freezeMeasurementLabel.setOpaque(true);
+        overlayCanvas.add(freezeMeasurementLabel);
+        overlayCanvas.setComponentZOrder(freezeMeasurementLabel, 0);
 
         applyThemeToOverlays();
         applyLegendPlacement();
+    }
+
+    private LegendActionListener createLegendActions() {
+        return new LegendActionListener() {
+            @Override
+            public void toggleSeries(String seriesId) {
+                layerVisibility.toggle(seriesId);
+                repaint();
+            }
+
+            @Override
+            public void openSeriesSettings(String seriesId) {
+                // Consumers can attach their own UI.
+            }
+
+            @Override
+            public void soloSeries(String seriesId) {
+                if (isSoloSeries(seriesId)) showAllSeries();
+                else soloSeriesInternal(seriesId);
+                repaint();
+            }
+        };
     }
 
     private void applyLegendPlacement() {
@@ -447,41 +581,7 @@ public class ArberChartPanel extends JPanel {
             if (dockedLegendPanel == null) {
                 dockedLegendPanel = new DockedLegendPanel(legendContext, theme);
                 dockedLegendPanel.setVisibilityResolver(layerVisibility::isVisible);
-                dockedLegendPanel.setLegendActionListener(new LegendActionListener() {
-                    @Override
-                    public void toggleSeries(String seriesId) {
-                        layerVisibility.toggle(seriesId);
-                        repaint();
-                        if (interactiveLegendOverlay != null) {
-                            interactiveLegendOverlay.repaint();
-                        }
-                        if (dockedLegendPanel != null) {
-                            dockedLegendPanel.repaint();
-                        }
-                    }
-
-                    @Override
-                    public void openSeriesSettings(String seriesId) {
-                        // Consumers can attach their own UI.
-                    }
-
-                    @Override
-                    public void soloSeries(String seriesId) {
-                        boolean currentlySolo = isSoloSeries(seriesId);
-                        if (currentlySolo) {
-                            showAllSeries();
-                        } else {
-                            soloSeriesInternal(seriesId);
-                        }
-                        repaint();
-                        if (interactiveLegendOverlay != null) {
-                            interactiveLegendOverlay.repaint();
-                        }
-                        if (dockedLegendPanel != null) {
-                            dockedLegendPanel.repaint();
-                        }
-                    }
-                });
+                dockedLegendPanel.setLegendActionListener(createLegendActions());
             }
             dockedLegendPanel.setVisible(true);
 
@@ -507,7 +607,7 @@ public class ArberChartPanel extends JPanel {
             }
             // Configure overlay position via ChartAssets as the current overlay uses that property.
             // Keep it consistent with the config.
-            com.arbergashi.charts.util.ChartAssets.setProperty("Chart.legend.position", legendConfig.getOverlayPosition().getName());
+            interactiveLegendOverlay.setPosition(legendConfig.getOverlayPosition());
         }
     }
 
@@ -539,13 +639,16 @@ public class ArberChartPanel extends JPanel {
         }
         if (interactiveLegendOverlay != null) {
             interactiveLegendOverlay.setTheme(theme);
-            interactiveLegendOverlay.setVisible(legendVisible);
+            interactiveLegendOverlay.setVisible(legendVisible && legendConfig.getPlacement() == LegendPlacement.OVERLAY);
         }
         if (dockedLegendPanel != null) {
             dockedLegendPanel.setTheme(theme);
             dockedLegendPanel.setVisible(legendVisible && legendConfig.getPlacement() == LegendPlacement.DOCKED);
         }
-        // legacy
+        if (freezeMeasurementLabel != null && theme != null) {
+            freezeMeasurementLabel.setForeground(toAwt(theme.getForeground()));
+            freezeMeasurementLabel.setBackground(toAwt(theme.getBackground()));
+        }
     }
 
     @Override
@@ -588,13 +691,16 @@ public class ArberChartPanel extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
+                if (e.getComponent() == interactiveLegendOverlay) return;
                 if (e.isPopupTrigger()) {
                     showContextMenu(e);
                     return;
                 }
                 if (SwingUtilities.isLeftMouseButton(e)) {
+                    advanceZoomAnimation(animationClock.getAsLong());
+                    stopZoomAnimation(false);
                     handleFreezeMeasurementClick(e);
-                    lastDragPoint = e.getPoint();
+                    lastDragPoint = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), overlayCanvas);
                     
                     // Handle special clicks for renderers
                     for (RenderLayer layer : layers) {
@@ -620,14 +726,15 @@ public class ArberChartPanel extends JPanel {
             public void mouseDragged(MouseEvent e) {
                 if (lastDragPoint == null || !SwingUtilities.isLeftMouseButton(e)) return;
 
-                double dx = e.getX() - lastDragPoint.getX();
+                Point point = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), overlayCanvas);
+                double dx = point.getX() - lastDragPoint.getX();
                 double width = plotBoundsCache.getWidth();
 
                 if (width > 0) {
                     PlotContext ctx = getOrBuildContext();
                     double rangeX = ctx.getMaxX() - ctx.getMinX();
                     // Sensitivity factor 1.0 = 1:1 movement
-                    double shift = -(dx / width) * rangeX;
+                    double shift = (ctx.isInvertedX() ? dx : -dx) / width * rangeX;
 
                     if (Double.isNaN(viewMinX)) {
                         viewMinX = ctx.getMinX();
@@ -639,41 +746,40 @@ public class ArberChartPanel extends JPanel {
                     cacheDirty = true;
                     repaint();
                 }
-                lastDragPoint = e.getPoint();
+                lastDragPoint = point;
             }
 
             @Override
             public void mouseWheelMoved(MouseWheelEvent e) {
+                if (e.getComponent() == interactiveLegendOverlay) return;
+                double rotation = e.getPreciseWheelRotation();
+                if (!Double.isFinite(rotation) || rotation == 0.0) return;
+                long now = animationClock.getAsLong();
+                advanceZoomAnimation(now);
                 PlotContext ctx = getOrBuildContext();
-                double zoomFactor = 1.1;
-                double currentRange = ctx.getMaxX() - ctx.getMinX();
-                
-                // Zoom towards mouse pointer
-                double mouseX = e.getX();
-                double plotX = ctx.getPlotBounds().getX();
-                double plotW = ctx.getPlotBounds().getWidth();
-                
-                // Relative position (0.0 to 1.0)
-                double relX = (mouseX - plotX) / plotW;
-                relX = Math.max(0, Math.min(1, relX)); // Clamp
+                double plotWidth = ctx.getPlotBounds().getWidth();
+                if (plotWidth <= 0) return;
 
-                double focusPoint = ctx.getMinX() + currentRange * relX;
+                Point point = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), overlayCanvas);
+                double relativeX = Math.clamp((point.getX() - ctx.getPlotBounds().getX()) / plotWidth, 0.0, 1.0);
+                if (ctx.isInvertedX()) relativeX = 1.0 - relativeX;
 
-                double newRange;
-                if (e.getWheelRotation() < 0) { // Zoom In
-                    newRange = currentRange / zoomFactor;
-                } else { // Zoom Out
-                    newRange = currentRange * zoomFactor;
-                }
+                // Accumulate every wheel impulse against the pending destination, including
+                // fractional trackpad deltas. Coordinates stay in the viewport's base domain.
+                double baseMin = zoomAnimationTimer.isRunning() ? animToMinX : ctx.getMinX();
+                double baseMax = zoomAnimationTimer.isRunning() ? animToMaxX : ctx.getMaxX();
+                double baseRange = baseMax - baseMin;
+                double newRange = baseRange * Math.pow(1.1, rotation);
+                double focus = Math.fma(ctx.getMaxX() - ctx.getMinX(), relativeX, ctx.getMinX());
+                double targetMinX = focus - newRange * relativeX;
+                double targetMaxX = focus + newRange * (1.0 - relativeX);
+                if (!Double.isFinite(targetMinX) || !Double.isFinite(targetMaxX)
+                        || !(targetMaxX > targetMinX)) return;
 
-                // Calculate new min/max keeping focusPoint stable
-                double targetMinX = focusPoint - newRange * relX;
-                double targetMaxX = focusPoint + newRange * (1 - relX);
-
-                // Use animation if enabled, otherwise immediate
-                if (animationsEnabled) {
-                    startZoomAnimation(targetMinX, targetMaxX);
+                if (animationsEnabled && isShowing()) {
+                    startZoomAnimation(targetMinX, targetMaxX, now);
                 } else {
+                    stopZoomAnimation(false);
                     viewMinX = targetMinX;
                     viewMaxX = targetMaxX;
                     cacheDirty = true;
@@ -697,6 +803,7 @@ public class ArberChartPanel extends JPanel {
 
                 hideTooltip();
                 if (crosshair != null) crosshair.hideCrosshair();
+                updateLegendFocus(ChartFocus.EMPTY);
             }
         };
 
@@ -742,7 +849,9 @@ public class ArberChartPanel extends JPanel {
         PlotContext ctx = getOrBuildContext();
         if (ctx == null) return;
 
-        ctx.mapToData(e.getX(), e.getY(), freezeMeasureScratch);
+        Point point = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), overlayCanvas);
+        if (!ctx.getPlotBounds().contains(new ArberPoint(point.x, point.y))) return;
+        ctx.mapToData(point.x, point.y, freezeMeasureScratch);
         double dataX = freezeMeasureScratch[0];
 
         if (!freezeMeasureArmed) {
@@ -762,51 +871,52 @@ public class ArberChartPanel extends JPanel {
                 || ChartAssets.getBoolean("Chart.medical.bpm.alarmEnabled", false);
         boolean alarm = alarmEnabled && (bpm < low || bpm > high);
 
-        String text = String.format("BPM: %.1f%s", bpm, alarm ? " !" : "");
+        String text = String.format(getLocale(), "BPM: %.1f%s", bpm, alarm ? " !" : "");
         freezeMeasurementLabel.setText(text);
         freezeMeasurementLabel.setVisible(true);
+        layoutMeasurementLabel();
         repaint();
     }
 
     // --- Animation Support ---
 
-    /**
-     * Starts a smooth zoom animation from current view to target bounds.
-     */
-    private void startZoomAnimation(double targetMinX, double targetMaxX) {
-        // Stop any existing animation
-        if (zoomAnimationTimer != null && zoomAnimationTimer.isRunning()) {
-            zoomAnimationTimer.stop();
-        }
-
-        // Setup animation
-        PlotContext ctx = getOrBuildContext();
-        animFromMinX = Double.isNaN(viewMinX) ? ctx.getMinX() : viewMinX;
-        animFromMaxX = Double.isNaN(viewMaxX) ? ctx.getMaxX() : viewMaxX;
+    private void startZoomAnimation(double targetMinX, double targetMaxX, long now) {
+        PlotContext context = getOrBuildContext();
+        animFromMinX = context.getMinX();
+        animFromMaxX = context.getMaxX();
         animToMinX = targetMinX;
         animToMaxX = targetMaxX;
-        zoomAnimationStart = AnimationUtils.nowNanos();
+        zoomAnimationStart = now;
+        // Reuse one coalescing timer; retargeting never queues another animation.
+        if (!zoomAnimationTimer.isRunning()) zoomAnimationTimer.start();
+    }
 
-        // Create animation timer (60 FPS)
-        zoomAnimationTimer = new Timer(16, _ -> {
-            double progress = AnimationUtils.getEasedProgressNanos(
-                zoomAnimationStart, ZOOM_ANIMATION_DURATION_MS);
+    void advanceZoomAnimation(long now) {
+        if (!zoomAnimationTimer.isRunning()) return;
+        double progress = Math.clamp((now - zoomAnimationStart) / (double) ZOOM_ANIMATION_DURATION_NANOS, 0.0, 1.0);
+        // Ease out starts responding immediately even during a stream of wheel events.
+        double remaining = 1.0 - progress;
+        double eased = 1.0 - remaining * remaining * remaining;
+        viewMinX = AnimationUtils.lerp(animFromMinX, animToMinX, eased);
+        viewMaxX = AnimationUtils.lerp(animFromMaxX, animToMaxX, eased);
+        if (progress >= 1.0) {
+            zoomAnimationTimer.stop();
+            viewMinX = animToMinX;
+            viewMaxX = animToMaxX;
+        }
+        cacheDirty = true;
+        repaint();
+    }
 
-            if (progress >= 1.0) {
-                // Animation complete
-                zoomAnimationTimer.stop();
-                viewMinX = animToMinX;
-                viewMaxX = animToMaxX;
-            } else {
-                // Interpolate
-                viewMinX = AnimationUtils.lerp(animFromMinX, animToMinX, progress);
-                viewMaxX = AnimationUtils.lerp(animFromMaxX, animToMaxX, progress);
-            }
-
+    private void stopZoomAnimation(boolean finish) {
+        if (!zoomAnimationTimer.isRunning()) return;
+        zoomAnimationTimer.stop();
+        if (finish) {
+            viewMinX = animToMinX;
+            viewMaxX = animToMaxX;
             cacheDirty = true;
             repaint();
-        });
-        zoomAnimationTimer.start();
+        }
     }
 
     // --- Rendering Loop (The Engine) ---
@@ -822,6 +932,8 @@ public class ArberChartPanel extends JPanel {
         super.doLayout();
 
         if (overlayCanvas == null) return;
+        if (contextWidth != overlayCanvas.getWidth() || contextHeight != overlayCanvas.getHeight()) cacheDirty = true;
+        layoutMeasurementLabel();
 
         if (crosshair != null) {
             crosshair.setBounds(0, 0, overlayCanvas.getWidth(), overlayCanvas.getHeight());
@@ -838,20 +950,24 @@ public class ArberChartPanel extends JPanel {
  * @since 1.5.0
  */
     protected void paintComponent(Graphics g) {
-        if (externalRenderSurface) {
-            return;
-        }
+        if (externalRenderSurface) return;
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g.create();
-        renderChart(g2);
+        if (overlayCanvas.getWidth() <= 0 || overlayCanvas.getHeight() <= 0) doLayout();
+        if (theme != null) {
+            g.setColor(toAwt(theme.getBackground()));
+            g.fillRect(0, 0, getWidth(), getHeight());
+        }
     }
 
     /**
-     * Renders the chart content onto an external Graphics2D surface.
+     * Renders chart content onto an external surface using this panel's coordinate system.
+     * A docked legend's offset is applied to the chart canvas; child overlays are painted by Swing.
      */
     public void renderExternal(Graphics2D g2) {
         if (g2 == null) return;
-        renderChart((Graphics2D) g2.create());
+        Graphics2D copy = (Graphics2D) g2.create();
+        copy.translate(overlayCanvas.getX(), overlayCanvas.getY());
+        renderChart(copy);
     }
 
     private void renderChart(Graphics2D g2) {
@@ -876,6 +992,12 @@ public class ArberChartPanel extends JPanel {
                 SwingRenderHints.apply(renderHints, g2);
             }
             
+            physicalPixelsPerMm = PhysicalScaleResolver.pixelsPerMillimeter(g2);
+            double density = PhysicalScaleResolver.logicalPixelsPerMillimeter(g2);
+            if (density != logicalPixelsPerMm) {
+                logicalPixelsPerMm = density;
+                cacheDirty = true;
+            }
             // 2. Build Context (View Matrix)
             PlotContext ctx = getOrBuildContext();
             ArberCanvas canvas = tryCreateCanvasAdapter(g2);
@@ -884,11 +1006,9 @@ public class ArberChartPanel extends JPanel {
             ChartTheme bgTheme = ctx.getTheme() != null ? ctx.getTheme() : theme;
             if (bgTheme != null && bgTheme.getBackground() != null) {
                 g2.setColor(toAwt(bgTheme.getBackground()));
-                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.fillRect(0, 0, overlayCanvas.getWidth(), overlayCanvas.getHeight());
             }
 
-            // Update physical scale for this frame (used by calibration renderers).
-            physicalPixelsPerMm = PhysicalScaleResolver.pixelsPerMillimeter(g2);
             
             // 3. Render Grid (Background)
             boolean showGrid = (xAxisConfig == null || xAxisConfig.isShowGrid())
@@ -899,8 +1019,9 @@ public class ArberChartPanel extends JPanel {
 
             // 3.5 Render Pre-Data Layers (predictive/analysis overlays below data)
             for (RenderLayer layer : preDataLayers) {
+                PlotContext layerContext = getLayerContext(layer.renderer);
                 if (layer.renderer instanceof BaseRenderer br) {
-                    if (!layerVisibility.isVisible(br.getId())) {
+                    if (!layerVisibility.isVisible(layer.id)) {
                         continue;
                     }
                 }
@@ -909,7 +1030,7 @@ public class ArberChartPanel extends JPanel {
                         Shape oldClip = g2.getClip();
                         g2.clip(SwingAssets.toAwtRect(ctx.getPlotBounds()));
                         if (canvas != null) {
-                            layer.renderer.renderEmptyState(canvas, layer.model, ctx);
+                            layer.renderer.renderEmptyState(canvas, layer.model, layerContext);
                         }
                         g2.setClip(oldClip);
                     }
@@ -918,14 +1039,14 @@ public class ArberChartPanel extends JPanel {
                 Shape oldClip = g2.getClip();
                 Composite oldComposite = g2.getComposite();
                 g2.clip(SwingAssets.toAwtRect(ctx.getPlotBounds()));
-                if (layer.renderer instanceof BaseRenderer br && layerVisibility.isDimmed(br.getId())) {
+                if (layer.renderer instanceof BaseRenderer br && layerVisibility.isDimmed(layer.id)) {
                     g2.setComposite(getSoloComposite());
                 }
                 if (layer.renderer instanceof SpatialChunkRenderer spatialRenderer) {
-                    renderSpatialLayer(spatialRenderer, layer.model, ctx, g2, 0);
+                    renderSpatialLayer(spatialRenderer, layer.model, layerContext, g2, layers.indexOf(layer));
                 } else {
                     if (canvas != null) {
-                        layer.renderer.render(canvas, layer.model, ctx);
+                        layer.renderer.render(canvas, layer.model, layerContext);
                     }
                 }
                 g2.setComposite(oldComposite);
@@ -935,8 +1056,9 @@ public class ArberChartPanel extends JPanel {
             // 4. Render Layers (Z-Order: First added is bottom)
             // We iterate normally so first layer is drawn first, others on top.
             for (RenderLayer layer : layers) {
+                PlotContext layerContext = getLayerContext(layer.renderer);
                 if (layer.renderer instanceof BaseRenderer br) {
-                    if (!layerVisibility.isVisible(br.getId())) {
+                    if (!layerVisibility.isVisible(layer.id)) {
                         continue;
                     }
                 }
@@ -945,7 +1067,7 @@ public class ArberChartPanel extends JPanel {
                         Shape oldClip = g2.getClip();
                         g2.clip(SwingAssets.toAwtRect(ctx.getPlotBounds()));
                         if (canvas != null) {
-                            layer.renderer.renderEmptyState(canvas, layer.model, ctx);
+                            layer.renderer.renderEmptyState(canvas, layer.model, layerContext);
                         }
                         g2.setClip(oldClip);
                     }
@@ -955,14 +1077,14 @@ public class ArberChartPanel extends JPanel {
                 Shape oldClip = g2.getClip();
                 Composite oldComposite = g2.getComposite();
                 g2.clip(SwingAssets.toAwtRect(ctx.getPlotBounds()));
-                if (layer.renderer instanceof BaseRenderer br && layerVisibility.isDimmed(br.getId())) {
+                if (layer.renderer instanceof BaseRenderer br && layerVisibility.isDimmed(layer.id)) {
                     g2.setComposite(getSoloComposite());
                 }
                 if (layer.renderer instanceof SpatialChunkRenderer spatialRenderer) {
-                    renderSpatialLayer(spatialRenderer, layer.model, ctx, g2, 0);
+                    renderSpatialLayer(spatialRenderer, layer.model, layerContext, g2, layers.indexOf(layer));
                 } else {
                     if (canvas != null) {
-                        layer.renderer.render(canvas, layer.model, ctx);
+                        layer.renderer.render(canvas, layer.model, layerContext);
                     }
                 }
                 g2.setComposite(oldComposite);
@@ -1008,9 +1130,7 @@ public class ArberChartPanel extends JPanel {
         spatialBatchConsumer.flush();
     }
 
-    private void drawAxisLabels(Graphics2D g2, PlotContext ctx) {
-        ChartTheme t = ctx.getTheme() != null ? ctx.getTheme() : theme;
-
+    private Font axisFont() {
         // Use Inter font from ChartFonts for professional axis labels (ZERO-GC cached)
         com.arbergashi.charts.platform.swing.util.ChartFonts.initialize();
 
@@ -1032,42 +1152,81 @@ public class ArberChartPanel extends JPanel {
         float crosshairSize = ChartScale.font(crosshairBase * crosshairScale);
         axisSize = Math.max(axisSize, crosshairSize);
 
-        Font axisFont = com.arbergashi.charts.platform.swing.util.ChartFonts.getAxisFont(axisSize);
-        g2.setFont(axisFont);
-        g2.setColor(toAwt(t.getAxisLabelColor()));
+        return com.arbergashi.charts.platform.swing.util.ChartFonts.getAxisFont(axisSize);
+    }
 
-        // Y-Axis - Zero-GC iteration
-        AxisConfig yCfg = (yAxisConfig != null) ? yAxisConfig : new AxisConfig();
-        cachedScaleY.setRange(ctx.getMinY(), ctx.getMaxY());
-        cachedScaleY.setMaxTicks(Math.max(2, yCfg.getRequestedTickCount()));
-        TextAnchor yAnchor = yCfg.getLabelAnchorOrDefault(TextAnchor.MIDDLE_RIGHT);
+    private double measuredAxisWidth(FontMetrics metrics, AxisConfig config, double min, double max) {
+        NiceScale scale = measurementScale.setRange(min, max);
+        scale.setMaxTicks(Math.max(2, Math.min(1000, config.getRequestedTickCount())));
+        double[] ticks = scale.getTicks();
+        double width = 0;
+        for (int i = 0; i < scale.getTickCount(); i++) {
+            if (!visibleTick(ticks[i], min, max)) continue;
+            width = Math.max(width, metrics.stringWidth(config.getFormattedValue(ticks[i], getLocale(), scale.getTickSpacing())));
+        }
+        return width;
+    }
 
-        double[] yTicks = cachedScaleY.getTicks();
-        int yTickCount = cachedScaleY.getTickCount();
-        double yLabelX = ctx.getPlotBounds().getX() - ChartScale.scale(8);
+    private static boolean visibleTick(double value, double min, double max) {
+        double epsilon = Math.abs(max - min) * 1e-9;
+        return Double.isFinite(value) && value >= min - epsilon && value <= max + epsilon;
+    }
 
-        for (int i = 0; i < yTickCount; i++) {
-            double val = yTicks[i];
-            ctx.mapToPixel(ctx.getMinX(), val, axisMapBuffer);
-            String label = yCfg.getFormattedValue(val);
-            drawAnchoredString(g2, label, yLabelX, axisMapBuffer[1], yAnchor);
+    void drawAxisLabels(Graphics2D g2, PlotContext ctx) {
+        ChartTheme activeTheme = ctx.getTheme() != null ? ctx.getTheme() : theme;
+        g2.setFont(axisFont());
+        g2.setColor(toAwt(activeTheme.getAxisLabelColor()));
+        drawYAxis(g2, ctx, yAxisConfig, cachedScaleY, false);
+        if (hasSecondaryAxis()) {
+            for (RenderLayer layer : layers) {
+                if (layer.renderer instanceof BaseRenderer br && br.getYAxisRole() == AxisRole.SECONDARY) {
+                    drawYAxis(g2, getLayerContext(layer.renderer), yAxisSecondaryConfig, cachedScaleSecondaryY, true);
+                    break;
+                }
+            }
         }
 
-        // X-Axis - Zero-GC iteration
-        AxisConfig xCfg = (xAxisConfig != null) ? xAxisConfig : new AxisConfig();
         cachedScaleX.setRange(ctx.getMinX(), ctx.getMaxX());
-        cachedScaleX.setMaxTicks(Math.max(2, xCfg.getRequestedTickCount()));
-        TextAnchor xAnchor = xCfg.getLabelAnchorOrDefault(TextAnchor.TOP_CENTER);
+        cachedScaleX.setMaxTicks(ctx.getRequestedTickCountX());
+        TextAnchor anchor = xAxisConfig.getLabelAnchorOrDefault(TextAnchor.TOP_CENTER);
+        double[] ticks = cachedScaleX.getTicks();
+        double y = ctx.getPlotBounds().getY() + ctx.getPlotBounds().getHeight() + ChartScale.scale(14);
+        FontMetrics metrics = g2.getFontMetrics();
+        double previousX = Double.NaN;
+        double previousWidth = 0;
+        for (int i = 0; i < cachedScaleX.getTickCount(); i++) {
+            double value = ticks[i];
+            if (!visibleTick(value, ctx.getMinX(), ctx.getMaxX())) continue;
+            ctx.mapToPixel(value, ctx.getMinY(), axisMapBuffer);
+            if (!Double.isFinite(axisMapBuffer[0])) continue;
+            String label = xAxisConfig.getFormattedValue(value, getLocale(), cachedScaleX.getTickSpacing());
+            double width = metrics.stringWidth(label);
+            if (Double.isFinite(previousX) && Math.abs(axisMapBuffer[0] - previousX)
+                    < (previousWidth + width) * 0.5 + ChartScale.scale(6)) continue;
+            drawAnchoredString(g2, label, axisMapBuffer[0], y, anchor);
+            previousX = axisMapBuffer[0];
+            previousWidth = width;
+        }
+    }
 
-        double[] xTicks = cachedScaleX.getTicks();
-        int xTickCount = cachedScaleX.getTickCount();
-        double xLabelY = ctx.getPlotBounds().getY() + ctx.getPlotBounds().getHeight() + ChartScale.scale(14);
-
-        for (int i = 0; i < xTickCount; i++) {
-            double val = xTicks[i];
-            ctx.mapToPixel(val, ctx.getMinY(), axisMapBuffer);
-            String label = xCfg.getFormattedValue(val);
-            drawAnchoredString(g2, label, axisMapBuffer[0], xLabelY, xAnchor);
+    private void drawYAxis(Graphics2D g2, PlotContext ctx, AxisConfig config, NiceScale scale, boolean secondary) {
+        scale.setRange(ctx.getMinY(), ctx.getMaxY());
+        scale.setMaxTicks(ctx.getRequestedTickCountY());
+        TextAnchor anchor = config.getLabelAnchorOrDefault(secondary ? TextAnchor.MIDDLE_LEFT : TextAnchor.MIDDLE_RIGHT);
+        double[] ticks = scale.getTicks();
+        double x = secondary ? ctx.getPlotBounds().getMaxX() + ChartScale.scale(8)
+                : ctx.getPlotBounds().getX() - ChartScale.scale(8);
+        double previousY = Double.NaN;
+        double separation = g2.getFontMetrics().getHeight() + ChartScale.scale(2);
+        for (int i = 0; i < scale.getTickCount(); i++) {
+            double value = ticks[i];
+            if (!visibleTick(value, ctx.getMinY(), ctx.getMaxY())) continue;
+            ctx.mapToPixel(ctx.getMinX(), value, axisMapBuffer);
+            if (!Double.isFinite(axisMapBuffer[1]) || (Double.isFinite(previousY)
+                    && Math.abs(axisMapBuffer[1] - previousY) < separation)) continue;
+            String label = config.getFormattedValue(value, getLocale(), scale.getTickSpacing());
+            drawAnchoredString(g2, label, x, axisMapBuffer[1], anchor);
+            previousY = axisMapBuffer[1];
         }
     }
 
@@ -1085,7 +1244,7 @@ public class ArberChartPanel extends JPanel {
         double ty;
 
         switch (a) {
-            case TOP_CENTER, CENTER, MIDDLE_LEFT, BOTTOM_CENTER, BASELINE_CENTER -> tx = x - width / 2.0;
+            case TOP_CENTER, CENTER, BOTTOM_CENTER, BASELINE_CENTER -> tx = x - width / 2.0;
             case TOP_RIGHT, MIDDLE_RIGHT, BOTTOM_RIGHT, BASELINE_RIGHT -> tx = x - width;
             default -> tx = x;
         }
@@ -1098,6 +1257,8 @@ public class ArberChartPanel extends JPanel {
             default -> ty = y;
         }
 
+        tx = Math.max(0, Math.min(tx, overlayCanvas.getWidth() - width));
+        ty = Math.max(ascent, Math.min(ty, overlayCanvas.getHeight() - descent));
         g2.drawString(text, (float) tx, (float) ty);
     }
 
@@ -1134,7 +1295,7 @@ public class ArberChartPanel extends JPanel {
             double xVal = lastSnapLayer.model.getX(lastSnapIndex);
             double yVal = lastSnapLayer.model.getY(lastSnapIndex);
             String xLabel = formatAxisValueX(xVal);
-            String yLabel = formatAxisValueY(yVal);
+            String yLabel = formatAxisValueY(yVal, lastSnapLayer);
             text = "X: " + xLabel + "  Y: " + yLabel;
         }
 
@@ -1274,6 +1435,7 @@ public class ArberChartPanel extends JPanel {
             lastSnapLayer = null;
             lastSnapIndex = -1;
             lastSnapPoint = null;
+            updateLegendFocus(ChartFocus.EMPTY);
             return;
         }
 
@@ -1293,14 +1455,15 @@ public class ArberChartPanel extends JPanel {
         if (snapEnabled) {
             for (RenderLayer layer : layers) {
                 if (layer.renderer instanceof BaseRenderer br) {
-                    if (!layerVisibility.isVisible(br.getId())) {
+                    if (!layerVisibility.isVisible(layer.id)) {
                         continue;
                     }
                 }
 
-                Optional<Integer> idxOpt = layer.renderer.getPointAt(new ArberPoint(position.x, position.y), layer.model, context);
+                PlotContext layerContext = getLayerContext(layer.renderer);
+                Optional<Integer> idxOpt = layer.renderer.getPointAt(new ArberPoint(position.x, position.y), layer.model, layerContext);
                 if (idxOpt.isEmpty() && layer.model.getPointCount() > 0) {
-                    idxOpt = findNearestPoint(position, layer.model, context);
+                    idxOpt = findNearestPoint(position, layer.model, layerContext);
                 }
 
                 if (idxOpt.isPresent()) {
@@ -1311,7 +1474,7 @@ public class ArberChartPanel extends JPanel {
                     double xVal = layer.model.getX(idx);
                     double yVal = layer.model.getY(idx);
                     double[] pix = axisMapBuffer;
-                    context.mapToPixel(xVal, yVal, pix);
+                    layerContext.mapToPixel(xVal, yVal, pix);
                     double dx = pix[0] - position.x;
                     double dy = pix[1] - position.y;
                     double distSq = dx * dx + dy * dy;
@@ -1331,12 +1494,14 @@ public class ArberChartPanel extends JPanel {
 
         if (snapped) {
             String labelX = formatAxisValueX(bestDataX);
-            String labelY = formatAxisValueY(bestDataY);
+            String labelY = formatAxisValueY(bestDataY, bestLayer);
             crosshair.updatePosition(bestX, bestY, labelX, labelY);
             lastCrosshairPoint = new Point(bestX, bestY);
             lastSnapLayer = bestLayer;
             lastSnapIndex = bestIndex;
             lastSnapPoint = new Point(bestX, bestY);
+            updateLegendFocus(new ChartFocus(new ArberPoint(bestX, bestY), bestDataX, bestDataY,
+                    bestIndex, bestLayer.model, null, Map.of()));
             return;
         }
 
@@ -1350,6 +1515,13 @@ public class ArberChartPanel extends JPanel {
         lastSnapLayer = null;
         lastSnapIndex = -1;
         lastSnapPoint = null;
+        updateLegendFocus(new ChartFocus(new ArberPoint(position.x, position.y), axisMapBuffer[0], axisMapBuffer[1],
+                -1, null, null, Map.of()));
+    }
+
+    private void updateLegendFocus(ChartFocus focus) {
+        if (interactiveLegendOverlay != null) interactiveLegendOverlay.setFocus(focus);
+        if (dockedLegendPanel != null) dockedLegendPanel.setFocus(focus);
     }
 
     private static boolean isIndexValid(com.arbergashi.charts.model.ChartModel model, int idx) {
@@ -1383,48 +1555,107 @@ public class ArberChartPanel extends JPanel {
     // --- Context & Bounds ---
 
     private PlotContext getOrBuildContext() {
-        // Check if any model changed
+        if (overlayCanvas.getWidth() <= 0 && getWidth() > 0) doLayout();
         long combinedStamp = 0;
-        for (RenderLayer layer : layers) {
-            combinedStamp += layer.model.getUpdateStamp();
-        }
+        for (RenderLayer layer : layers) combinedStamp += layer.model.getUpdateStamp();
+        int width = overlayCanvas.getWidth();
+        int height = overlayCanvas.getHeight();
+        if (!cacheDirty && contextCache != null && combinedStamp == lastModelStamp
+                && width == contextWidth && height == contextHeight) return contextCache;
 
-        if (!cacheDirty && contextCache != null && combinedStamp == lastModelStamp) {
-            return contextCache;
-        }
-
+        if (!Double.isFinite(viewMinX) || !Double.isFinite(viewMaxX)) autoScale();
         Rectangle2D.Double plotBounds = getCalculatedPlotBounds();
-        
-        // Auto-Scale if view is invalid
-        if (Double.isNaN(viewMinX) || Double.isNaN(viewMaxX)) {
-            autoScale();
-        }
-
-        // Create Context
-        // Note: We use the first layer's model as the "primary" model for the context,
-        // but the context bounds (minX/maxX) are what matters most for rendering.
-        ChartModel primaryModel = layers.isEmpty() ? null : layers.getFirst().model;
-
         applyAxisOverridesInternal(plotBounds);
-        boolean invertX = xAxisConfig != null && xAxisConfig.isInverted();
-        boolean invertY = yAxisConfig != null && yAxisConfig.isInverted();
-        com.arbergashi.charts.core.geometry.ArberRect arberBounds = new com.arbergashi.charts.core.geometry.ArberRect(
-                plotBounds.getX(), plotBounds.getY(), plotBounds.getWidth(), plotBounds.getHeight());
-        int tickCountX = (xAxisConfig != null) ? xAxisConfig.getRequestedTickCount() : 10;
-        int tickCountY = (yAxisConfig != null) ? yAxisConfig.getRequestedTickCount() : 8;
-        contextCache = new DefaultPlotContext(arberBounds, viewMinX, viewMaxX, viewMinY, viewMaxY, false, invertX, invertY,
-                com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR, com.arbergashi.charts.util.NiceScale.ScaleMode.LINEAR,
-                theme, renderHints, gapModel, animationProfile)
-                .setRequestedTickCountX(tickCountX)
-                .setRequestedTickCountY(tickCountY);
-
+        contextCache = createContext(plotBounds, viewMinY, viewMaxY, yAxisConfig);
+        secondaryContextCache = null;
+        contextWidth = width;
+        contextHeight = height;
         lastModelStamp = combinedStamp;
         cacheDirty = false;
         return contextCache;
     }
 
+    private PlotContext createContext(Rectangle2D plotBounds, double minY, double maxY, AxisConfig yConfig) {
+        com.arbergashi.charts.core.geometry.ArberRect bounds = new com.arbergashi.charts.core.geometry.ArberRect(
+                plotBounds.getX(), plotBounds.getY(), plotBounds.getWidth(), plotBounds.getHeight());
+        PlotContext base = new DefaultPlotContext(bounds, viewMinX, viewMaxX, minY, maxY, false,
+                xAxisConfig.isInverted(), yConfig.isInverted(), NiceScale.ScaleMode.LINEAR, NiceScale.ScaleMode.LINEAR,
+                theme, renderHints, gapModel, animationsEnabled ? animationProfile : AnimationProfile.TACTICAL)
+                .setRequestedTickCountX(Math.max(2, Math.min(1000, xAxisConfig.getRequestedTickCount())))
+                .setRequestedTickCountY(Math.max(2, Math.min(1000, yConfig.getRequestedTickCount())));
+        return new HostPlotContext(base, coordinateTransformer, xAxisConfig.isShowGrid(), yConfig.isShowGrid(),
+                logicalPixelsPerMm);
+    }
+
+    private PlotContext getLayerContext(ChartRenderer renderer) {
+        PlotContext primary = getOrBuildContext();
+        if (!(renderer instanceof BaseRenderer br) || br.getYAxisRole() != AxisRole.SECONDARY) return primary;
+        if (secondaryContextCache == null) {
+            double[] range = secondaryRange();
+            Double units = yAxisSecondaryConfig.getResolvedUnitsPerPixel(logicalPixelsPerMm);
+            if (units != null && Double.isFinite(units) && units > 0.0 && !yAxisSecondaryConfig.isFixedRange()) {
+                double center = (range[0] + range[1]) * 0.5;
+                double extent = primary.getPlotBounds().height() * units * 0.5;
+                range[0] = center - extent;
+                range[1] = center + extent;
+            }
+            secondaryContextCache = createContext(plotBoundsCache, range[0], range[1], yAxisSecondaryConfig);
+        }
+        return secondaryContextCache;
+    }
+
+    private double[] secondaryRange() {
+        if (yAxisSecondaryConfig.isFixedRange()) {
+            secondaryRangeBuffer[0] = yAxisSecondaryConfig.getFixedMin();
+            secondaryRangeBuffer[1] = yAxisSecondaryConfig.getFixedMax();
+            return secondaryRangeBuffer;
+        }
+        double min = Double.POSITIVE_INFINITY;
+        double max = Double.NEGATIVE_INFINITY;
+        for (RenderLayer layer : layers) {
+            if (!(layer.renderer instanceof BaseRenderer br) || br.getYAxisRole() != AxisRole.SECONDARY) continue;
+            double[] preferred = layer.renderer.getPreferredYRange(layer.model);
+            if (validRange(preferred)) {
+                min = Math.min(min, preferred[0]);
+                max = Math.max(max, preferred[1]);
+            } else {
+                for (int i = 0; i < layer.model.getPointCount(); i++) {
+                    double y = layer.model.getY(i);
+                    if (!Double.isFinite(y)) continue;
+                    min = Math.min(min, y);
+                    max = Math.max(max, y);
+                }
+            }
+        }
+        if (!Double.isFinite(min) || !Double.isFinite(max)) {
+            secondaryRangeBuffer[0] = 0;
+            secondaryRangeBuffer[1] = 1;
+            return secondaryRangeBuffer;
+        }
+        double padding = Math.max(max - min, Math.ulp(Math.max(Math.abs(min), Math.abs(max)))) * 0.05;
+        if (max == min) padding = Math.max(0.05, Math.abs(min) * 0.05);
+        secondaryRangeBuffer[0] = min - padding;
+        secondaryRangeBuffer[1] = max + padding;
+        return secondaryRangeBuffer;
+    }
+
+    private static boolean validRange(double[] range) {
+        return range != null && range.length >= 2 && Double.isFinite(range[0]) && Double.isFinite(range[1]);
+    }
+
+    private boolean hasSecondaryAxis() {
+        for (RenderLayer layer : layers) {
+            if (layer.renderer instanceof BaseRenderer br && br.getYAxisRole() == AxisRole.SECONDARY) return true;
+        }
+        return false;
+    }
+
     private void autoScale() {
-        if (layers.isEmpty()) return;
+        if (layers.isEmpty()) {
+            viewMinX = viewMinY = 0;
+            viewMaxX = viewMaxY = 1;
+            return;
+        }
 
         double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
         double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
@@ -1435,6 +1666,8 @@ public class ArberChartPanel extends JPanel {
 
             double[] x = layer.model.getXData();
             double[] y = layer.model.getYData();
+            double[] xOverride = layer.renderer.getPreferredXRange(layer.model);
+            boolean secondary = layer.renderer instanceof BaseRenderer br && br.getYAxisRole() == AxisRole.SECONDARY;
             double[] yOverride = (layer.renderer != null) ? layer.renderer.getPreferredYRange(layer.model) : null;
             boolean hasOverride = yOverride != null && yOverride.length >= 2
                     && Double.isFinite(yOverride[0]) && Double.isFinite(yOverride[1]);
@@ -1449,15 +1682,21 @@ public class ArberChartPanel extends JPanel {
             if (count <= 0) continue;
 
             for (int i = 0; i < count; i++) {
-                if (x[i] < minX) minX = x[i];
-                if (x[i] > maxX) maxX = x[i];
-                if (!hasOverride && y != null && i < y.length) {
+                if (!validRange(xOverride)) {
+                    if (x[i] < minX) minX = x[i];
+                    if (x[i] > maxX) maxX = x[i];
+                }
+                if (!secondary && !hasOverride && y != null && i < y.length) {
                     if (y[i] < minY) minY = y[i];
                     if (y[i] > maxY) maxY = y[i];
                 }
             }
 
-            if (hasOverride) {
+            if (validRange(xOverride)) {
+                minX = Math.min(minX, xOverride[0]);
+                maxX = Math.max(maxX, xOverride[1]);
+            }
+            if (!secondary && hasOverride) {
                 if (yOverride[0] < minY) minY = yOverride[0];
                 if (yOverride[1] > maxY) maxY = yOverride[1];
             }
@@ -1471,6 +1710,8 @@ public class ArberChartPanel extends JPanel {
             return;
         }
 
+        if (minY == Double.MAX_VALUE || maxY == -Double.MAX_VALUE) { minY = 0; maxY = 1; }
+        if (minX == Double.MAX_VALUE || maxX == -Double.MAX_VALUE) { minX = 0; maxX = 1; }
         // Add Padding
         double rangeY = maxY - minY;
         if (rangeY == 0) rangeY = 1.0;
@@ -1487,11 +1728,12 @@ public class ArberChartPanel extends JPanel {
         if (plotBounds == null) return;
 
         if (xAxisConfig != null) {
+            Double units = xAxisConfig.getResolvedUnitsPerPixel(logicalPixelsPerMm);
             if (xAxisConfig.isFixedRange()) {
                 viewMinX = xAxisConfig.getFixedMin();
                 viewMaxX = xAxisConfig.getFixedMax();
-            } else if (xAxisConfig.getUnitsPerPixel() != null && Double.isFinite(xAxisConfig.getUnitsPerPixel())) {
-                double range = plotBounds.getWidth() * xAxisConfig.getUnitsPerPixel();
+            } else if (units != null && Double.isFinite(units) && units > 0.0) {
+                double range = plotBounds.getWidth() * units;
                 double center = (viewMinX + viewMaxX) * 0.5;
                 if (!Double.isFinite(center)) {
                     center = 0.0;
@@ -1502,11 +1744,12 @@ public class ArberChartPanel extends JPanel {
         }
 
         if (yAxisConfig != null) {
+            Double units = yAxisConfig.getResolvedUnitsPerPixel(logicalPixelsPerMm);
             if (yAxisConfig.isFixedRange()) {
                 viewMinY = yAxisConfig.getFixedMin();
                 viewMaxY = yAxisConfig.getFixedMax();
-            } else if (yAxisConfig.getUnitsPerPixel() != null && Double.isFinite(yAxisConfig.getUnitsPerPixel())) {
-                double range = plotBounds.getHeight() * yAxisConfig.getUnitsPerPixel();
+            } else if (units != null && Double.isFinite(units) && units > 0.0) {
+                double range = plotBounds.getHeight() * units;
                 double center = (viewMinY + viewMaxY) * 0.5;
                 if (!Double.isFinite(center)) {
                     center = 0.0;
@@ -1520,7 +1763,25 @@ public class ArberChartPanel extends JPanel {
     private Rectangle2D.Double getCalculatedPlotBounds() {
         double left = ChartScale.scale(padding.left), top = ChartScale.scale(padding.top);
         double right = ChartScale.scale(padding.right), bottom = ChartScale.scale(padding.bottom);
-        plotBoundsCache.setRect(left, top, Math.max(1, getWidth() - left - right), Math.max(1, getHeight() - top - bottom));
+        FontMetrics metrics = getFontMetrics(axisFont());
+        double minY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMin() : viewMinY;
+        double maxY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMax() : viewMaxY;
+        left = Math.max(left, measuredAxisWidth(metrics, yAxisConfig, minY, maxY) + ChartScale.scale(12));
+        if (hasSecondaryAxis()) {
+            double[] range = secondaryRange();
+            right = Math.max(right, measuredAxisWidth(metrics, yAxisSecondaryConfig, range[0], range[1]) + ChartScale.scale(12));
+        }
+        double minX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMin() : viewMinX;
+        double maxX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMax() : viewMaxX;
+        double endLabelMargin = measuredAxisWidth(metrics, xAxisConfig, minX, maxX) * 0.5 + ChartScale.scale(4);
+        left = Math.max(left, endLabelMargin);
+        right = Math.max(right, endLabelMargin);
+        int width = Math.max(1, overlayCanvas.getWidth());
+        int height = Math.max(1, overlayCanvas.getHeight());
+        left = Math.min(left, width * 0.4);
+        right = Math.min(right, width * 0.4);
+        bottom = Math.max(bottom, metrics.getHeight() + ChartScale.scale(18));
+        plotBoundsCache.setRect(left, top, Math.max(1, width - left - right), Math.max(1, height - top - bottom));
         return plotBoundsCache;
     }
 
@@ -1529,7 +1790,7 @@ public class ArberChartPanel extends JPanel {
         g2.setColor(toAwt(t.getAxisLabelColor()));
         FontMetrics fm = g2.getFontMetrics();
         String s = "No data";
-        drawAnchoredString(g2, s, getWidth() / 2.0, getHeight() / 2.0, TextAnchor.CENTER);
+        drawAnchoredString(g2, s, overlayCanvas.getWidth() / 2.0, overlayCanvas.getHeight() / 2.0, TextAnchor.CENTER);
     }
 
     // --- Fluent API ---
@@ -1559,6 +1820,7 @@ public class ArberChartPanel extends JPanel {
      */
     public ArberChartPanel setRenderHints(ChartRenderHints renderHints){
         this.renderHints = renderHints;
+        cacheDirty = true;
         repaint();
         return this;
         
@@ -1597,6 +1859,7 @@ public class ArberChartPanel extends JPanel {
 
     /**
      * Sets the locale used for formatting axis labels and tooltips.
+     * An explicit {@link AxisConfig#setLocale(Locale) axis locale} overrides this host default.
      *
      * @param locale locale to apply (null resets to JVM default)
      */
@@ -1606,6 +1869,7 @@ public class ArberChartPanel extends JPanel {
         // Keep the AWT component locale in sync, otherwise Component.getLocale() keeps
         // answering with the JVM default (CI on Linux: "en" instead of "en_US").
         super.setLocale(this.locale);
+        cacheDirty = true;
         repaint();
     }
 
@@ -1659,6 +1923,9 @@ public class ArberChartPanel extends JPanel {
         if (dockedLegendPanel != null) {
             dockedLegendPanel.setVisible(visible && legendConfig.getPlacement() == LegendPlacement.DOCKED);
         }
+        cacheDirty = true;
+        revalidate();
+        repaint();
         return this;
     }
 
@@ -1671,8 +1938,11 @@ public class ArberChartPanel extends JPanel {
      * @param config legend configuration (null uses defaults)
      */
     public ArberChartPanel setLegendConfig(LegendConfig config) {
-        this.legendConfig = config != null ? config : LegendConfig.DEFAULT;
+        this.legendConfig = config != null ? config : LegendConfig.overlay(LegendPosition.TOP_LEFT);
         applyLegendPlacement();
+        cacheDirty = true;
+        revalidate();
+        repaint();
         return this;
     }
 
@@ -1697,18 +1967,31 @@ public class ArberChartPanel extends JPanel {
     }
 
     /**
-     * Enables or disables smooth animations for zoom and pan operations.
-     * <p>
-     * When enabled, zoom operations will use {@link AnimationUtils} for smooth eased transitions.
-     * Default is {@code true}.
-     * </p>
+     * Enables or disables viewport and overlay animation on the EDT.
+     * Disabling motion completes any pending zoom immediately and removes crosshair fading.
+     * The default is enabled unless {@code arbercharts.reduceMotion=true} is set at construction.
      *
-     * @param enabled {@code true} to enable animations, {@code false} for instant updates.
-     * @return This panel for chaining.
+     * @param enabled whether to animate interaction feedback
+     * @return this panel
      */
     public ArberChartPanel setAnimationsEnabled(boolean enabled) {
-        this.animationsEnabled = enabled;
+        boolean previous = animationsEnabled;
+        animationsEnabled = enabled;
+        if (!enabled) stopZoomAnimation(true);
+        if (crosshair != null) crosshair.setAnimationsEnabled(enabled);
+        cacheDirty = true;
+        firePropertyChange("animationsEnabled", previous, enabled);
+        repaint();
         return this;
+    }
+
+    /**
+     * Returns whether interaction animations are enabled.
+     *
+     * @return the animation setting
+     */
+    public boolean isAnimationsEnabled() {
+        return animationsEnabled;
     }
 
     /**
@@ -1717,7 +2000,9 @@ public class ArberChartPanel extends JPanel {
      * @param config axis configuration (null uses defaults)
      */
     public ArberChartPanel setXAxisConfig(AxisConfig config) {
+        stopZoomAnimation(false);
         this.xAxisConfig = (config != null) ? config : new AxisConfig();
+        cacheDirty = true;
         repaint();
         return this;
     }
@@ -1729,6 +2014,7 @@ public class ArberChartPanel extends JPanel {
      */
     public ArberChartPanel setYAxisConfig(AxisConfig config) {
         this.yAxisConfig = (config != null) ? config : new AxisConfig();
+        cacheDirty = true;
         repaint();
         return this;
     }
@@ -1739,6 +2025,7 @@ public class ArberChartPanel extends JPanel {
      * Resets the zoom to fit all data.
      */
     public void resetZoom() {
+        stopZoomAnimation(false);
         autoScale();
         cacheDirty = true;
         repaint();
@@ -1791,6 +2078,10 @@ public class ArberChartPanel extends JPanel {
      */
     public ArberChartPanel setFreeze(boolean freeze) {
         this.frozen = freeze;
+        if (!freeze) {
+            freezeMeasureArmed = false;
+            freezeMeasurementLabel.setVisible(false);
+        }
         repaint();
         return this;
     }
@@ -1845,6 +2136,18 @@ public class ArberChartPanel extends JPanel {
     }
 
     /**
+     * Returns the stable series identifier used by the legend and visibility model.
+     * The first occurrence retains the renderer identifier; repeated types receive a numeric suffix.
+     *
+     * @param index zero-based layer index
+     * @return identifier for this layer
+     * @throws IndexOutOfBoundsException if the index does not identify a layer
+     */
+    public String getLayerId(int index) {
+        return layers.get(index).id;
+    }
+
+    /**
      * Checks if the legend is currently visible.
      *
      * @return true if the legend is visible, false otherwise
@@ -1882,8 +2185,25 @@ public class ArberChartPanel extends JPanel {
     }
 
     @Override
+    public void removeNotify() {
+        stopZoomAnimation(true);
+        if (modelListenersAttached) {
+            for (RenderLayer layer : layers) layer.model.removeChangeListener(layer.listener);
+            for (RenderLayer layer : preDataLayers) layer.model.removeChangeListener(layer.listener);
+            modelListenersAttached = false;
+        }
+        super.removeNotify();
+    }
+
+    @Override
     public void addNotify() {
         super.addNotify();
+        if (!modelListenersAttached) {
+            for (RenderLayer layer : layers) layer.model.setChangeListener(layer.listener);
+            for (RenderLayer layer : preDataLayers) layer.model.setChangeListener(layer.listener);
+            modelListenersAttached = true;
+            cacheDirty = true;
+        }
         // On Java 9+, Swing handles HiDPI scaling itself. Keep framework scale at 1x unless forced.
         float scale = 1.0f;
         boolean forceGraphicsScale = Boolean.parseBoolean(System.getProperty("arbercharts.hidpi.autodetect", "false"));
@@ -1898,6 +2218,7 @@ public class ArberChartPanel extends JPanel {
 
     /**
      * Returns the visibility model used by the interactive legend.
+     * Use {@link #getLayerId(int)} to address independent series, including repeated renderer types.
      *
      * @return layer visibility model
      */
@@ -1930,15 +2251,25 @@ public class ArberChartPanel extends JPanel {
 
     private String formatAxisValueX(double value) {
         if (xAxisConfig != null) {
-            return xAxisConfig.getFormattedValue(value);
+            return xAxisConfig.getFormattedValue(value, getLocale(), cachedScaleX.getTickSpacing());
         }
         return FormatUtils.formatAxisLabel(value, getLocale());
     }
 
     private String formatAxisValueY(double value) {
         if (yAxisConfig != null) {
-            return yAxisConfig.getFormattedValue(value);
+            return yAxisConfig.getFormattedValue(value, getLocale(), cachedScaleY.getTickSpacing());
         }
         return FormatUtils.formatAxisLabel(value, getLocale());
+    }
+
+    private String formatAxisValueY(double value, RenderLayer layer) {
+        boolean secondary = layer.renderer instanceof BaseRenderer br && br.getYAxisRole() == AxisRole.SECONDARY;
+        AxisConfig config = secondary ? yAxisSecondaryConfig : yAxisConfig;
+        NiceScale scale = secondary ? cachedScaleSecondaryY : cachedScaleY;
+        PlotContext context = getLayerContext(layer.renderer);
+        scale.setRange(context.getMinY(), context.getMaxY());
+        scale.setMaxTicks(context.getRequestedTickCountY());
+        return config.getFormattedValue(value, getLocale(), scale.getTickSpacing());
     }
 }

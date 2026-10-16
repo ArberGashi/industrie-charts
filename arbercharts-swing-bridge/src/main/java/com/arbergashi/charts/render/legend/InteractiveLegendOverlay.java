@@ -19,8 +19,16 @@ import com.arbergashi.charts.util.ColorUtils;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.platform.swing.util.SwingAssets;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JComponent;
+import javax.swing.UIManager;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -64,6 +72,7 @@ public final class InteractiveLegendOverlay extends JComponent {
     // hit regions for interaction
     private final List<RowHit> rowHits = new ArrayList<>();
     private String hoveredId;
+    private LegendPosition position;
 
     private java.util.function.Predicate<String> visibilityResolver = _ -> true;
 
@@ -174,10 +183,24 @@ public final class InteractiveLegendOverlay extends JComponent {
         return (lastBounds != null) ? new Rectangle(lastBounds) : null;
     }
 
+    /** Sets a local legend position; null uses the global default. */
+    public InteractiveLegendOverlay setPosition(LegendPosition position) {
+        this.position = position;
+        repaint();
+        return this;
+    }
+
+    @Override
+    public boolean contains(int x, int y) {
+        return lastBounds != null && lastBounds.contains(x, y);
+    }
+
     @Override/**
  * @since 1.5.0
  */
     protected void paintComponent(Graphics g) {
+        rowHits.clear();
+        lastBounds = null;
         ChartModel model = chart.getModel();
         if (model == null) return;
 
@@ -244,7 +267,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             int visibleRows = overflow ? Math.max(1, maxRows - 1) : rows.size();
             int boxH = padding * 2 + (overflow ? (visibleRows + 1) : visibleRows) * rowH;
 
-            LegendPosition pos = LegendPosition.parse(ChartAssets.getString(KEY_POS, "TOP_LEFT"), LegendPosition.TOP_LEFT);
+            LegendPosition pos = getPosition();
             ArberRect legendBounds = LegendLayoutTransformer.place(
                     pos,
                     new ArberRect(0, 0, getWidth(), getHeight()),
@@ -404,7 +427,7 @@ public final class InteractiveLegendOverlay extends JComponent {
             totalHeight += rowGap * (rows.size() - 1);
         }
 
-        LegendPosition pos = LegendPosition.parse(ChartAssets.getString(KEY_POS, "TOP_LEFT"), LegendPosition.TOP_LEFT);
+        LegendPosition pos = getPosition();
         ArberRect legendBounds = LegendLayoutTransformer.place(
                 pos,
                 new ArberRect(0, 0, getWidth(), getHeight()),
@@ -414,6 +437,7 @@ public final class InteractiveLegendOverlay extends JComponent {
 
         int x = (int) Math.round(legendBounds.x());
         int y = (int) Math.round(legendBounds.y());
+        lastBounds = new Rectangle(x, y, maxWidth, totalHeight);
         rowHits.clear();
 
         float bgAlpha = ChartAssets.getFloat("Chart.legend.background.alpha", 0.6f);
@@ -459,24 +483,35 @@ public final class InteractiveLegendOverlay extends JComponent {
 
     private List<LegendSeriesRow> buildRows(ChartModel model) {
         List<LegendSeriesRow> rows = new ArrayList<>();
-
-        for (BaseRenderer r : chart.getRenderers()) {
+        List<LayerLegendContext.Entry> entries;
+        if (chart instanceof LayerLegendContext layerContext) {
+            entries = layerContext.getEntries();
+        } else {
+            entries = chart.getRenderers().stream()
+                    .map(renderer -> new LayerLegendContext.Entry(renderer.getId(), renderer.getName(), model, renderer))
+                    .toList();
+        }
+        for (LayerLegendContext.Entry entry : entries) {
+            BaseRenderer r = entry.renderer();
             if (!r.isLegendRequired()) continue;
 
-            String id = r.getId();
-            String name = r.getName() != null ? r.getName() : id;
-            ArberColor color = r.getLegendColor(model);
+            String id = entry.id();
+            String name = entry.name() != null ? entry.name() : id;
+            ChartModel seriesModel = entry.model();
+            ArberColor color = r.getLegendColor(seriesModel);
             int argb = (color != null) ? color.argb() : 0xFF000000;
 
             boolean visible = visibilityResolver == null || visibilityResolver.test(id);
 
             Map<String, Object> values = new LinkedHashMap<>();
-            if (focus != null && focus.isActive() && focus.getIndex() >= 0) {
+            if (focus != null && focus.isActive() && seriesModel != null) {
                 // Renderer may contribute values.
                 try {
                     // Context is optional; consumers may ignore it.
-                    com.arbergashi.charts.api.PlotContext ctx = null;
-                    values.putAll(r.getFocusValues(focus.getIndex(), model, ctx));
+                    com.arbergashi.charts.api.PlotContext ctx = chart instanceof LayerLegendContext layers
+                            ? layers.getContext(entry) : null;
+                    int index = nearestIndex(seriesModel, focus.getX());
+                    if (index >= 0) values.putAll(r.getFocusValues(index, seriesModel, ctx));
                 } catch (Exception ignored) {
                     // Keep legend robust even for third-party renderers.
                 }
@@ -486,6 +521,24 @@ public final class InteractiveLegendOverlay extends JComponent {
         }
 
         return rows;
+    }
+
+    private LegendPosition getPosition() {
+        return position != null ? position
+                : LegendPosition.parse(ChartAssets.getString(KEY_POS, "TOP_LEFT"), LegendPosition.TOP_LEFT);
+    }
+
+    private static int nearestIndex(ChartModel model, double x) {
+        int best = -1;
+        double distance = Double.POSITIVE_INFINITY;
+        for (int i = 0; i < model.getPointCount(); i++) {
+            double next = Math.abs(model.getX(i) - x);
+            if (next < distance) {
+                distance = next;
+                best = i;
+            }
+        }
+        return best;
     }
 
 

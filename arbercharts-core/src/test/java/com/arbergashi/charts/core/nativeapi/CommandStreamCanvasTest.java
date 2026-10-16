@@ -3,15 +3,80 @@ package com.arbergashi.charts.core.nativeapi;
 import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.DefaultPlotContext;
 import com.arbergashi.charts.core.geometry.ArberRect;
+import com.arbergashi.charts.api.types.ArberColor;
+import com.arbergashi.charts.core.rendering.VoxelBuffer;
 import com.arbergashi.charts.core.testing.LargeScaleDataGenerator;
 import com.arbergashi.charts.model.DefaultFinancialChartModel;
 import com.arbergashi.charts.render.financial.CandlestickRenderer;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CommandStreamCanvasTest {
+    @Test
+    void clipCanBeSavedRestoredAndCleared() {
+        ByteArrayWriter writer = new ByteArrayWriter(new byte[256]);
+        CommandStreamCanvas canvas = new CommandStreamCanvas(writer);
+        ArberRect outer = new ArberRect(2, 3, 100, 80);
+        ArberRect inner = new ArberRect(10, 15, 20, 25);
+
+        assertNull(canvas.getClip());
+        canvas.setClip(outer);
+        ArberRect saved = canvas.getClip();
+        canvas.setClip(inner);
+        assertEquals(inner, canvas.getClip());
+        canvas.setClip(saved);
+        assertEquals(outer, canvas.getClip());
+        canvas.setClip(null);
+        assertNull(canvas.getClip());
+
+        ByteBuffer commands = ByteBuffer.wrap(writer.buffer, 0, writer.position()).order(ByteOrder.LITTLE_ENDIAN);
+        for (ArberRect expected : new ArberRect[]{outer, inner, outer}) {
+            assertEquals(CommandStreamCanvas.OP_SET_CLIP, commands.get() & 0xFF);
+            assertEquals((float) expected.x(), commands.getFloat());
+            assertEquals((float) expected.y(), commands.getFloat());
+            assertEquals((float) expected.width(), commands.getFloat());
+            assertEquals((float) expected.height(), commands.getFloat());
+        }
+        assertEquals(CommandStreamCanvas.OP_CLEAR_CLIP, commands.get() & 0xFF);
+        assertEquals(0, commands.remaining());
+    }
+
+    @Test
+    void voxelFieldsExpandToPortableFillCommands() {
+        ByteArrayWriter writer = new ByteArrayWriter(new byte[256]);
+        CommandStreamCanvas canvas = new CommandStreamCanvas(writer);
+        canvas.setStroke(3f);
+        canvas.setColor(new ArberColor(0xFFFF0000));
+        canvas.drawVoxelField(new VoxelBuffer(new float[]{2, 6}, new float[]{4, 8}, null,
+            new int[]{0xFF00FF00}, 3));
+
+        ByteBuffer commands = ByteBuffer.wrap(writer.buffer, 0, writer.position()).order(ByteOrder.LITTLE_ENDIAN);
+        assertEquals(CommandStreamCanvas.OP_SET_STROKE, commands.get() & 0xFF);
+        assertEquals(3f, commands.getFloat());
+        assertEquals(CommandStreamCanvas.OP_SET_COLOR, commands.get() & 0xFF);
+        assertEquals(0xFFFF0000, commands.getInt());
+        assertEquals(CommandStreamCanvas.OP_SET_COLOR, commands.get() & 0xFF);
+        assertEquals(0xFF00FF00, commands.getInt());
+        for (int i = 0; i < 2; i++) {
+            if (i == 1) {
+                assertEquals(CommandStreamCanvas.OP_SET_COLOR, commands.get() & 0xFF);
+                assertEquals(0xFFFF0000, commands.getInt());
+            }
+            assertEquals(CommandStreamCanvas.OP_FILL_RECT, commands.get() & 0xFF);
+            assertEquals(2f + 4f * i, commands.getFloat());
+            assertEquals(4f + 4f * i, commands.getFloat());
+            assertEquals(3f, commands.getFloat());
+            assertEquals(3f, commands.getFloat());
+        }
+        assertEquals(0, commands.remaining());
+    }
+
     @Test
     void commandStreamProducesHeaderAndPayload() {
         DefaultFinancialChartModel model = LargeScaleDataGenerator.generateFinancialCandles("Test", 10_000);

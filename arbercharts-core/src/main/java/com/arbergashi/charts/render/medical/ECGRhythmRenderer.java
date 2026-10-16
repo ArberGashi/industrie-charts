@@ -6,10 +6,12 @@ import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>ECGRhythmRenderer</h1>
+ * <h2>ECGRhythmRenderer</h2>
  * <p>
  * Specialized renderer for ECG signals (Electrocardiogram).
  * Optimized for continuous waveforms with medical grid backgrounds.
+ * Reads samples in logical time order, including wrapped models. Missing samples
+ * and decreasing X coordinates start a separate trace segment.
  * </p>
  *
  * @author Arber Gashi
@@ -35,21 +37,35 @@ public final class ECGRhythmRenderer extends BaseRenderer {
         int n = model.getPointCount();
         if (n < 2) return;
 
-        double[] xData = model.getXData();
-        double[] yData = model.getYData();
-
         ensureBufferCapacity(n);
 
         // ECG is typically a continuous line
         canvas.setStroke(ChartScale.scale(1.5f));
         canvas.setColor(themeForeground(context));
 
+        int count = 0;
+        double previousX = Double.NaN;
         for (int i = 0; i < n; i++) {
-            context.mapToPixel(xData[i], yData[i], p);
-            pathX[i] = (float) p[0];
-            pathY[i] = (float) p[1];
+            double x = model.getX(i);
+            double y = model.getY(i);
+            boolean missing = !Double.isFinite(x) || !Double.isFinite(y);
+            if (missing || x < previousX) {
+                if (count > 1) canvas.drawPolyline(pathX, pathY, count);
+                count = 0;
+            }
+            previousX = x;
+            if (missing) continue;
+            context.mapToPixel(x, y, p);
+            if (!Double.isFinite(p[0]) || !Double.isFinite(p[1])) {
+                if (count > 1) canvas.drawPolyline(pathX, pathY, count);
+                count = 0;
+                continue;
+            }
+            pathX[count] = (float) p[0];
+            pathY[count] = (float) p[1];
+            count++;
         }
-        canvas.drawPolyline(pathX, pathY, n);
+        if (count > 1) canvas.drawPolyline(pathX, pathY, count);
     }
 
     private void ensureBufferCapacity(int capacity) {

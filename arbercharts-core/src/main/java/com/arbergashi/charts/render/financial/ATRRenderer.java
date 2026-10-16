@@ -10,7 +10,7 @@ import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.util.ChartAssets;
 import com.arbergashi.charts.util.ChartScale;
 /**
- * <h1>ATRRenderer - Average True Range</h1>
+ * <h2>ATRRenderer - Average True Range</h2>
  *
  * <p>Professional ATR indicator renderer for volatility measurement.
  * ATR measures market volatility by decomposing the entire range of an asset price.</p>
@@ -59,6 +59,7 @@ public final class ATRRenderer extends BaseRenderer {
 
     // Cached indicator arrays
     private transient ChartModel cachedModel;
+    private transient long cachedUpdateStamp;
     private transient int cachedPointCount;
     private transient int cachedPeriod = -1;
     private double[] xValues = new double[0];
@@ -135,20 +136,23 @@ public final class ATRRenderer extends BaseRenderer {
     }
 
     private void ensureCache(ChartModel model, int period) {
+        final long stamp = model.getUpdateStamp();
         final int n = model.getPointCount();
         if (n <= period) {
             cachedModel = model;
+            cachedUpdateStamp = stamp;
             cachedPointCount = 0;
             cachedPeriod = period;
             preferredRangeValid = false;
             return;
         }
 
-        if (cachedModel == model && cachedPointCount == n && cachedPeriod == period) {
+        if (cachedModel == model && cachedUpdateStamp == stamp && cachedPointCount == n && cachedPeriod == period) {
             return;
         }
 
         cachedModel = model;
+        cachedUpdateStamp = stamp;
         cachedPointCount = n;
         cachedPeriod = period;
         preferredRangeValid = false;

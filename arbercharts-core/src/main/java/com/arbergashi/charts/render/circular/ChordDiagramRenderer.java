@@ -8,35 +8,35 @@ import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.MatrixChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
+import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ColorRegistry;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * <h1>Modern Chord Diagram Renderer</h1>
+ * <h2>Modern Chord Diagram Renderer</h2>
  * <p>
  * Draws a professional, interactive chord diagram to visualize relationships or flows between entities.
- * Adheres to strict zero-allocation guidelines by pre-calculating layout.
+ * Reuses drawing buffers and refreshes layout from the current matrix and bounds.
  * </p>
  * <h2>Features:</h2>
  * <ul>
  *     <li><b>Interactive Highlighting:</b> Hovering over a group highlights its connections.</li>
- *     <li><b>Pre-calculated Layout:</b> All shapes are calculated once, making rendering extremely fast.</li>
+ *     <li><b>Current Layout:</b> Matrix edits and plot resizing are reflected on the next frame.</li>
  * </ul>
  *
  * @author Arber Gashi
  * @since 2025-06-01
- * Part of the Zero-Allocation Render Path. High-frequency execution safe.
  */
 public final class ChordDiagramRenderer extends BaseRenderer {
 
     private static final class GroupArc {
-        final double cx;
-        final double cy;
-        final double r;
-        final double start;
-        final double extent;
+        double cx;
+        double cy;
+        double r;
+        double start;
+        double extent;
 
         GroupArc(double cx, double cy, double r, double start, double extent) {
             this.cx = cx;
@@ -53,6 +53,8 @@ public final class ChordDiagramRenderer extends BaseRenderer {
     }
 
     private GroupArc[] groupArcs;
+    private double[] groupTotals = new double[0];
+    private int groupCount;
     private double[][] matrix;
     private List<String> labels;
     private int hoverIndex = -1;
@@ -63,64 +65,76 @@ public final class ChordDiagramRenderer extends BaseRenderer {
 
     @Override
     protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        groupCount = 0;
         if (!(model instanceof MatrixChartModel matrixModel)) {
             return;
         }
 
-        if (this.matrix != matrixModel.getMatrix()) {
-            this.matrix = matrixModel.getMatrix();
-            this.labels = matrixModel.getEntityLabels();
-            getCalculatedLayout(context);
-        }
-
-        if (groupArcs == null) return;
+        this.matrix = matrixModel.getMatrix();
+        this.labels = matrixModel.getEntityLabels();
+        getCalculatedLayout(context);
+        if (groupCount == 0) return;
 
         drawGroups(canvas, context);
         drawChords(canvas, context);
     }
 
     private void getCalculatedLayout(PlotContext context) {
-        if (matrix == null || labels == null || matrix.length != labels.size()) return;
+        if (matrix == null || labels == null || matrix.length == 0 || matrix.length != labels.size()) return;
         int n = matrix.length;
 
         ArberRect bounds = context.getPlotBounds();
+        if (bounds == null || bounds.width() <= 0 || bounds.height() <= 0) return;
         double cx = bounds.centerX();
         double cy = bounds.centerY();
         double radius = Math.min(bounds.getWidth(), bounds.getHeight()) / 2.0 * 0.8;
-        double gap = 2; // degrees
+        double gap = Math.min(2.0, 180.0 / n);
 
-        double[] groupTotals = new double[n];
+        if (groupTotals.length < n) groupTotals = new double[n];
         double total = 0;
         for (int i = 0; i < n; i++) {
+            if (matrix[i] == null || matrix[i].length != n) return;
+            groupTotals[i] = 0;
             for (int j = 0; j < n; j++) {
-                groupTotals[i] += matrix[i][j];
+                double value = matrix[i][j];
+                if (Double.isFinite(value) && value > 0) groupTotals[i] += value;
             }
             total += groupTotals[i];
         }
-        if (total <= 0) return;
+        if (!(total > 0) || !Double.isFinite(total)) return;
 
         double scale = (360.0 - n * gap) / total;
 
-        groupArcs = new GroupArc[n];
+        if (groupArcs == null || groupArcs.length < n) groupArcs = new GroupArc[n];
         double currentAngle = 90;
         for (int i = 0; i < n; i++) {
             double arcAngle = groupTotals[i] * scale;
-            groupArcs[i] = new GroupArc(cx, cy, radius, currentAngle, -arcAngle);
+            if (groupArcs[i] == null) groupArcs[i] = new GroupArc(cx, cy, radius, currentAngle, -arcAngle);
+            else {
+                GroupArc arc = groupArcs[i];
+                arc.cx = cx;
+                arc.cy = cy;
+                arc.r = radius;
+                arc.start = currentAngle;
+                arc.extent = -arcAngle;
+            }
             currentAngle -= (arcAngle + gap);
         }
+        groupCount = n;
     }
 
     private void drawGroups(ArberCanvas canvas, PlotContext context) {
-        for (int i = 0; i < groupArcs.length; i++) {
+        for (int i = 0; i < groupCount; i++) {
+            if (groupArcs[i].extent == 0) continue;
             canvas.setColor(getResolvedTheme(context).getSeriesColor(i));
             fillArcSegment(canvas, groupArcs[i]);
         }
     }
 
     private void drawChords(ArberCanvas canvas, PlotContext context) {
-        for (int i = 0; i < groupArcs.length; i++) {
-            for (int j = 0; j < groupArcs.length; j++) {
-                if (i == j || matrix[i][j] == 0) continue;
+        for (int i = 0; i < groupCount; i++) {
+            for (int j = 0; j < groupCount; j++) {
+                if (i == j || !(matrix[i][j] > 0) || !Double.isFinite(matrix[i][j])) continue;
 
                 ArberColor base = getResolvedTheme(context).getSeriesColor(i);
                 float alpha = 0.4f;
@@ -142,9 +156,9 @@ public final class ChordDiagramRenderer extends BaseRenderer {
 
     @Override
     public Optional<Integer> getPointAt(ArberPoint pixel, ChartModel model, PlotContext context) {
-        if (groupArcs == null) return Optional.empty();
+        if (groupCount == 0) return Optional.empty();
 
-        for (int i = 0; i < groupArcs.length; i++) {
+        for (int i = 0; i < groupCount; i++) {
             if (contains(groupArcs[i], pixel)) {
                 hoverIndex = i;
                 return Optional.of(i);
@@ -164,31 +178,22 @@ public final class ChordDiagramRenderer extends BaseRenderer {
         double angle = Math.toDegrees(Math.atan2(-dy, dx));
         double start = arc.start;
         double end = arc.start + arc.extent;
-        return angleInSweep(angle, start, end);
+        return arc.extent < 0 && angleInSweep(angle, start, end);
     }
 
     private boolean angleInSweep(double angle, double start, double end) {
-        angle = normalize(angle);
-        start = normalize(start);
-        end = normalize(end);
-        if (start >= end) {
-            return angle <= start && angle >= end;
-        }
-        return angle >= start && angle <= end;
+        return normalize(start - angle) <= start - end;
     }
 
     private double normalize(double a) {
-        double n = a;
-        while (n < 0) n += 360;
-        while (n >= 360) n -= 360;
-        return n;
+        return (a % 360.0 + 360.0) % 360.0;
     }
 
     private void fillArcSegment(ArberCanvas canvas, GroupArc arc) {
         int segments = Math.max(18, (int) (Math.abs(arc.extent) / 4.0));
         int total = segments + 2;
-        float[] xs = new float[total];
-        float[] ys = new float[total];
+        float[] xs = RendererAllocationCache.getFloatArray(this, "chord.arc.x", total);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "chord.arc.y", total);
         xs[0] = (float) arc.cx;
         ys[0] = (float) arc.cy;
         double step = arc.extent / segments;
@@ -202,8 +207,8 @@ public final class ChordDiagramRenderer extends BaseRenderer {
 
     private void drawQuadratic(ArberCanvas canvas, double x0, double y0, double cx, double cy, double x1, double y1) {
         int segments = 24;
-        float[] xs = new float[segments + 1];
-        float[] ys = new float[segments + 1];
+        float[] xs = RendererAllocationCache.getFloatArray(this, "chord.curve.x", segments + 1);
+        float[] ys = RendererAllocationCache.getFloatArray(this, "chord.curve.y", segments + 1);
         for (int i = 0; i <= segments; i++) {
             double t = i / (double) segments;
             double mt = 1.0 - t;

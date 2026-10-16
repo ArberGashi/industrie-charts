@@ -56,6 +56,7 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
 
     // Reusable buffers for LOD aggregation (sized to plot width)
     private int[] lodCount = new int[0];
+    private double[] lodX = new double[0];
     private double[] lodOpen = new double[0];
     private double[] lodHigh = new double[0];
     private double[] lodLow = new double[0];
@@ -96,18 +97,15 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
             final double high = model.getMax(i);
             final double low = model.getMin(i);
 
-            final double top = Math.min(open, close);
-            final double bottom = Math.max(open, close);
-
             context.mapToPixel(xVal, high, px2);
             context.mapToPixel(xVal, low, px3);
-            context.mapToPixel(xVal, top, px4);
-            context.mapToPixel(xVal, bottom, px);
+            context.mapToPixel(xVal, open, px4);
+            context.mapToPixel(xVal, close, px);
 
-            final double yHigh = px2[1];
-            final double yLow = px3[1];
-            final double yTop = px4[1];
-            final double yBottom = px[1];
+            final double yHigh = Math.min(px2[1], px3[1]);
+            final double yLow = Math.max(px2[1], px3[1]);
+            final double yTop = Math.min(px4[1], px[1]);
+            final double yBottom = Math.max(px4[1], px[1]);
 
             canvas.setColor(close >= open ? bullish : bearish);
 
@@ -131,41 +129,33 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
 
         Arrays.fill(lodCount, 0);
 
-        double minX = Double.POSITIVE_INFINITY;
-        double maxX = Double.NEGATIVE_INFINITY;
+        final double pixelStep = bounds.getWidth() / (double) w;
         final int n = model.getPointCount();
         for (int i = 0; i < n; i++) {
             final double x = model.getX(i);
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-        }
-        final double span = Math.max(1e-12, maxX - minX);
-
-        for (int i = 0; i < n; i++) {
-            final double pxv = model.getX(i);
-            final int xiRaw = (int) ((pxv - minX) / span * (w - 1));
-            final int xi = (xiRaw < 0) ? 0 : Math.min(xiRaw, w - 1);
-
             final double o = model.getWeight(i);
             final double h = model.getMax(i);
             final double l = model.getMin(i);
             final double c = model.getY(i);
+            context.mapToPixel(x, c, px);
+            if (!Double.isFinite(px[0]) || px[0] < bounds.minX() || px[0] > bounds.maxX()) continue;
+            final int xi = Math.min(w - 1, (int) ((px[0] - bounds.x()) / pixelStep));
 
             if (lodCount[xi] == 0) {
+                lodX[xi] = x;
                 lodOpen[xi] = o;
                 lodHigh[xi] = h;
                 lodLow[xi] = l;
                 lodClose[xi] = c;
             } else {
-                lodOpen[xi] = (lodOpen[xi] + o) * 0.5;
-                lodClose[xi] = (lodClose[xi] + c) * 0.5;
+                // A candle preserves the first open and the last close in its bin.
+                lodClose[xi] = c;
                 if (h > lodHigh[xi]) lodHigh[xi] = h;
                 if (l < lodLow[xi]) lodLow[xi] = l;
             }
             lodCount[xi]++;
         }
 
-        final double pixelStep = bounds.getWidth() / (double) w;
         final double x0 = bounds.x();
 
         for (int xi = 0; xi < w; xi++) {
@@ -177,18 +167,16 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
             final double close = lodClose[xi];
             final double high = lodHigh[xi];
             final double low = lodLow[xi];
-            final double top = Math.min(open, close);
-            final double bottom = Math.max(open, close);
+            final double x = lodX[xi];
+            context.mapToPixel(x, high, px);
+            context.mapToPixel(x, low, px2);
+            context.mapToPixel(x, open, px3);
+            context.mapToPixel(x, close, px4);
 
-            context.mapToPixel(cx, high, px);
-            context.mapToPixel(cx, low, px2);
-            context.mapToPixel(cx, top, px3);
-            context.mapToPixel(cx, bottom, px4);
-
-            final double yHigh = px[1];
-            final double yLow = px2[1];
-            final double yTop = px3[1];
-            final double yBottom = px4[1];
+            final double yHigh = Math.min(px[1], px2[1]);
+            final double yLow = Math.max(px[1], px2[1]);
+            final double yTop = Math.min(px3[1], px4[1]);
+            final double yBottom = Math.max(px3[1], px4[1]);
 
             canvas.setColor(close >= open ? bullish : bearish);
 
@@ -216,6 +204,7 @@ public final class CandlestickHollowRenderer extends BaseRenderer {
     private void ensureLodCapacity(int w) {
         if (lodCount.length >= w) return;
         lodCount = new int[w];
+        lodX = new double[w];
         lodOpen = new double[w];
         lodHigh = new double[w];
         lodLow = new double[w];
