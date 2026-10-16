@@ -189,7 +189,6 @@ axis, renderer and UI corrections; the current tests do not certify full visual 
 
 Industrie Charts artifacts are released under the MIT license.
 See `LICENSE`, `NOTICE` and `BINARY-LICENSE.md`.
-Commercial support and SLAs: see [docs/PRICING.md](docs/PRICING.md).
 
 ## Support
 
