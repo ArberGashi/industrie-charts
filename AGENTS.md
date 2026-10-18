@@ -4,31 +4,42 @@
 
 - `pom.xml` is the parent Maven build that aggregates modules.
 - `arbercharts-core/` contains the core library: `src/main/java`, `src/main/resources`, `src/main/javadoc`, and tests in `src/test/java`.
-- `arbercharts-demo/` contains the demo app (shaded JAR) under `src/main/java`.
-- `site/` hosts the static site (HTML/CSS/JS, images, generated Javadoc).
-- `dist/` contains release assets; `target/` folders are build outputs.
-- Root docs: `README.md`, `USER_GUIDE.md`, `LICENSING.md`, `SLA*.md`, `RENDERER_CATALOG.md`.
+- `arbercharts-swing-bridge/` and `arbercharts-server-bridge/` own the desktop and Java2D server backends.
+- `arbercharts-spring-boot-starter/` provides server auto-configuration; `arbercharts-starter/` is a local bundle module.
+- `arbercharts-demo/` and `arbercharts-spring-boot-demo/` contain the Swing and browser workbenches.
+- `docs/` contains current technical documentation and dated verification evidence for the current release.
+- `dist/` and module `target/` directories contain generated output and are not committed.
+- Root documentation consists of `README.md`, `RELEASING.md`, the current release notes, `LICENSE`, and `NOTICE`.
+
+## Repository Content
+
+- Keep GitHub focused on source, technical documentation, tests, and current demo images.
+- Commercial offers, pricing and service agreements belong in the separate business portal.
+- Keep one canonical MIT `LICENSE`; do not add contradictory source-access or binary-only delivery terms.
+- Remove obsolete release instructions, migration scripts and generated state from the current tree. Git history retains earlier versions.
+- Run `python3 tools/check_repository.py` to check documentation links, release metadata and repository content before publishing.
 
 ## Build, Test, and Development Commands
 
 - `mvn clean package` builds all modules and produces JARs in each module `target/`.
 - `mvn -pl arbercharts-core test` runs core unit tests (JUnit Jupiter).
 - `mvn -pl arbercharts-demo -am package` builds the demo JAR with dependencies.
-- `java --enable-native-access=ALL-UNNAMED -jar arbercharts-demo/target/arbercharts-demo-1.7.0-LTS.jar` runs the demo.
+- `java -jar arbercharts-demo/target/arbercharts-demo-2.2.0.jar` runs the Swing demo on a graphical desktop.
+- `java -Djava.awt.headless=true -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.2.0.jar` runs the browser demo.
 - `mvn -Pperf test` runs performance tests tagged for JMH.
 
 ## Coding Style & Naming Conventions
 
 - Java 25; 4-space indentation; braces on the same line.
 - Package naming uses `com.arbergashi.charts.*`.
-- Public APIs are documented with Javadoc; keep comments consistent with existing style.
+- Public APIs are documented with English Javadoc; keep code comments and documentation in English.
 - No formatter is enforced; avoid reformatting unrelated code.
 
 ## Testing Guidelines
 
 - Unit tests use JUnit Jupiter; performance tests use JMH.
 - Default test runs exclude perf tests; tag perf tests with `@Tag("perf")`.
-- Use `*Test` naming and place tests under `arbercharts-core/src/test/java`.
+- Use `*Test` naming and place tests under the owning module's `src/test/java`.
 
 ## Commit & Pull Request Guidelines
 

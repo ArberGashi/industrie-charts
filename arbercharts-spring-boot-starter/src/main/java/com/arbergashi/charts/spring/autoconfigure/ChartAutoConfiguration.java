@@ -9,29 +9,20 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * Auto-Configuration for ArberCharts in Spring Boot applications.
+ * Binds chart settings and conditionally registers the chart Actuator endpoint.
  *
- * <p>This configuration is automatically activated when ArberCharts is on the classpath.
- * It provides:
- * <ul>
- *   <li>Theme configuration from application.yml</li>
- *   <li>Export service with file management</li>
- *   <li>Actuator endpoints for monitoring (when actuator is present)</li>
- *   <li>Security integration for protected exports (when security is present)</li>
- * </ul>
+ * <p>{@link ChartsProperties} receives values under {@code arbercharts}. This
+ * configuration does not apply its theme, export or performance settings to a
+ * renderer, create an export service, or configure export security.
  *
- * <p>Example configuration in application.yml:
+ * <p>The endpoint requires Spring Boot Actuator and endpoint availability. It
+ * exposes manually recorded statistics and fixed placeholders; see
+ * {@link ChartActuatorEndpoint} for the measurement limits. The separate
+ * {@link ArberChartsAutoConfiguration} creates the server rendering service
+ * configured by {@link ArberChartsProperties}.
+ *
+ * <p>Example endpoint exposure in application.yml:
  * <pre>
- * arbercharts:
- *   theme: dark
- *   export:
- *     enabled: true
- *     formats: [png, svg, pdf]
- *     directory: /tmp/charts
- *   performance:
- *     virtual-threads: true
- *     max-concurrent-renders: 10
- *
  * management:
  *   endpoints:
  *     web:
@@ -49,10 +40,10 @@ import org.springframework.context.annotation.Bean;
 public class ChartAutoConfiguration {
 
     /**
-     * Creates the Actuator endpoint for chart monitoring.
+     * Creates the endpoint for manually recorded chart statistics.
      *
-     * <p>Only activated if Spring Boot Actuator is on the classpath
-     * and the endpoint is enabled in configuration.
+     * <p>Only activated if Spring Boot Actuator is on the classpath, the endpoint
+     * is available, and no replacement endpoint bean has been registered.
      *
      * <p>Access at: {@code /actuator/charts}
      *

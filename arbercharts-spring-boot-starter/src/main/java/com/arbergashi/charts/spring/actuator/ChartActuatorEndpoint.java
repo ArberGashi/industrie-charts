@@ -8,18 +8,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Spring Boot Actuator endpoint for ArberCharts monitoring.
+ * Spring Boot Actuator endpoint exposing manually recorded render statistics.
  *
  * <p>Available at: {@code /actuator/charts}
  *
- * <h2>Provided Metrics</h2>
- * <ul>
- *   <li><strong>Health Status</strong> - Overall chart rendering health</li>
- *   <li><strong>Render Metrics</strong> - Average time, p99, p999</li>
- *   <li><strong>Memory Usage</strong> - Current chart memory consumption</li>
- *   <li><strong>Active Renderers</strong> - List of registered renderers</li>
- *   <li><strong>Configuration</strong> - Current ArberCharts settings</li>
- * </ul>
+ * <p>The endpoint is not connected to a render metrics collector. Calls to
+ * {@link #recordRender(double, long)} update the render count, mean duration,
+ * maximum duration, and supplied memory values. The field named
+ * {@code p99RenderTime} contains the maximum recorded duration, not a percentile.
+ *
+ * <p>The status and renderer counts are constants. Other percentile, allocation,
+ * failure and concurrency fields are placeholders. These responses do not
+ * establish rendering health or describe live renderer registrations.
  *
  * <h2>Usage Example</h2>
  * <pre>{@code
@@ -34,26 +34,6 @@ import java.util.Map;
  * curl http://localhost:8080/actuator/charts
  * }</pre>
  *
- * <h2>Response Example</h2>
- * <pre>{@code
- * {
- *   "status": "UP",
- *   "renderers": {
- *     "total": 158,
- *     "active": 12
- *   },
- *   "performance": {
- *     "avgRenderTime": "2.3ms",
- *     "p99RenderTime": "5.1ms",
- *     "totalRenders": 1523
- *   },
- *   "memory": {
- *     "currentUsage": "45MB",
- *     "peakUsage": "67MB"
- *   }
- * }
- * }</pre>
- *
  * @since 2.0.0
  * @see org.springframework.boot.actuate.endpoint.annotation.Endpoint
  */
@@ -61,8 +41,8 @@ import java.util.Map;
 public class ChartActuatorEndpoint {
 
     /**
-     * v2.0.0: Placeholder values until metrics collector is integrated in v2.0.1.
-     * These fields will be populated by a proper metrics service.
+     * Statistics updated only by explicit calls to {@link #recordRender(double, long)}.
+     * The p99-named field stores the maximum duration.
      */
     private long totalRenders = 0;
     private double avgRenderTimeMs = 0.0;
@@ -71,21 +51,21 @@ public class ChartActuatorEndpoint {
     private long peakMemoryBytes = 0;
 
     /**
-     * Main endpoint - returns comprehensive chart status.
+     * Returns recorded render statistics alongside fixed status and renderer counts.
      *
-     * @return map with health, metrics, and configuration
+     * @return map with fixed status and renderer counts, plus recorded statistics
      */
     @ReadOperation
     public Map<String, Object> charts() {
         Map<String, Object> result = new LinkedHashMap<>();
 
-        // Overall status
+        // Fixed status; no rendering health check is performed
         result.put("status", "UP");
 
-        // Renderer information
+        // Fixed renderer counts; the registry is not queried
         Map<String, Object> renderers = new LinkedHashMap<>();
         renderers.put("total", 158);
-        renderers.put("active", 12); // v2.0.1: Will query RendererRegistry
+        renderers.put("active", 12);
         result.put("renderers", renderers);
 
         // Performance metrics
@@ -105,12 +85,12 @@ public class ChartActuatorEndpoint {
     }
 
     /**
-     * Detailed metrics sub-endpoint.
+     * Returns a section of recorded statistics and placeholder values.
      *
      * <p>Access via: {@code /actuator/charts/{section}}
      *
      * @param section the section to query (performance, memory, renderers)
-     * @return detailed metrics for the specified section
+     * @return the requested section, or an error map for an unknown section
      */
     @ReadOperation
     public Map<String, Object> chartsBySection(@Selector String section) {
@@ -128,15 +108,15 @@ public class ChartActuatorEndpoint {
     }
 
     /**
-     * Gets detailed performance metrics.
+     * Gets recorded render statistics and fixed performance placeholders.
      *
-     * <p><strong>v2.0.0:</strong> Returns placeholder values.
-     * v2.0.1 will integrate with actual metrics collector.
+     * <p>The p99-named value is the recorded maximum. The other percentile,
+     * failure and concurrency values are constants.
      */
     private Map<String, Object> getPerformanceMetrics() {
         Map<String, Object> metrics = new LinkedHashMap<>();
 
-        // Placeholder values - v2.0.1 will use real metrics
+        // Recorded values are mixed with fixed placeholders
         metrics.put("avgRenderTime", avgRenderTimeMs);
         metrics.put("p50RenderTime", 1.5);
         metrics.put("p95RenderTime", 3.2);
@@ -150,33 +130,32 @@ public class ChartActuatorEndpoint {
     }
 
     /**
-     * Gets detailed memory metrics.
+     * Gets supplied memory values and fixed memory placeholders.
      *
-     * <p><strong>v2.0.0:</strong> Returns placeholder values.
-     * v2.0.1 will integrate with actual memory tracking.
+     * <p>Current and peak bytes reflect explicit recordRender calls. Average
+     * bytes and allocations per render are constants, not measurements.
      */
     private Map<String, Object> getMemoryMetrics() {
         Map<String, Object> metrics = new LinkedHashMap<>();
 
-        // Placeholder values - v2.0.1 will use real memory tracker
+        // Memory usage is caller-supplied; average and allocation values are fixed
         metrics.put("currentBytes", currentMemoryBytes);
         metrics.put("peakBytes", peakMemoryBytes);
         metrics.put("averageBytes", 35_000_000L);
-        metrics.put("allocationsPerRender", 0); // Zero-alloc goal
+        metrics.put("allocationsPerRender", 0); // Placeholder, not an allocation measurement
 
         return metrics;
     }
 
     /**
-     * Gets renderer information.
+     * Gets fixed renderer counts and category placeholders.
      *
-     * <p><strong>v2.0.0:</strong> Returns static values.
-     * v2.0.1 will query RendererRegistry dynamically.
+     * <p>The renderer registry is not queried.
      */
     private Map<String, Object> getRendererMetrics() {
         Map<String, Object> metrics = new LinkedHashMap<>();
 
-        // v2.0.1: Will query RendererRegistry for actual values
+        // Fixed values, independent of the renderer registry
         metrics.put("totalRenderers", 158);
         metrics.put("activeRenderers", 12);
         metrics.put("categories", Map.of(
@@ -210,7 +189,10 @@ public class ChartActuatorEndpoint {
     }
 
     /**
-     * Records a chart render for metrics.
+     * Records a caller-supplied duration and memory value.
+     *
+     * <p>Updates the count, mean duration, maximum duration, and current/peak
+     * memory values. No percentile distribution is maintained.
      *
      * @param renderTimeMs render time in milliseconds
      * @param memoryBytes memory used in bytes
@@ -228,8 +210,7 @@ public class ChartActuatorEndpoint {
 
         currentMemoryBytes = memoryBytes;
 
-        // v2.0.1: Will update p99 using HdrHistogram for accurate percentiles
-        // For now, using simple running average which is acceptable for v2.0.0
+        // Retains the maximum duration despite the historical p99 field name
         p99RenderTimeMs = Math.max(p99RenderTimeMs, renderTimeMs);
     }
 }

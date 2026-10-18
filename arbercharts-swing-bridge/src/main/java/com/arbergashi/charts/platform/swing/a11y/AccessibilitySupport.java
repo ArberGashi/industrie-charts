@@ -7,50 +7,24 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 /**
- * WCAG 2.1 AA Accessibility Support for ArberCharts v2.0.
+ * Basic accessibility metadata and contrast utilities for Swing chart components.
  *
- * <p>This class provides comprehensive accessibility features for screen readers,
- * keyboard navigation, and assistive technologies.
+ * <p>{@link #enable(JComponent)} makes a component focusable and assigns an
+ * accessible name and description. {@link #announce(JComponent, String)} publishes
+ * description changes through the Java Accessibility API.
  *
- * <h2>Features</h2>
- * <ul>
- *   <li><strong>Screen Reader Support</strong> - JAWS, NVDA, VoiceOver compatible</li>
- *   <li><strong>Keyboard Navigation</strong> - Full chart interaction via keyboard</li>
- *   <li><strong>Focus Indicators</strong> - Clear visual focus states</li>
- *   <li><strong>High Contrast Themes</strong> - System high-contrast mode detection</li>
- *   <li><strong>Accessible Descriptions</strong> - Data point announcements</li>
- * </ul>
- *
- * <h2>WCAG 2.1 AA Compliance</h2>
- * <ul>
- *   <li>1.4.3 Contrast (Minimum) - AA Level</li>
- *   <li>2.1.1 Keyboard - All functionality available via keyboard</li>
- *   <li>2.4.7 Focus Visible - Clear focus indicators</li>
- *   <li>4.1.2 Name, Role, Value - Proper ARIA-like semantics</li>
- * </ul>
+ * <p>The installed keyboard listener logs navigation requests but does not move
+ * or select data points. High-contrast detection is not implemented. This helper
+ * does not establish accessibility compliance; the host application must provide
+ * and validate its keyboard interaction, focus presentation and assistive-technology
+ * integration.
  *
  * <h2>Usage Example</h2>
  * <pre>{@code
- * ArberChartPanel chart = new ArberChartPanel();
+ * ArberChartPanel chart = new ArberChartPanel(model, renderer);
  * AccessibilitySupport.enable(chart);
- *
- * // Chart is now fully accessible:
- * // - Screen readers announce data points
- * // - Keyboard navigation works (Tab, Arrow keys)
- * // - Focus indicators visible
+ * AccessibilitySupport.announce(chart, "Chart data updated");
  * }</pre>
- *
- * <h2>Keyboard Shortcuts</h2>
- * <table>
- *   <caption>Chart keyboard navigation</caption>
- *   <tr><th>Key</th><th>Action</th></tr>
- *   <tr><td>Tab</td><td>Focus next data point</td></tr>
- *   <tr><td>Shift+Tab</td><td>Focus previous data point</td></tr>
- *   <tr><td>Arrow Keys</td><td>Navigate between data points</td></tr>
- *   <tr><td>Enter/Space</td><td>Select/activate data point</td></tr>
- *   <tr><td>Home</td><td>Jump to first data point</td></tr>
- *   <tr><td>End</td><td>Jump to last data point</td></tr>
- * </table>
  *
  * @since 2.0.0
  * @see javax.accessibility.Accessible
@@ -64,15 +38,10 @@ public final class AccessibilitySupport {
     }
 
     /**
-     * Enables full accessibility support for a chart component.
+     * Assigns basic accessibility metadata and makes a chart component focusable.
      *
-     * <p>This configures:
-     * <ul>
-     *   <li>Accessible context with proper role</li>
-     *   <li>Keyboard event listeners</li>
-     *   <li>Focus management</li>
-     *   <li>Screen reader announcements</li>
-     * </ul>
+     * <p>Also installs a keyboard listener that logs navigation requests. It does
+     * not implement data-point navigation or automatic announcements.
      *
      * @param component the chart component to enhance
      */
@@ -80,7 +49,7 @@ public final class AccessibilitySupport {
         // Make component focusable
         component.setFocusable(true);
 
-        // Add keyboard navigation
+        // Observe keyboard requests without changing chart selection
         component.addKeyListener(new ChartKeyboardNavigator());
 
         // Configure accessible context
@@ -88,19 +57,15 @@ public final class AccessibilitySupport {
         context.setAccessibleName("Chart");
         context.setAccessibleDescription("Interactive data visualization chart");
 
-        // Set proper ARIA-like role
-        // Note: Swing doesn't have full ARIA, but we use closest equivalent
+        // Store a role hint as a client property; this does not change AccessibleContext's role
         component.putClientProperty("AccessibleRole", AccessibleRole.PANEL);
-
-        // v2.0.0: Basic accessibility enabled
-        // v2.0.1: Will add live region announcements for data updates
     }
 
     /**
-     * Announces text to screen readers.
+     * Publishes text as an accessible-description change.
      *
-     * <p>This uses the Java Accessibility API to send announcements
-     * to screen readers like JAWS, NVDA, and VoiceOver.
+     * <p>How the change is announced depends on the component's accessibility
+     * implementation and the assistive technology in use.
      *
      * @param component the component context
      * @param text the text to announce
@@ -119,20 +84,14 @@ public final class AccessibilitySupport {
     }
 
     /**
-     * Checks if high contrast mode is active.
+     * Returns the default high-contrast flag without querying the operating system.
      *
-     * <p>On Windows, this checks the system setting.
-     * On macOS, this checks for "Increase Contrast" accessibility option.
+     * <p>Platform-specific detection is not implemented. The host application
+     * must obtain and apply its preferred contrast setting separately.
      *
-     * <p><strong>v2.0.0 Limitation:</strong> Returns false.
-     * Platform-specific detection will be added in v2.0.1.
-     *
-     * @return true if high contrast mode is enabled (always false in v2.0.0)
+     * @return always {@code false}
      */
     public static boolean isHighContrastMode() {
-        // v2.0.1: Will implement platform-specific detection
-        // Windows: SystemParametersInfo(SPI_GETHIGHCONTRAST)
-        // macOS: NSWorkspace.accessibilityDisplayShouldIncreaseContrast
         return false;
     }
 
@@ -198,10 +157,9 @@ public final class AccessibilitySupport {
     }
 
     /**
-     * Internal keyboard navigator for chart interactions.
+     * Internal listener that logs chart-navigation key requests.
      *
-     * <p><strong>v2.0.0:</strong> Key events are captured but not yet acted upon.
-     * Full navigation will be implemented in v2.0.1 with chart model integration.
+     * <p>Key events do not change the chart model, focus or selected data point.
      */
     private static class ChartKeyboardNavigator implements KeyListener {
         @Override
@@ -209,29 +167,24 @@ public final class AccessibilitySupport {
             switch (e.getKeyCode()) {
                 case KeyEvent.VK_LEFT:
                 case KeyEvent.VK_UP:
-                    // v2.0.1: Navigate to previous data point
                     LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Previous data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_RIGHT:
                 case KeyEvent.VK_DOWN:
-                    // v2.0.1: Navigate to next data point
                     LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Next data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_HOME:
-                    // v2.0.1: Jump to first data point
                     LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: First data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_END:
-                    // v2.0.1: Jump to last data point
                     LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Last data point (not yet implemented)");
                     break;
 
                 case KeyEvent.VK_ENTER:
                 case KeyEvent.VK_SPACE:
-                    // v2.0.1: Activate/select current data point
                     LOGGER.log(System.Logger.Level.DEBUG, "Accessibility: Select data point (not yet implemented)");
                     break;
             }

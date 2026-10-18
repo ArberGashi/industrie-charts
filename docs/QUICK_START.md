@@ -7,6 +7,7 @@ Create a Swing chart or render a PNG with the APIs available in ArberCharts 2.2.
 ## Installation
 
 Use Eclipse Temurin JDK 25 from Adoptium. An existing Temurin 25 installation is sufficient.
+Keep all ArberCharts dependencies at version **2.2.0**.
 
 ### Maven
 
@@ -88,10 +89,11 @@ For PNG output, use `ServerRenderService` as shown in the Spring Boot example be
 - **Other chart families:** use the [renderer catalog](RENDERER_CATALOG.md)
   and the corresponding model types directly.
 
-The `Charts` convenience API currently supports line-chart creation, data insertion
+The `Charts` convenience API supports line-chart creation, data insertion
 and display. Its streaming and export helpers, and the other convenience factories,
 are not implemented. Use the model, renderer and host APIs demonstrated by the workbenches
-for those features.
+for those features. Its stored subtitle, axis-label and theme values are not applied
+by the bundled display provider; use the panel API below to configure presentation.
 
 ---
 
@@ -199,9 +201,9 @@ and performance checks and their coverage limits.
 
 ---
 
-## What's Next?
+## Further Reading
 
-- **[User Guide](USER_GUIDE.md)** - Complete documentation
+- **[User Guide](USER_GUIDE.md)** - Modules, build commands and integration references
 - **[Renderer Catalog](RENDERER_CATALOG.md)** - 156 catalog entries
 - **[Swing Workbench](../arbercharts-demo/docs/WORKBENCH.md)** - Desktop demo
 - **[Spring Boot Workbench](../arbercharts-spring-boot-demo/README.md)** - Browser demo and server examples
@@ -209,9 +211,5 @@ and performance checks and their coverage limits.
 
 ---
 
-## Support
-
-**Questions?** gashi@pro-business.ch
-
-**Found a bug?** [GitHub Issues](https://github.com/ArberGashi/industrie-charts/issues)
+Report reproducible defects through [GitHub Issues](https://github.com/ArberGashi/industrie-charts/issues).
 

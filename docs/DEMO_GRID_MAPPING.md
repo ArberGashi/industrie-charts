@@ -1,166 +1,213 @@
-# Demo Grid Mapping (Core Grid Layers)
+# Demo grid mapping (2.2.0)
 
-> **Auto-generated** from `arbercharts-demo` (`RendererCatalog` + `DemoApplication.configureGrid`). Do not edit manually.
-> Run `python3 tools/update_demo_grid_mapping.py` to refresh.
+> Generated from the renderer catalog, `DemoApplication.configureChart` and the
+> `ArberChartPanel` default. Run `python3 tools/update_demo_grid_mapping.py` to refresh;
+> use `--check` to verify without writing.
 
-This document records the demo grid mapping used by the Swing demo application.
+The Swing workbench assigns the following base grid layers to all 156 catalog entries.
+Rules are evaluated in source order. Category rules take precedence over later renderer-name
+rules: for example, the financial `Candlestick3DRenderer` uses `FinancialGridLayer`.
+Axis settings and showcase presets control visibility separately; a selected layer does
+not imply that every grid line is visible. These are Swing workbench choices, not a
+required grid for a renderer in another application.
 
 ## MedicalGridLayer
-- CalibrationRenderer
-- CapnographyRenderer
-- ECGRenderer
-- ECGRhythmRenderer
-- EEGRenderer
-- EMGRenderer
-- EOGRenderer
-- IBPRenderer
-- MedicalSweepRenderer
-- NIRSRenderer
-- PPGRenderer
-- SpectrogramMedicalRenderer
-- SpirometryRenderer
-- SweepEraseEKGRenderer
-- UltrasoundMModeRenderer
-- VCGRenderer
-- VentilatorWaveformRenderer
+
+| Category | Catalog class |
+| --- | --- |
+| medical | `com.arbergashi.charts.render.medical.CalibrationRenderer` |
+| medical | `com.arbergashi.charts.render.medical.CapnographyRenderer` |
+| medical | `com.arbergashi.charts.render.medical.ECGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.ECGRhythmRenderer` |
+| medical | `com.arbergashi.charts.render.medical.EEGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.EMGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.EOGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.IBPRenderer` |
+| medical | `com.arbergashi.charts.render.medical.MedicalSweepRenderer` |
+| medical | `com.arbergashi.charts.render.medical.NIRSRenderer` |
+| medical | `com.arbergashi.charts.render.medical.PPGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.SpectrogramMedicalRenderer` |
+| medical | `com.arbergashi.charts.render.medical.SpirometryRenderer` |
+| medical | `com.arbergashi.charts.render.medical.SweepEraseEKGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.UltrasoundMModeRenderer` |
+| medical | `com.arbergashi.charts.render.medical.VCGRenderer` |
+| medical | `com.arbergashi.charts.render.medical.VentilatorWaveformRenderer` |
+
+## FinancialGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| financial | `com.arbergashi.charts.render.financial.ADXRenderer` |
+| financial | `com.arbergashi.charts.render.financial.ATRRenderer` |
+| financial | `com.arbergashi.charts.render.financial.AuditTrailRenderer` |
+| financial | `com.arbergashi.charts.render.financial.BollingerBandsRenderer` |
+| financial | `com.arbergashi.charts.render.financial.Candlestick3DRenderer` |
+| financial | `com.arbergashi.charts.render.financial.CandlestickHollowRenderer` |
+| financial | `com.arbergashi.charts.render.financial.CandlestickRenderer` |
+| financial | `com.arbergashi.charts.render.financial.FibonacciRenderer` |
+| financial | `com.arbergashi.charts.render.financial.FibonacciRetracementRenderer` |
+| financial | `com.arbergashi.charts.render.financial.GanttRenderer` |
+| financial | `com.arbergashi.charts.render.financial.HeikinAshiRenderer` |
+| financial | `com.arbergashi.charts.render.financial.HighLowRenderer` |
+| financial | `com.arbergashi.charts.render.financial.IchimokuCloudRenderer` |
+| financial | `com.arbergashi.charts.render.financial.IchimokuRenderer` |
+| financial | `com.arbergashi.charts.render.financial.KagiRenderer` |
+| financial | `com.arbergashi.charts.render.financial.LiquidityHeatmapRenderer` |
+| financial | `com.arbergashi.charts.render.financial.MACDRenderer` |
+| financial | `com.arbergashi.charts.render.financial.OBVRenderer` |
+| financial | `com.arbergashi.charts.render.financial.ParabolicSARRenderer` |
+| financial | `com.arbergashi.charts.render.financial.PivotPointsRenderer` |
+| financial | `com.arbergashi.charts.render.financial.PointAndFigureAdvancedRenderer` |
+| financial | `com.arbergashi.charts.render.financial.PointAndFigureRenderer` |
+| financial | `com.arbergashi.charts.render.financial.PredictiveCandleRenderer` |
+| financial | `com.arbergashi.charts.render.financial.RSIRenderer` |
+| financial | `com.arbergashi.charts.render.financial.RenkoRenderer` |
+| financial | `com.arbergashi.charts.render.financial.StochasticRenderer` |
+| financial | `com.arbergashi.charts.render.financial.VolumeProfileRenderer` |
+| financial | `com.arbergashi.charts.render.financial.VolumeRenderer` |
+| financial | `com.arbergashi.charts.render.financial.WaterfallRenderer` |
+
+## StatisticalGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| statistical | `com.arbergashi.charts.render.statistical.BandRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.BeeswarmRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.BoxPlotRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.ConfidenceIntervalRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.DotPlotRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.ECDFRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.ErrorBarRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.HistogramRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.KDERenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.LiveDistributionOverlayRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.QQPlotRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.QuantileBandRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.QuantileRegressionRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.RidgeLineRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.RugPlotRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.StatisticalErrorBarRenderer` |
+| statistical | `com.arbergashi.charts.render.statistical.ViolinPlotRenderer` |
+
+## AnalysisGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| analysis | `com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.AutocorrelationRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.ChangePointRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.EnvelopeRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.FourierOverlayRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.LiveFFTRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.LoessRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.MinMaxMarkerRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.MovingAverageRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.MovingCorrelationRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.OutlierDetectionRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.PeakDetectionRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.PolynomialRegressionRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.ReferenceLineRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.RegressionLineRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.SlopeRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.ThresholdRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.TrendDecompositionRenderer` |
+| analysis | `com.arbergashi.charts.render.analysis.VectorFieldRenderer` |
+
+## IsometricGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| security | `com.arbergashi.charts.render.security.VoxelCloudRenderer` |
+| standard | `com.arbergashi.charts.render.standard.LineSpatialRenderer` |
 
 ## SmithChartGridLayer
-- SmithChartRenderer
-- VSWRCircleRenderer
+
+| Category | Catalog class |
+| --- | --- |
+| specialized | `com.arbergashi.charts.render.specialized.SmithChartRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.VSWRCircleRenderer` |
+
+## PolarGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| circular | `com.arbergashi.charts.render.circular.PolarAdvancedRenderer` |
+| circular | `com.arbergashi.charts.render.circular.PolarLineRenderer` |
+| circular | `com.arbergashi.charts.render.circular.PolarRenderer` |
+| circular | `com.arbergashi.charts.render.circular.RadarRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.WindRoseRenderer` |
+
+## TernaryGridLayer
+
+| Category | Catalog class |
+| --- | --- |
+| specialized | `com.arbergashi.charts.render.specialized.TernaryContourRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.TernaryPhasediagramRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.TernaryPlotRenderer` |
 
 ## DefaultGridLayer
-- ADXRenderer
-- ATRRenderer
-- AdaptiveFunctionRenderer
-- AlluvialRenderer
-- AnomalyGapRenderer
-- ArcDiagramRenderer
-- AreaRenderer
-- AuditTrailRenderer
-- AutocorrelationRenderer
-- BandRenderer
-- BarRenderer
-- BaselineAreaRenderer
-- BeeswarmRenderer
-- BollingerBandsRenderer
-- BoxPlotRenderer
-- BubbleRenderer
-- BulletChartRenderer
-- Candlestick3DRenderer
-- CandlestickHollowRenderer
-- CandlestickRenderer
-- ChangePointRenderer
-- ChernoffFacesRenderer
-- ChordDiagramRenderer
-- ChordFlowRenderer
-- CircularLatencyOverlayRenderer
-- ColumnRenderer
-- ConfidenceIntervalRenderer
-- ControlChartRenderer
-- DelaunayRenderer
-- DendrogramRenderer
-- DependencyWheelRenderer
-- DonutRenderer
-- DotPlotRenderer
-- ECDFRenderer
-- EnvelopeRenderer
-- ErrorBarRenderer
-- FibonacciRenderer
-- FibonacciRetracementRenderer
-- FourierOverlayRenderer
-- GanttRenderer
-- GanttResourceViewRenderer
-- GaugeBandsRenderer
-- GaugeRenderer
-- GroupedBarRenderer
-- HeatmapContourRenderer
-- HeatmapRenderer
-- HeikinAshiRenderer
-- HexbinRenderer
-- HighLowRenderer
-- HistogramRenderer
-- HorizonChartRenderer
-- HorizonRenderer
-- IchimokuCloudRenderer
-- IchimokuRenderer
-- ImpulseRenderer
-- JoyplotRenderer
-- KDERenderer
-- KagiRenderer
-- LineRenderer
-- LineSpatialRenderer
-- LiquidityHeatmapRenderer
-- LiveDistributionOverlayRenderer
-- LiveFFTRenderer
-- LoessRenderer
-- LollipopRenderer
-- MACDRenderer
-- MarimekkoRenderer
-- MinMaxMarkerRenderer
-- MovingAverageRenderer
-- MovingCorrelationRenderer
-- NetworkRenderer
-- NightingaleRoseRenderer
-- OBVRenderer
-- OutlierDetectionRenderer
-- ParabolicSARRenderer
-- ParallelCoordinatesRenderer
-- ParetoRenderer
-- PeakDetectionRenderer
-- PerformanceAuditRenderer
-- PhysicalScaleRenderer
-- PieRenderer
-- PivotPointsRenderer
-- PlaybackStatusRenderer
-- PointAndFigureAdvancedRenderer
-- PointAndFigureRenderer
-- PolarAdvancedRenderer
-- PolarLineRenderer
-- PolarRenderer
-- PolynomialRegressionRenderer
-- PredictiveCandleRenderer
-- PredictivePathRenderer
-- PredictiveShadowRenderer
-- QQPlotRenderer
-- QuantileBandRenderer
-- QuantileRegressionRenderer
-- RSIRenderer
-- RadarGlowRenderer
-- RadarRenderer
-- RadialBarRenderer
-- RadialStackedRenderer
-- RangeRenderer
-- ReferenceLineRenderer
-- RegressionLineRenderer
-- RenkoRenderer
-- RidgeLineRenderer
-- RugPlotRenderer
-- SankeyProRenderer
-- SankeyRenderer
-- ScatterRenderer
-- SemiDonutRenderer
-- SlopeRenderer
-- SparklineRenderer
-- SpectrogramRenderer
-- SplineRenderer
-- StackedAreaRenderer
-- StackedBarRenderer
-- StatisticalErrorBarRenderer
-- StepAreaRenderer
-- StepRenderer
-- StochasticRenderer
-- StreamgraphRenderer
-- SunburstRenderer
-- TernaryContourRenderer
-- TernaryPhasediagramRenderer
-- TernaryPlotRenderer
-- ThresholdRenderer
-- TrendDecompositionRenderer
-- VectorFieldRenderer
-- ViolinPlotRenderer
-- VolumeProfileRenderer
-- VolumeRenderer
-- VoronoiRenderer
-- VoxelCloudRenderer
-- WaterfallRenderer
-- WindRoseRenderer
+
+| Category | Catalog class |
+| --- | --- |
+| circular | `com.arbergashi.charts.render.circular.ChordDiagramRenderer` |
+| circular | `com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer` |
+| circular | `com.arbergashi.charts.render.circular.DonutRenderer` |
+| circular | `com.arbergashi.charts.render.circular.GaugeBandsRenderer` |
+| circular | `com.arbergashi.charts.render.circular.GaugeRenderer` |
+| circular | `com.arbergashi.charts.render.circular.NightingaleRoseRenderer` |
+| circular | `com.arbergashi.charts.render.circular.PieRenderer` |
+| circular | `com.arbergashi.charts.render.circular.RadialBarRenderer` |
+| circular | `com.arbergashi.charts.render.circular.RadialStackedRenderer` |
+| circular | `com.arbergashi.charts.render.circular.SemiDonutRenderer` |
+| circular | `com.arbergashi.charts.render.circular.SunburstRenderer` |
+| common | `com.arbergashi.charts.render.common.PerformanceAuditRenderer` |
+| common | `com.arbergashi.charts.render.common.PhysicalScaleRenderer` |
+| forensic | `com.arbergashi.charts.render.forensic.PlaybackStatusRenderer` |
+| predictive | `com.arbergashi.charts.render.predictive.AnomalyGapRenderer` |
+| predictive | `com.arbergashi.charts.render.predictive.PredictiveShadowRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.AlluvialRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ArcDiagramRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.BulletChartRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.CandlestickHollowRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ChernoffFacesRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ChordFlowRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ControlChartRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.DelaunayRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.DendrogramRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.DependencyWheelRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.GanttResourceViewRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.HeatmapContourRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.HeatmapRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.HexbinRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.HorizonChartRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.HorizonRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.JoyplotRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.LollipopRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.MarimekkoRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.NetworkRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ParallelCoordinatesRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.ParetoRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.RadarGlowRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.SankeyProRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.SankeyRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.SparklineRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.SpectrogramRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.StreamgraphRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.SunburstRenderer` |
+| specialized | `com.arbergashi.charts.render.specialized.VoronoiRenderer` |
+| standard | `com.arbergashi.charts.render.standard.AreaRenderer` |
+| standard | `com.arbergashi.charts.render.standard.BarRenderer` |
+| standard | `com.arbergashi.charts.render.standard.BaselineAreaRenderer` |
+| standard | `com.arbergashi.charts.render.standard.BubbleRenderer` |
+| standard | `com.arbergashi.charts.render.standard.ColumnRenderer` |
+| standard | `com.arbergashi.charts.render.standard.GroupedBarRenderer` |
+| standard | `com.arbergashi.charts.render.standard.ImpulseRenderer` |
+| standard | `com.arbergashi.charts.render.standard.LineRenderer` |
+| standard | `com.arbergashi.charts.render.standard.PredictivePathRenderer` |
+| standard | `com.arbergashi.charts.render.standard.RangeRenderer` |
+| standard | `com.arbergashi.charts.render.standard.ScatterRenderer` |
+| standard | `com.arbergashi.charts.render.standard.SplineRenderer` |
+| standard | `com.arbergashi.charts.render.standard.StackedAreaRenderer` |
+| standard | `com.arbergashi.charts.render.standard.StackedBarRenderer` |
+| standard | `com.arbergashi.charts.render.standard.StepAreaRenderer` |
+| standard | `com.arbergashi.charts.render.standard.StepRenderer` |

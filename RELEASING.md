@@ -12,7 +12,7 @@ Publishing additionally requires a Central Portal token in `~/.m2/settings.xml` 
 
 ## Prepare and verify
 
-1. Review the release scope, [migration notes](docs/RENDERING_ARCHITECTURE.md#migration-from-210) and [verification limits](docs/VERIFICATION_STRATEGY.md). Record unresolved [rendering audit](docs/audits/2026-10-16-rendering/README.md) findings accurately; a green build is not complete visual acceptance.
+1. Review the release scope, [migration notes](docs/RENDERING_ARCHITECTURE.md#migration-from-210) and [verification limits](docs/VERIFICATION_STRATEGY.md). Record unresolved [rendering audit](docs/audits/2026-10-16-rendering/README.md) findings accurately; a green build is not complete visual acceptance. Keep the current tree free of superseded release instructions, commercial documents and generated artifacts. Run `python3 tools/check_repository.py` before packaging.
 
 2. Set the intended release version across the reactor:
 
@@ -45,7 +45,7 @@ Publishing additionally requires a Central Portal token in `~/.m2/settings.xml` 
 
    Each directory contains its current application JAR. The Swing distribution includes launch scripts naming that exact JAR; the Spring Boot distribution includes its README with startup instructions. Start the Swing demo on a graphical desktop and the Spring Boot demo locally; verify the intended version and behavior. Do not select a JAR by an ambiguous wildcard or reuse an older distribution from another version directory.
 
-5. Update the release notes and review the final diff, artifact contents and verification results. Historical release directories and reports remain historical evidence; do not overwrite them to represent a new version.
+5. Update the current release notes and review the final diff, artifact contents and verification results. Keep earlier release documentation in Git history. Preserve dated evidence supporting the current release. Check that freshly built JARs contain the current `META-INF/LICENSE` and `META-INF/NOTICE`, and that release bundles include these same notices. Never replace already published binaries under the same version to repair embedded metadata; publish those corrections with a new version.
 
 ## Publish the selected modules
 

@@ -1,68 +1,24 @@
 /**
- * Concurrent rendering support using Virtual Threads (Project Loom).
+ * Executor infrastructure and reserved asynchronous rendering methods.
  *
- * <p>This package provides infrastructure for massively concurrent chart
- * rendering without traditional thread pool limitations.
+ * <p>{@link com.arbergashi.charts.engine.concurrent.VirtualThreadRenderer}
+ * creates virtual-thread, custom-thread or fallback work-stealing executors.
+ * Applications can submit their own tasks through its executor accessor and
+ * must call {@code shutdown()} when finished.
  *
- * <h2>Virtual Threads (Java 21+)</h2>
- * <p>Virtual Threads enable 100+ concurrent chart renders without exhausting
- * platform threads. Each render operation runs in its own lightweight virtual
- * thread with ~1KB memory overhead (vs ~1MB for platform threads).
+ * <p>The PNG and SVG convenience operations are not implemented. Their tasks
+ * complete exceptionally with {@link java.lang.UnsupportedOperationException};
+ * they do not generate images.
  *
- * <h2>Key Components</h2>
- * <ul>
- *   <li>{@link com.arbergashi.charts.engine.concurrent.VirtualThreadRenderer} -
- *       Async rendering with CompletableFuture API</li>
- * </ul>
+ * <p>For server PNG rendering, use {@code ServerRenderService.renderToPng} from
+ * {@code arbercharts-server-bridge}, optionally scheduled on an application-owned
+ * executor. Coordinate model updates and avoid sharing mutable renderer state
+ * across simultaneous requests. Swing applications can use
+ * {@code ChartExportService.exportSvg} with the optional JFreeSVG backend.
  *
- * <h2>Performance Characteristics</h2>
- * <ul>
- *   <li><strong>Throughput:</strong> 100+ concurrent renders without pool exhaustion</li>
- *   <li><strong>Memory:</strong> ~1KB per virtual thread vs ~1MB for platform threads</li>
- *   <li><strong>Latency:</strong> No thread pool contention delays</li>
- *   <li><strong>Scheduling:</strong> Automatic work-stealing via ForkJoinPool</li>
- * </ul>
- *
- * <h2>Usage Example</h2>
- * <pre>{@code
- * VirtualThreadRenderer renderer = VirtualThreadRenderer.create();
- *
- * // Render multiple charts concurrently
- * List<CompletableFuture<byte[]>> futures = models.stream()
- *     .map(renderer::renderPngAsync)
- *     .toList();
- *
- * // Wait for all to complete
- * CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
- *     .join();
- * }</pre>
- *
- * <h2>Spring Boot Integration</h2>
- * <pre>{@code
- * @Configuration
- * public class ChartConfig {
- *     @Bean
- *     public VirtualThreadRenderer virtualThreadRenderer() {
- *         return VirtualThreadRenderer.create();
- *     }
- * }
- *
- * @RestController
- * class ChartController {
- *     @Autowired VirtualThreadRenderer renderer;
- *
- *     @GetMapping("/chart.png")
- *     public CompletableFuture<byte[]> renderChart() {
- *         return renderer.renderPngAsync(model);
- *     }
- * }
- * }</pre>
- *
- * <h2>Compatibility</h2>
- * <ul>
- *   <li><strong>Java 21+:</strong> Full Virtual Threads support</li>
- *   <li><strong>Java 17-20:</strong> Automatic fallback to ForkJoinPool</li>
- * </ul>
+ * <p>The library requires Java 25. The executor fallback does not provide
+ * compatibility with older Java runtimes or establish rendering throughput,
+ * memory or latency guarantees.
  *
  * @see com.arbergashi.charts.engine.concurrent.VirtualThreadRenderer
  * @see java.util.concurrent.Executors#newVirtualThreadPerTaskExecutor()

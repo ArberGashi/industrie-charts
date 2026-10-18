@@ -10,11 +10,11 @@
     <packaging>pom</packaging>
     <name>ArberCharts</name>
     <description>Java 25 charting framework with 156 catalog entries, platform-neutral rendering contracts and Swing/server bridges.</description>
-    <url>https://www.arbergashi.com</url>
+    <url>https://github.com/ArberGashi/industrie-charts</url>
 
     <organization>
         <name>Arber Gashi</name>
-        <url>https://www.arbergashi.com</url>
+        <url>https://www.pro-business.ch</url>
     </organization>
 
     <licenses>
@@ -22,7 +22,7 @@
             <name>MIT License</name>
             <url>https://opensource.org/licenses/MIT</url>
             <distribution>repo</distribution>
-            <comments>MIT License for distributed artifacts. Standard delivery is binary-first; support is commercial.</comments>
+            <comments>MIT License for project source code and distributed artifacts.</comments>
         </license>
     </licenses>
 
@@ -30,7 +30,7 @@
         <developer>
             <name>Arber Gashi</name>
             <email>gashi@pro-business.ch</email>
-            <url>https://www.arbergashi.com</url>
+            <url>https://github.com/ArberGashi</url>
         </developer>
     </developers>
 
@@ -263,7 +263,6 @@
                                         <directory>${session.executionRootDirectory}</directory>
                                         <includes>
                                             <include>LICENSE</include>
-                                            <include>BINARY-LICENSE.md</include>
                                             <include>NOTICE</include>
                                         </includes>
                                     </resource>

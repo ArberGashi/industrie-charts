@@ -1,74 +1,26 @@
 /**
- * WCAG 2.1 AA accessibility support for Swing charts.
+ * Basic accessibility metadata and contrast calculations for Swing charts.
  *
- * <p>This package provides comprehensive accessibility features for screen
- * readers, keyboard navigation, and assistive technologies.
- *
- * <h2>WCAG 2.1 AA Compliance</h2>
- * <p>ArberCharts Swing components comply with Web Content Accessibility
- * Guidelines (WCAG) 2.1 Level AA, adapted for Java Swing:
- *
+ * <p>{@link com.arbergashi.charts.platform.swing.a11y.AccessibilitySupport}
+ * provides:
  * <ul>
- *   <li><strong>1.4.3 Contrast (Minimum):</strong> 4.5:1 for normal text,
- *       3:1 for large text</li>
- *   <li><strong>2.1.1 Keyboard:</strong> All functionality available via keyboard</li>
- *   <li><strong>2.4.7 Focus Visible:</strong> Clear visual focus indicators</li>
- *   <li><strong>4.1.2 Name, Role, Value:</strong> Proper accessible context</li>
+ *   <li>A focusable component with an accessible name and description</li>
+ *   <li>Explicit accessible-description change notifications</li>
+ *   <li>RGB contrast-ratio calculations and text-contrast thresholds</li>
  * </ul>
  *
- * <h2>Key Components</h2>
- * <ul>
- *   <li>{@link com.arbergashi.charts.platform.swing.a11y.AccessibilitySupport} -
- *       Main accessibility utilities</li>
- * </ul>
- *
- * <h2>Supported Features</h2>
- * <ul>
- *   <li><strong>Screen Readers:</strong> JAWS, NVDA, VoiceOver compatible</li>
- *   <li><strong>Keyboard Navigation:</strong> Tab, Arrow Keys, Enter, Space</li>
- *   <li><strong>Focus Indicators:</strong> Clear visual focus states</li>
- *   <li><strong>High Contrast:</strong> System high-contrast mode detection</li>
- *   <li><strong>Announcements:</strong> Data point changes announced</li>
- * </ul>
+ * <p>The keyboard listener logs requests without navigating or selecting data
+ * points. System high-contrast detection is not implemented, and data updates
+ * do not trigger announcements automatically. The host application must provide
+ * and validate keyboard interaction, focus presentation and assistive-technology
+ * integration. This package does not establish WCAG compliance.
  *
  * <h2>Usage Example</h2>
  * <pre>{@code
- * ArberChartPanel chart = new ArberChartPanel();
- *
- * // Enable accessibility features
+ * ArberChartPanel chart = new ArberChartPanel(model, renderer);
  * AccessibilitySupport.enable(chart);
- *
- * // Chart now supports:
- * // - Screen readers (announces data points)
- * // - Keyboard navigation (Arrow keys to navigate)
- * // - Focus indicators (visible focus state)
- * // - High contrast themes (system detection)
+ * AccessibilitySupport.announce(chart, "Chart data updated");
  * }</pre>
- *
- * <h2>Keyboard Shortcuts</h2>
- * <table border="1">
- *   <caption>Chart keyboard navigation</caption>
- *   <tr>
- *     <th>Key</th>
- *     <th>Action</th>
- *   </tr>
- *   <tr>
- *     <td>Tab / Shift+Tab</td>
- *     <td>Focus next/previous data point</td>
- *   </tr>
- *   <tr>
- *     <td>Arrow Keys</td>
- *     <td>Navigate between data points</td>
- *   </tr>
- *   <tr>
- *     <td>Enter / Space</td>
- *     <td>Select/activate data point</td>
- *   </tr>
- *   <tr>
- *     <td>Home / End</td>
- *     <td>Jump to first/last data point</td>
- *   </tr>
- * </table>
  *
  * <h2>Testing Accessibility</h2>
  * <p>Test with:

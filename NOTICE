@@ -1,44 +1,11 @@
-ArberCharts
+Industrie Charts
 Copyright (c) 2024-2026 Arber Gashi
 
-This product is licensed under the MIT License.
+The project source code and artifacts are licensed under the MIT License.
 See the LICENSE file for the full license text.
 
-================================================================================
+Third-party dependencies retain their own licenses and copyright notices.
+See each dependency's license files and the module POMs for dependency details.
+Preserve the applicable notices when redistributing bundled dependencies.
 
-IMPORTANT LICENSING NOTICE:
-
-ArberCharts artifacts are distributed under the MIT License.
-Closed-source end products are permitted under MIT.
-When redistributing artifacts, keep MIT copyright/license notices.
-
-Standard customer delivery is binary-first.
-Source-access terms, if any, are governed by separate commercial agreements.
-
-================================================================================
-
-THIRD-PARTY DEPENDENCIES:
-
-ArberCharts may include or depend on third-party libraries. Each library
-retains its own license. Please refer to the respective library documentation
-for licensing information.
-
-Key dependencies:
-- FlatLaf (Apache License 2.0)
-- FlatLaf Inter Font (Apache License 2.0)
-- Spring Framework (Apache License 2.0)
-- Spring Boot (Apache License 2.0)
-- JUnit Jupiter (Eclipse Public License 2.0)
-
-For a complete list of dependencies, see the POM files in each module.
-
-================================================================================
-
-CONTACT:
-
-For licensing inquiries, support subscriptions, or custom development:
-
-Email: gashi@pro-business.ch
-Web: https://www.arbergashi.com
-
-================================================================================
+Project: https://github.com/ArberGashi/industrie-charts

@@ -1,5 +1,6 @@
 # Build output
 **/target/
+**/target-*/
 build/
 dist/
 .build/
@@ -47,6 +48,7 @@ dependency-reduced-pom.xml
 
 # Generated docs
 docs/javadoc/
+docs/site/
 
 # Gradle
 .gradle/
@@ -71,7 +73,11 @@ Thumbs.db
 # Test reports (keep markdown reports)
 test_compile_errors.txt
 *.stacktrace
-.jqwik-database/
+.jqwik-database
+
+# Python-generated state
+__pycache__/
+*.py[cod]
 
 # Package Files
 *.zip
@@ -88,17 +94,10 @@ test_compile_errors.txt
 backup/
 *.backup
 
-# Allow shipping selected public binaries in repo
-!binaries/
-!binaries/*.jar
-!binaries/*.sh
-!binaries/*.bat
-!binaries/*.txt
-!binaries/*.md
+# Generated sites and release distributions
 site/
 binaries/
-dist/
 
-# Die Startskripte der Demo gehoeren ins Repository (CI: stage-demo-dist kopiert sie)
+# Demo launch scripts are sources copied by stage-demo-dist.
 !arbercharts-demo/src/main/dist/
 !arbercharts-demo/src/main/dist/**

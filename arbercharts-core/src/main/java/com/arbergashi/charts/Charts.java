@@ -97,9 +97,8 @@ public final class Charts {
      */
     public static SimpleChart scatterPlot() {
         throw new UnsupportedOperationException(
-            "Scatter plots will be added in v2.1.0. " +
-            "Current version v2.0.0 supports line charts only. " +
-            "Use lineChart() for now."
+            "The scatter-plot convenience factory is not implemented. " +
+            "Use ScatterRenderer with a chart model in a Swing or server host."
         );
     }
 
@@ -114,9 +113,8 @@ public final class Charts {
      */
     public static SimpleChart barChart() {
         throw new UnsupportedOperationException(
-            "Bar charts will be added in v2.1.0. " +
-            "Current version v2.0.0 supports line charts only. " +
-            "Use lineChart() for now."
+            "The bar-chart convenience factory is not implemented. " +
+            "Use BarRenderer with a chart model in a Swing or server host."
         );
     }
 
@@ -134,9 +132,8 @@ public final class Charts {
      */
     public static SimpleChart candlestickChart() {
         throw new UnsupportedOperationException(
-            "Candlestick charts will be added in v2.2.0. " +
-            "This is a complex renderer requiring OHLC data model. " +
-            "Use lineChart() for now."
+            "The candlestick convenience factory is not implemented. " +
+            "Use CandlestickRenderer with DefaultFinancialChartModel in a Swing or server host."
         );
     }
 
@@ -155,9 +152,8 @@ public final class Charts {
      */
     public static SimpleChart ecgChart() {
         throw new UnsupportedOperationException(
-            "ECG charts will be added in v2.3.0. " +
-            "This requires sweep-erase rendering and medical grid. " +
-            "Use streamingLineChart() for now."
+            "The ECG convenience factory is not implemented. " +
+            "Use MedicalSweepRenderer with CircularFastMedicalModel in a chart host."
         );
     }
 }

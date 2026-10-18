@@ -6,43 +6,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * Virtual Thread based concurrent rendering for ArberCharts v2.0.
+ * Executor wrapper with reserved asynchronous rendering methods.
  *
- * <p>Uses Project Loom Virtual Threads (Java 21+) for massively concurrent
- * chart rendering without traditional thread pool limitations.
+ * <p>The factory methods create an executor for application-owned tasks.
+ * {@link #renderPngAsync(Object)} and {@link #renderSvgAsync(Object)} are not
+ * implemented: their submitted tasks always fail with
+ * {@link UnsupportedOperationException}.
  *
- * <h2>Performance Characteristics</h2>
- * <ul>
- *   <li>100+ concurrent renders without thread pool exhaustion</li>
- *   <li>Low memory overhead (~1KB per virtual thread vs ~1MB for platform threads)</li>
- *   <li>Non-blocking server-side rendering</li>
- *   <li>Automatic work-stealing scheduling</li>
- * </ul>
+ * <p>For PNG rendering, use {@code ServerRenderService.renderToPng} from
+ * {@code arbercharts-server-bridge} and schedule calls with an executor owned by
+ * the application. Each task must respect the model and renderer ownership
+ * requirements. Swing applications can use {@code ChartExportService.exportSvg}
+ * with the optional JFreeSVG backend for SVG output.
  *
- * <h2>Usage Example</h2>
- * <pre>{@code
- * VirtualThreadRenderer renderer = VirtualThreadRenderer.create();
- *
- * // Render multiple charts concurrently
- * CompletableFuture<byte[]> chart1 = renderer.renderAsync(model1);
- * CompletableFuture<byte[]> chart2 = renderer.renderAsync(model2);
- * CompletableFuture<byte[]> chart3 = renderer.renderAsync(model3);
- *
- * // Combine results
- * CompletableFuture.allOf(chart1, chart2, chart3)
- *     .thenRun(() -> System.out.println("All charts rendered"));
- * }</pre>
- *
- * <h2>Spring Boot Integration</h2>
- * <pre>{@code
- * @Configuration
- * public class ChartConfig {
- *     @Bean
- *     public VirtualThreadRenderer virtualThreadRenderer() {
- *         return VirtualThreadRenderer.create();
- *     }
- * }
- * }</pre>
+ * <p>Call {@link #shutdown()} when the executor is no longer needed. The library
+ * requires Java 25; selecting a fallback executor does not change that baseline.
  *
  * @since 2.0.0
  * @see java.util.concurrent.Executors#newVirtualThreadPerTaskExecutor()
@@ -63,21 +41,19 @@ public final class VirtualThreadRenderer {
     /**
      * Creates a VirtualThreadRenderer with Virtual Threads.
      *
-     * <p>Requires Java 21+ with Virtual Threads support.
-     * Throws {@link UnsupportedOperationException} if not available.
+     * <p>Throws {@link UnsupportedOperationException} if executor creation fails.
      *
      * @return new VirtualThreadRenderer instance
-     * @throws UnsupportedOperationException if Virtual Threads not supported
+     * @throws UnsupportedOperationException if the virtual-thread executor cannot be created
      */
     public static VirtualThreadRenderer create() {
         try {
-            // Java 21+: Executors.newVirtualThreadPerTaskExecutor()
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
             return new VirtualThreadRenderer(executor, true);
         } catch (Exception e) {
             throw new UnsupportedOperationException(
-                "Virtual Threads not available. Requires Java 21+. " +
-                "Use createWithFallback() for compatibility mode.", e
+                "Could not create the virtual-thread executor. " +
+                "Use createWithFallback() to attempt a work-stealing executor instead.", e
             );
         }
     }
@@ -85,8 +61,8 @@ public final class VirtualThreadRenderer {
     /**
      * Creates a VirtualThreadRenderer with automatic fallback.
      *
-     * <p>Attempts to use Virtual Threads (Java 21+), falls back to
-     * ForkJoinPool if not available.
+     * <p>Attempts to create a virtual-thread executor, falling back to a
+     * work-stealing executor if creation fails. Java 25 is still required.
      *
      * @return new VirtualThreadRenderer instance
      */
@@ -95,7 +71,7 @@ public final class VirtualThreadRenderer {
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
             return new VirtualThreadRenderer(executor, true);
         } catch (Exception e) {
-            // Fallback to ForkJoinPool (available in all Java versions)
+            // Fall back to a platform-thread work-stealing executor
             ExecutorService executor = Executors.newWorkStealingPool();
             return new VirtualThreadRenderer(executor, false);
         }
@@ -113,44 +89,52 @@ public final class VirtualThreadRenderer {
     }
 
     /**
-     * Renders a chart asynchronously and returns a PNG byte array.
+     * Submits an unsupported PNG-rendering operation.
      *
-     * <p>This method is non-blocking and returns immediately.
-     * The actual rendering happens on a virtual thread.
+     * <p>The submitted task always throws {@link UnsupportedOperationException}.
+     * No rendering is performed. Use {@code ServerRenderService.renderToPng}
+     * from {@code arbercharts-server-bridge} for PNG output.
      *
-     * @param model the chart model to render
-     * @return CompletableFuture with PNG bytes
-     * @throws UnsupportedOperationException rendering not yet implemented in v2.0.0
+     * @param model requested chart model; not used
+     * @return a future that completes exceptionally with {@code UnsupportedOperationException}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the task
      */
     public CompletableFuture<byte[]> renderPngAsync(Object model) {
         return CompletableFuture.supplyAsync(() -> {
             throw new UnsupportedOperationException(
-                "Async PNG rendering is not available in ArberCharts 2.0.0. " +
-                "Use Charts.lineChart().show() for interactive display."
+                "PNG rendering through VirtualThreadRenderer is not implemented. " +
+                "Schedule ServerRenderService.renderToPng() with an application-owned executor."
             );
         }, executor);
     }
 
     /**
-     * Renders a chart asynchronously and returns an SVG string.
+     * Submits an unsupported SVG-rendering operation.
      *
-     * @param model the chart model to render
-     * @return CompletableFuture with SVG string
-     * @throws UnsupportedOperationException rendering not yet implemented in v2.0.0
+     * <p>The submitted task always throws {@link UnsupportedOperationException}.
+     * No rendering is performed. Swing applications can use
+     * {@code ChartExportService.exportSvg} with the optional JFreeSVG backend.
+     *
+     * @param model requested chart model; not used
+     * @return a future that completes exceptionally with {@code UnsupportedOperationException}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the task
      */
     public CompletableFuture<String> renderSvgAsync(Object model) {
         return CompletableFuture.supplyAsync(() -> {
             throw new UnsupportedOperationException(
-                "Async SVG rendering is not available in ArberCharts 2.0.0. " +
-                "Use Charts.lineChart().show() for interactive display."
+                "SVG rendering through VirtualThreadRenderer is not implemented. " +
+                "Use ChartExportService.exportSvg() with a Swing panel and the optional JFreeSVG backend."
             );
         }, executor);
     }
 
     /**
-     * Checks if this renderer is using Virtual Threads.
+     * Returns the executor-selection flag assigned by the factory.
      *
-     * @return true if using Virtual Threads, false if using fallback
+     * <p>The custom-factory path sets this flag to true without inspecting the
+     * threads produced by that factory.
+     *
+     * @return false for the work-stealing fallback, otherwise true
      */
     public boolean isUsingVirtualThreads() {
         return isVirtualThreads;

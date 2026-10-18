@@ -187,10 +187,10 @@ axis, renderer and UI corrections; the current tests do not certify full visual 
 
 ## Licensing
 
-Industrie Charts artifacts are released under the MIT license.
-See `LICENSE`, `NOTICE` and `BINARY-LICENSE.md`.
+The source code and artifacts are released under the [MIT License](LICENSE).
+See [NOTICE](NOTICE) for copyright and third-party notice requirements.
 
-## Support
+## Project feedback
 
-gashi@pro-business.ch
-https://www.arbergashi.com
+Report reproducible bugs and technical feature requests in
+[GitHub Issues](https://github.com/ArberGashi/industrie-charts/issues).

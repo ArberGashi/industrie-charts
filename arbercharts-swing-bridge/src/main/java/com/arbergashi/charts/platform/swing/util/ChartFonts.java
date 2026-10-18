@@ -1,10 +1,7 @@
 /*
- * Copyright (c) 2024-2026 Arber Gashi. All rights reserved.
+ * Copyright (c) 2024-2026 Arber Gashi.
  *
- * This file is part of ArberCharts, a high-performance charting library
- * designed for real-time financial applications.
- *
- * PROPRIETARY AND CONFIDENTIAL
+ * Licensed under the MIT License. See LICENSE in the project root.
  */
 package com.arbergashi.charts.platform.swing.util;
 
@@ -19,9 +16,10 @@ import java.awt.GraphicsEnvironment;
  * font for all chart elements including axes, crosshairs, legends, and tooltips.
  * Inter is a professional, highly legible font optimized for UI/data visualization.</p>
  *
- * <h2>ZERO-GC Compliance</h2>
- * <p>Font instances are cached and reused to minimize allocations. The base font
- * is resolved once at startup and derived fonts are cached per size.</p>
+ * <h2>Font Resolution</h2>
+ * <p>The base font is resolved on first access and cached until
+ * {@link #resetCache()} is called. Size-specific accessors derive fonts from that
+ * base; they do not maintain a cache of derived fonts.</p>
  *
  * <h2>Font Hierarchy</h2>
  * <ol>
@@ -41,7 +39,7 @@ public final class ChartFonts {
     /** Fallback font family if Inter is not available */
     public static final String FALLBACK_FONT_FAMILY = Font.SANS_SERIF;
 
-    // Cached base font instance (ZERO-GC)
+    // Cached base font instance
     private static volatile Font cachedBaseFont;
     private static volatile boolean fontInitialized;
 
@@ -63,7 +61,7 @@ public final class ChartFonts {
             }
             // Try to install Inter font from FlatLaf
             try {
-                // FlatLaf 4.x: com.formdev.flatlaf.fonts.inter.FlatInterFont.installLazy()
+                // Register the optional Inter font through FlatLaf's lazy installer
                 Class<?> interFontClass = Class.forName("com.formdev.flatlaf.fonts.inter.FlatInterFont");
                 java.lang.reflect.Method installMethod = interFontClass.getMethod("installLazy");
                 installMethod.invoke(null);
@@ -78,7 +76,7 @@ public final class ChartFonts {
      * Returns the base font for chart rendering.
      *
      * <p>Returns Inter if available, otherwise falls back to the system font.
-     * This method caches the font instance for ZERO-GC compliance.</p>
+     * This method caches the resolved base font instance.</p>
      *
      * @return the base font, never null
      */

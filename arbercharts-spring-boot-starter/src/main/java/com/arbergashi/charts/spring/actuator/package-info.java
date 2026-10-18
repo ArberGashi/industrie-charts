@@ -1,30 +1,22 @@
 /**
- * Spring Boot Actuator integration for ArberCharts monitoring.
+ * Spring Boot Actuator integration for manually recorded chart statistics.
  *
- * <p>This package provides production-ready monitoring endpoints for chart
- * rendering metrics, health status, and performance analytics.
+ * <p>{@link com.arbergashi.charts.spring.actuator.ChartActuatorEndpoint} exposes
+ * a render count, mean duration, maximum duration and caller-supplied memory
+ * values. These change only when its {@code recordRender} method is called;
+ * the rendering services do not call it automatically.
+ *
+ * <p>The endpoint also returns fixed status, renderer counts and performance
+ * placeholders. Its {@code p99RenderTime} field holds the maximum recorded
+ * duration, not a calculated percentile. Do not interpret these placeholders
+ * as rendering health, live registry contents or measured percentiles.
  *
  * <h2>Available Endpoints</h2>
  * <ul>
- *   <li><strong>/actuator/charts:</strong> Overall chart status and metrics</li>
- *   <li><strong>/actuator/charts/performance:</strong> Detailed render metrics</li>
- *   <li><strong>/actuator/charts/memory:</strong> Memory usage statistics</li>
- *   <li><strong>/actuator/charts/renderers:</strong> Active renderer information</li>
- * </ul>
- *
- * <h2>Key Components</h2>
- * <ul>
- *   <li>{@link com.arbergashi.charts.spring.actuator.ChartActuatorEndpoint} -
- *       Main monitoring endpoint</li>
- * </ul>
- *
- * <h2>Provided Metrics</h2>
- * <ul>
- *   <li><strong>Health Status:</strong> UP/DOWN/DEGRADED</li>
- *   <li><strong>Render Times:</strong> avg, p50, p95, p99, p999</li>
- *   <li><strong>Memory Usage:</strong> current, peak, average</li>
- *   <li><strong>Renderer Stats:</strong> total, active, failed</li>
- *   <li><strong>Zero-GC Stats:</strong> cache hit rates</li>
+ *   <li><strong>/actuator/charts:</strong> Recorded statistics and fixed status/counts</li>
+ *   <li><strong>/actuator/charts/performance:</strong> Render statistics and placeholders</li>
+ *   <li><strong>/actuator/charts/memory:</strong> Supplied memory values and placeholders</li>
+ *   <li><strong>/actuator/charts/renderers:</strong> Fixed renderer counts</li>
  * </ul>
  *
  * <h2>Configuration</h2>
@@ -35,57 +27,23 @@
  *     web:
  *       exposure:
  *         include: health,info,charts
- *   endpoint:
- *     charts:
- *       enabled: true
  * </pre>
  *
- * <h2>Usage Example</h2>
- * <pre>{@code
- * // Access main endpoint
- * curl http://localhost:8080/actuator/charts
- *
- * // Response:
- * {
- *   "status": "UP",
- *   "renderers": {
- *     "total": 158,
- *     "active": 12
- *   },
- *   "performance": {
- *     "avgRenderTime": "2.3ms",
- *     "p99RenderTime": "5.1ms",
- *     "totalRenders": 1523
- *   },
- *   "memory": {
- *     "currentUsage": "45MB",
- *     "peakUsage": "67MB"
- *   }
- * }
- * }</pre>
- *
  * <h2>Micrometer Integration</h2>
- * <p>Metrics are automatically exported to Micrometer registries:
- * <pre>{@code
- * // Prometheus metrics
- * arbercharts_render_time_seconds{quantile="0.99"} 0.0051
- * arbercharts_render_total 1523
- * arbercharts_memory_bytes{type="current"} 47185920
- * }</pre>
- *
- * <h2>Alerting</h2>
- * <p>Recommended alerts:
+ * <p>{@link com.arbergashi.charts.bridge.server.ServerRenderService} registers
+ * separate meters when it receives a Micrometer {@code MeterRegistry}:
  * <ul>
- *   <li><strong>High p99 latency:</strong> Alert if > 10ms</li>
- *   <li><strong>Memory growth:</strong> Alert if > 1GB/hour</li>
- *   <li><strong>Failed renders:</strong> Alert if > 1% failure rate</li>
+ *   <li>{@code arber.charts.render.time}</li>
+ *   <li>{@code arber.charts.render.count}</li>
+ *   <li>{@code arber.charts.pool.active}</li>
+ *   <li>{@code arber.charts.pool.idle}</li>
  * </ul>
+ * <p>Those meters are independent of this endpoint's stored values.
  *
  * <h2>Dependencies</h2>
  * <p>This package requires:
  * <ul>
  *   <li>spring-boot-actuator</li>
- *   <li>micrometer-core</li>
  * </ul>
  *
  * @see com.arbergashi.charts.spring.actuator.ChartActuatorEndpoint

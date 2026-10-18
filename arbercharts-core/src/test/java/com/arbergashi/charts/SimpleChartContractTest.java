@@ -2,25 +2,24 @@ package com.arbergashi.charts;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SimpleChartContractTest {
 
     @Test
-    void startStreamingReportsStableVersionTwoContract() {
+    void startStreamingReportsUnsupportedConvenienceOperationAndManualAlternative() {
         SimpleChart chart = new SimpleChart();
 
         UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
             () -> chart.startStreaming(() -> 1.0));
 
-        assertTrue(ex.getMessage().contains("2.0.0"));
-        assertFalse(ex.getMessage().contains("2.0.1"));
+        assertTrue(ex.getMessage().contains("SimpleChart is not implemented"));
+        assertTrue(ex.getMessage().contains("addPoint() or addData()"));
     }
 
     @Test
-    void exportMethodsReportStableVersionTwoContract() {
+    void exportMethodsReportUnsupportedConvenienceOperationsAndHostAlternatives() {
         SimpleChart chart = new SimpleChart();
 
         UnsupportedOperationException png = assertThrows(UnsupportedOperationException.class,
@@ -28,9 +27,9 @@ class SimpleChartContractTest {
         UnsupportedOperationException svg = assertThrows(UnsupportedOperationException.class,
             () -> chart.exportToSVG("a.svg"));
 
-        assertTrue(png.getMessage().contains("2.0.0"));
-        assertTrue(svg.getMessage().contains("2.0.0"));
-        assertFalse(png.getMessage().contains("2.0.1"));
-        assertFalse(svg.getMessage().contains("2.0.1"));
+        assertTrue(png.getMessage().contains("PNG export through SimpleChart is not implemented"));
+        assertTrue(png.getMessage().contains("ServerRenderService.renderToPng()"));
+        assertTrue(svg.getMessage().contains("SVG export through SimpleChart is not implemented"));
+        assertTrue(svg.getMessage().contains("ChartExportService.exportSvg()"));
     }
 }

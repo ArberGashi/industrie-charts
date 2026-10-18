@@ -1,6 +1,7 @@
 # ArberCharts documentation
 
-The current source tree and Maven installation examples target **2.2.0**. Documents named for older versions remain historical references; they do not establish the current implementation or verification status.
+The source tree, installation examples and technical documentation target **2.2.0**.
+Earlier release documentation is available in the Git history.
 
 ## Start here
 
@@ -9,7 +10,7 @@ The current source tree and Maven installation examples target **2.2.0**. Docume
 - [User Guide](USER_GUIDE.md)
 - [Renderer Catalog](RENDERER_CATALOG.md)
 - [Release notes index](../RELEASE_NOTES.md)
-- [Licensing](LICENSING.md)
+- [MIT License](../LICENSE) and [third-party notices](../NOTICE)
 
 ## Architecture and verification
 
@@ -21,7 +22,6 @@ The current source tree and Maven installation examples target **2.2.0**. Docume
 - [Concurrency model](CONCURRENCY_MODEL.md)
 - [Logging policy](LOGGING_POLICY.md)
 - [Design policies](DOCTRINE_POLICY.md)
-- [Recorded performance report](PERFORMANCE_REPORT.md)
 
 The independent audit separates executed reproductions, source review and inventory coverage. Its remaining visual and numerical findings are follow-up work; primitive backend tests and catalog smoke tests do not constitute full visual approval.
 
@@ -30,5 +30,3 @@ The independent audit separates executed reproductions, source review and invent
 - [Swing demo module](../arbercharts-demo/)
 - [Spring Boot demo](../arbercharts-spring-boot-demo/README.md)
 - [Release preparation and publishing](../RELEASING.md)
-- [Commercial support](PRICING.md)
-- [Service level agreement](SLA.md) / [German version](SLA_DE.md)

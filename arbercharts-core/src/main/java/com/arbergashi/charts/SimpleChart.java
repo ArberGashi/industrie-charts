@@ -229,8 +229,8 @@ public class SimpleChart {
         this.streamingEnabled = true;
 
         throw new UnsupportedOperationException(
-            "Streaming is not available in ArberCharts 2.0.0. " +
-            "Use addData() with manual updates."
+            "Automatic streaming through SimpleChart is not implemented. " +
+            "Supply points with addPoint() or addData(), or manage model updates in the host application."
         );
     }
 
@@ -283,8 +283,8 @@ public class SimpleChart {
      */
     public SimpleChart exportToPNG(String filename) {
         throw new UnsupportedOperationException(
-            "PNG export is not available in ArberCharts 2.0.0. " +
-            "Use interactive display via show()."
+            "PNG export through SimpleChart is not implemented. " +
+            "Use ServerRenderService.renderToPng() or ChartExportService.exportPng() with a Swing panel."
         );
     }
 
@@ -301,8 +301,8 @@ public class SimpleChart {
      */
     public SimpleChart exportToSVG(String filename) {
         throw new UnsupportedOperationException(
-            "SVG export is not available in ArberCharts 2.0.0. " +
-            "Use interactive display via show()."
+            "SVG export through SimpleChart is not implemented. " +
+            "Use ChartExportService.exportSvg() with a Swing panel and the optional JFreeSVG backend."
         );
     }
 
