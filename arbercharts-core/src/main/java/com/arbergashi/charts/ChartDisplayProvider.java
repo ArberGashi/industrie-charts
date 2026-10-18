@@ -14,14 +14,25 @@ import com.arbergashi.charts.render.ChartRenderer;
  *
  * <h2>Implementation Example</h2>
  * <pre>{@code
+ * import com.arbergashi.charts.ChartDisplayProvider;
+ * import com.arbergashi.charts.SimpleChart;
+ * import com.arbergashi.charts.model.ChartModel;
+ * import com.arbergashi.charts.platform.swing.ArberChartPanel;
+ * import com.arbergashi.charts.render.ChartRenderer;
+ * import javax.swing.JFrame;
+ * import javax.swing.SwingUtilities;
+ *
  * public class SwingChartDisplayProvider implements ChartDisplayProvider {
  *     public void showChart(SimpleChart chart, String title,
  *                           ChartModel model, ChartRenderer renderer) {
  *         SwingUtilities.invokeLater(() -> {
- *             var panel = new ArberChartPanel();
- *             panel.setModel(model);
- *             panel.setRenderer(renderer);
- *             // ... create and show JFrame
+ *             var panel = new ArberChartPanel(model, renderer);
+ *             var frame = new JFrame(title != null ? title : "ArberCharts");
+ *             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+ *             frame.add(panel);
+ *             frame.setSize(800, 450);
+ *             frame.setLocationRelativeTo(null);
+ *             frame.setVisible(true);
  *         });
  *     }
  * }

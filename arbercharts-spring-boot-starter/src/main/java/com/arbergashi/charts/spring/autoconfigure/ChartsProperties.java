@@ -5,9 +5,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * Configuration properties for ArberCharts.
+ * Bound configuration values reserved for application-defined behavior.
  *
- * <p>Bind these properties in your application.yml or application.properties:
+ * <p>{@link ChartAutoConfiguration} binds these values but does not apply the
+ * theme, configure export services, select an executor or enforce concurrency
+ * limits. Applications that use these settings must read and implement them.
+ * The active server pool and timing settings belong to
+ * {@link ArberChartsProperties} under {@code arbercharts.server}.
+ *
+ * <p>Example values for an application that implements the corresponding behavior:
  * <pre>
  * arbercharts:
  *   theme: dark
@@ -26,18 +32,18 @@ import java.util.List;
 public class ChartsProperties {
 
     /**
-     * Theme name (e.g., "dark", "light", "obsidian").
+     * Requested theme name, such as "dark", "light" or "obsidian"; not applied automatically.
      * Default: "dark"
      */
     private String theme = "dark";
 
     /**
-     * Export configuration.
+     * Stored export preferences; the starter does not configure an exporter from them.
      */
     private ExportProperties export = new ExportProperties();
 
     /**
-     * Performance tuning configuration.
+     * Stored performance preferences; the starter does not apply them.
      */
     private PerformanceProperties performance = new PerformanceProperties();
 
@@ -68,24 +74,24 @@ public class ChartsProperties {
     }
 
     /**
-     * Export-related configuration.
+     * Export preferences for an application-provided exporter.
      */
     public static class ExportProperties {
 
         /**
-         * Enable chart export functionality.
+         * Requested export-enabled flag; no exporter is enabled by this value alone.
          * Default: true
          */
         private boolean enabled = true;
 
         /**
-         * Supported export formats.
+         * Requested export format names; this list does not verify backend availability.
          * Default: ["png", "svg", "pdf"]
          */
         private List<String> formats = List.of("png", "svg", "pdf");
 
         /**
-         * Directory for exported files.
+         * Requested output directory; this holder does not create directories or write files.
          * Default: System temp directory
          */
         private String directory = System.getProperty("java.io.tmpdir");
@@ -118,19 +124,19 @@ public class ChartsProperties {
     }
 
     /**
-     * Performance tuning configuration.
+     * Stored performance preferences; the starter does not apply them.
      */
     public static class PerformanceProperties {
 
         /**
-         * Use Virtual Threads (Project Loom) for concurrent rendering.
-         * Requires Java 21+.
+         * Requested virtual-thread preference; does not create or configure an executor.
+         * The ArberCharts runtime baseline remains Java 25.
          * Default: true
          */
         private boolean virtualThreads = true;
 
         /**
-         * Maximum number of concurrent render operations.
+         * Requested concurrency limit; application code must enforce it.
          * Default: 10
          */
         private int maxConcurrentRenders = 10;

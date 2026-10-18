@@ -8,11 +8,14 @@ Industrie Charts is a Java 25 charting library for technical data visualization 
 with a catalog of 156 entries, reusable rendering buffers, optional SIMD acceleration,
 headless server output and Swing desktop integration.
 
-**Current release: 2.2.0.** See the [release notes](RELEASE_NOTES_2.2.0.md) for
-architecture changes, renderer corrections and migration details.
+**Current release: 2.5.0.** This release corrects model, rendering and backend
+defects, updates the Swing workbench and cleans packaged notices and documentation.
+See the [release notes](RELEASE_NOTES_2.5.0.md) for its scope and the
+[2.2.0 upgrade notes](RELEASE_NOTES_2.5.0.md#upgrading-from-220), including the
+corrected Actuator response contract and custom-renderer behavior.
 
 Core contains the platform-neutral models and renderer contracts. Swing and server
-integration live in separate bridge modules. In 2.2.0, production Core is independent
+integration live in separate bridge modules. Since 2.2.0, production Core is independent
 of `java.desktop`; the Java2D server backend still requires that module in headless mode.
 The Vector API is optional at runtime: without `--add-modules jdk.incubator.vector`,
 supported operations use their scalar fallback.
@@ -22,9 +25,10 @@ current text/spatial limitations, and the desktop APIs moving to the Swing bridg
 
 ## Chart workbench gallery
 
-Real browser captures of the **2.2.0 demo** show each chart
+Real browser captures of the **2.5.0 demo** show each chart
 inside the complete workbench, with example navigation, settings and the dataset
-inspector. All data is synthetic. The [Spring Boot workbench](arbercharts-spring-boot-demo/README.md)
+inspector. The images were captured from the verified executable JAR on
+18 October 2026. All data is synthetic. The [Spring Boot workbench](arbercharts-spring-boot-demo/README.md)
 includes these six examples and five further chart types with adjustable data
 and export sizes. The images follow your preferred light or dark color scheme.
 
@@ -81,7 +85,7 @@ remain available for reports and direct renderer comparisons.
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-core</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
@@ -96,7 +100,7 @@ For server-side rendering (PNG export in REST APIs, reports, batch jobs) the Spr
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-spring-boot-starter</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
@@ -138,7 +142,7 @@ arbercharts.server.metrics-enabled=true
 
 Use **Eclipse Temurin JDK 25** and **Maven 3.9 or newer**. The existing Temurin installation
 is suitable; an Oracle JDK or a new machine-wide Java installation is not required.
-CI also uses Temurin 25. The 2.2.0 baseline uses Spring Boot 4.1.1 and
+CI also uses Temurin 25. The 2.5.0 baseline uses Spring Boot 4.1.1 and
 JUnit 6.1.3; see the [dependency update record](docs/DEPENDENCY_UPDATES.md).
 
 From the repository root, build fresh binaries, source JARs and English Javadoc JARs:
@@ -151,10 +155,10 @@ Run the exact staged artifacts for the current version:
 
 ```bash
 # Swing gallery; requires a graphical desktop.
-java -jar dist/releases/jvm/2.2.0/arbercharts-demo-2.2.0.jar
+java -jar dist/releases/jvm/2.5.0/arbercharts-demo-2.5.0.jar
 
 # Local browser demo backed by the server bridge.
-java -Djava.awt.headless=true -jar dist/releases/spring-boot/2.2.0/arbercharts-spring-boot-demo-2.2.0.jar
+java -Djava.awt.headless=true -jar dist/releases/spring-boot/2.5.0/arbercharts-spring-boot-demo-2.5.0.jar
 ```
 
 The Swing launcher enables the runtime options it needs through its restart mechanism.

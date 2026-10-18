@@ -1,17 +1,31 @@
 package com.arbergashi.charts.bridge.server;
 
 import com.arbergashi.charts.api.PlotContext;
+import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
+import com.arbergashi.charts.engine.spatial.SpatialBuffer;
+import com.arbergashi.charts.engine.spatial.SpatialChunkConsumer;
+import com.arbergashi.charts.engine.spatial.SpatialFillConsumer;
+import com.arbergashi.charts.engine.spatial.SpatialPathBatchBuilder;
+import com.arbergashi.charts.engine.spatial.SpatialStyleDescriptor;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.DefaultFinancialChartModel;
 import com.arbergashi.charts.model.DefaultChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.render.ChartRenderer;
+import com.arbergashi.charts.render.SpatialChunkRenderer;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.List;
@@ -23,13 +37,216 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ServerRenderServiceTest {
+    @Test
+    void replacesClosedPoolGaugesAndKeepsRenderHistory() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        try {
+            ServerRenderService first = new ServerRenderService(1, true, registry);
+            try (first) {
+                first.renderToImage(generateFinancialCandles(2), new Dimension(32, 32));
+                assertEquals(1, registry.get("arber.charts.pool.idle").gauge().value());
+            }
+            assertNull(registry.find("arber.charts.pool.active").gauge());
+            assertNull(registry.find("arber.charts.pool.idle").gauge());
+            assertEquals(1, registry.get("arber.charts.render.count").tag("result", "success").counter().count());
+            assertEquals(1, registry.get("arber.charts.render.time").timer().count());
+
+            try (ServerRenderService second = new ServerRenderService(1, true, registry)) {
+                Gauge active = registry.get("arber.charts.pool.active").gauge();
+                Gauge idle = registry.get("arber.charts.pool.idle").gauge();
+                first.close();
+                assertSame(active, registry.get("arber.charts.pool.active").gauge());
+                assertSame(idle, registry.get("arber.charts.pool.idle").gauge());
+                second.renderToImage(generateFinancialCandles(2), new Dimension(32, 32), null,
+                        renderer(canvas -> {
+                            assertEquals(1, active.value());
+                            assertEquals(0, idle.value());
+                        }));
+                assertEquals(0, active.value());
+                assertEquals(1, idle.value());
+                assertEquals(2, registry.get("arber.charts.render.count").tag("result", "success").counter().count());
+            }
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
+    void preservesGaugesOwnedByAnotherRegistrant() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        try {
+            Gauge active = Gauge.builder("arber.charts.pool.active", () -> 41).register(registry);
+            Gauge idle = Gauge.builder("arber.charts.pool.idle", () -> 42).register(registry);
+            try (ServerRenderService service = new ServerRenderService(1, true, registry)) {
+                service.renderToImage(generateFinancialCandles(2), new Dimension(32, 32));
+            }
+            assertSame(active, registry.get("arber.charts.pool.active").gauge());
+            assertSame(idle, registry.get("arber.charts.pool.idle").gauge());
+            assertEquals(41, active.value());
+            assertEquals(42, idle.value());
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
+    void preservesARegisteredReplacementOfAnOwnedGauge() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        try {
+            Gauge replacement;
+            try (ServerRenderService service = new ServerRenderService(1, true, registry)) {
+                registry.remove(registry.get("arber.charts.pool.idle").gauge());
+                replacement = Gauge.builder("arber.charts.pool.idle", () -> 23).register(registry);
+            }
+            assertNull(registry.find("arber.charts.pool.active").gauge());
+            assertSame(replacement, registry.get("arber.charts.pool.idle").gauge());
+            assertEquals(23, replacement.value());
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
+    void preservesExistingGaugesWhenMeterFiltersMapTheirNames() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        try {
+            registry.config().meterFilter(new MeterFilter() {
+                @Override
+                public Meter.Id map(Meter.Id id) {
+                    return id.getName().startsWith("arber.charts.pool.") ? id.withName("shared.pool") : id;
+                }
+            });
+            Gauge foreign = Gauge.builder("shared.pool", () -> 17).register(registry);
+            try (ServerRenderService service = new ServerRenderService(1, true, registry)) {
+                service.renderToImage(generateFinancialCandles(2), new Dimension(32, 32));
+            }
+            assertSame(foreign, registry.get("shared.pool").gauge());
+            assertEquals(17, foreign.value());
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
+    void fillsUnstyledSpatialQuadsWithTheThemeDefault() {
+        ChartRenderer renderer = new SpatialTestRenderer((builder, consumer) -> {
+            builder.setStyleKey(0L);
+            ((SpatialFillConsumer) consumer).fillQuad(5, 5, 25, 5, 25, 25, 5, 25);
+        });
+        var theme = ChartThemes.getLightTheme();
+        try (ServerRenderService service = new ServerRenderService(1)) {
+            BufferedImage image = service.renderToImage(generateFinancialCandles(2), new Dimension(60, 40),
+                    theme, renderer);
+            assertEquals(theme.getAccentColor().argb(), image.getRGB(15, 15));
+        }
+    }
+
+    @Test
+    void restoresTheDefaultSpatialFillAfterAnExplicitStyle() {
+        ChartRenderer renderer = new SpatialTestRenderer((builder, consumer) -> {
+            SpatialFillConsumer fills = (SpatialFillConsumer) consumer;
+            builder.setStyleKey(SpatialStyleDescriptor.pack(0xFFFF0000, 2f, 1, 0));
+            fills.fillQuad(5, 5, 25, 5, 25, 25, 5, 25);
+            builder.setStyleKey(0L);
+            fills.fillQuad(30, 5, 50, 5, 50, 25, 30, 25);
+        });
+        var theme = ChartThemes.getDarkTheme();
+        try (ServerRenderService service = new ServerRenderService(1)) {
+            BufferedImage image = service.renderToImage(generateFinancialCandles(2), new Dimension(60, 40),
+                    theme, renderer);
+            assertEquals(0xFFFF0000, image.getRGB(15, 15));
+            assertEquals(theme.getAccentColor().argb(), image.getRGB(40, 15));
+        }
+    }
+
+    @Test
+    void rendersSpatialDashPatternsWithTheSameSegmentPhasesAsSwing() {
+        for (int dashId : new int[]{0, 1, 2, 3, 255}) {
+            SpatialBuffer points = spatialPoints(10, 43, 80);
+            long style = SpatialStyleDescriptor.pack(0xFF0000FF, 2f, dashId, 0);
+            for (int i = 0; i < 3; i++) points.setPointMetadata(i, style, false);
+            BufferedImage expected = new BufferedImage(100, 60, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D graphics = expected.createGraphics();
+            try {
+                graphics.setColor(Color.BLUE);
+                float[] pattern = switch (dashId) {
+                    case 1 -> new float[]{5f, 5f};
+                    case 2 -> new float[]{2f, 4f};
+                    case 3 -> new float[]{8f, 4f, 2f, 4f};
+                    default -> null;
+                };
+                graphics.setStroke(pattern == null ? new BasicStroke(2f)
+                        : new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, pattern, 0f));
+                graphics.drawLine(10, 30, 43, 30);
+                graphics.drawLine(43, 30, 80, 30);
+            } finally {
+                graphics.dispose();
+            }
+            try (ServerRenderService service = new ServerRenderService(1)) {
+                BufferedImage image = service.renderToImage(generateFinancialCandles(2), new Dimension(100, 60),
+                        null, new SpatialTestRenderer(points));
+                assertArrayEquals(expected.getRGB(0, 0, 100, 60, null, 0, 100),
+                        image.getRGB(0, 0, 100, 60, null, 0, 100), "Spatial dash ID " + dashId);
+            }
+        }
+    }
+
+    @Test
+    void resetsSpatialDashesBeforeTheNextPooledRender() {
+        SpatialBuffer points = spatialPoints(10, 70);
+        long style = SpatialStyleDescriptor.pack(0xFF0000FF, 1f, 1, 0);
+        points.setPointMetadata(0, style, false);
+        points.setPointMetadata(1, style, false);
+        try (ServerRenderService service = new ServerRenderService(1)) {
+            ChartModel model = generateFinancialCandles(2);
+            Dimension size = new Dimension(100, 60);
+            service.renderToImage(model, size, null, new SpatialTestRenderer(points));
+            BufferedImage image = service.renderToImage(model, size, null,
+                    renderer(canvas -> canvas.drawLine(10, 30, 70, 30)));
+            assertEquals(0xFF000000, image.getRGB(17, 30), "The pooled canvas must restore a solid stroke");
+        }
+    }
+
+    @Test
+    void preservesContinuousSpatialSegmentsWhenTheStyleChanges() {
+        SpatialBuffer points = spatialPoints(10, 40, 70);
+        points.setPointMetadata(0, SpatialStyleDescriptor.pack(0xFFFF0000, 1f, 0, 0), false);
+        points.setPointMetadata(1, SpatialStyleDescriptor.pack(0xFF0000FF, 1f, 0, 0), false);
+        points.setPointMetadata(2, SpatialStyleDescriptor.pack(0xFF0000FF, 1f, 0, 0), false);
+        try (ServerRenderService service = new ServerRenderService(1)) {
+            BufferedImage image = service.renderToImage(generateFinancialCandles(2), new Dimension(100, 60),
+                    null, new SpatialTestRenderer(points));
+            assertEquals(0xFF0000FF, image.getRGB(25, 30), "The target point's style applies to the incoming segment");
+            assertEquals(0xFF0000FF, image.getRGB(55, 30));
+        }
+    }
+
+    @Test
+    void keepsIndependentSpatialPathsSeparateWhenTheStyleChanges() {
+        SpatialBuffer points = spatialPoints(10, 30, 50, 70);
+        points.setPointMetadata(0, SpatialStyleDescriptor.pack(0xFFFF0000, 1f, 0, 0), false);
+        points.setPointMetadata(1, SpatialStyleDescriptor.pack(0xFFFF0000, 1f, 0, 0), false);
+        points.setPointMetadata(2, SpatialStyleDescriptor.pack(0xFF0000FF, 1f, 0, 0), true);
+        points.setPointMetadata(3, SpatialStyleDescriptor.pack(0xFF0000FF, 1f, 0, 0), false);
+        try (ServerRenderService service = new ServerRenderService(1)) {
+            BufferedImage image = service.renderToImage(generateFinancialCandles(2), new Dimension(100, 60),
+                    null, new SpatialTestRenderer(points));
+            assertEquals(0xFFFF0000, image.getRGB(20, 30));
+            assertEquals(0, image.getRGB(40, 30), "A path-start marker must prevent an artificial connection");
+            assertEquals(0xFF0000FF, image.getRGB(60, 30));
+        }
+    }
+
     @Test
     void usesDerivedRendererRangesBeforeFinancialFallback() {
         ChartModel model = generateFinancialCandles(3);
@@ -274,6 +491,50 @@ class ServerRenderServiceTest {
                 draw.accept(canvas);
             }
         };
+    }
+
+    private static SpatialBuffer spatialPoints(double... xs) {
+        SpatialBuffer points = new SpatialBuffer(xs.length);
+        double[] coordinates = points.getInputCoords();
+        for (int i = 0; i < xs.length; i++) {
+            coordinates[i * 3] = xs[i];
+            coordinates[i * 3 + 1] = 30;
+            coordinates[i * 3 + 2] = 1;
+        }
+        return points;
+    }
+
+    private static final class SpatialTestRenderer extends BaseRenderer implements SpatialChunkRenderer {
+        private final SpatialPathBatchBuilder builder = new SpatialPathBatchBuilder();
+        private final BiConsumer<SpatialPathBatchBuilder, SpatialChunkConsumer> draw;
+
+        private SpatialTestRenderer(SpatialBuffer points) {
+            this((builder, consumer) -> consumer.accept(points, points.getPointCapacity()));
+        }
+
+        private SpatialTestRenderer(BiConsumer<SpatialPathBatchBuilder, SpatialChunkConsumer> draw) {
+            super("spatial-server-test");
+            this.draw = draw;
+        }
+
+        @Override
+        public SpatialPathBatchBuilder getSpatialPathBatchBuilder() {
+            return builder;
+        }
+
+        @Override
+        public void renderSpatial(ChartModel model, PlotContext context, SpatialChunkConsumer consumer) {
+            draw.accept(builder, consumer);
+        }
+
+        @Override
+        public void accept(SpatialBuffer buffer, int count) {
+            builder.accept(buffer, count);
+        }
+
+        @Override
+        protected void drawData(ArberCanvas canvas, ChartModel model, PlotContext context) {
+        }
     }
 
     private static ChartRenderer rangesRenderer(double[] xRange, double[] yRange, Consumer<PlotContext> check) {

@@ -3,6 +3,7 @@
 
 import argparse
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -12,6 +13,17 @@ CATALOG = ROOT / 'arbercharts-demo/src/main/resources/data/renderer-catalog.txt'
 DEMO = ROOT / 'arbercharts-demo/src/main/java/com/arbergashi/charts/demo/DemoApplication.java'
 PANEL = ROOT / 'arbercharts-swing-bridge/src/main/java/com/arbergashi/charts/platform/swing/ArberChartPanel.java'
 OUTPUT = ROOT / 'docs/DEMO_GRID_MAPPING.md'
+
+
+@dataclass(frozen=True)
+class GridRule:
+    conditions: list[tuple[str, str]]
+    grid: str
+    renderer_names: frozenset[str] | None = None
+
+    def matches(self, fields: dict[str, str]) -> bool:
+        return (any(fields[field] == value for field, value in self.conditions)
+                and (self.renderer_names is None or fields['simple'] in self.renderer_names))
 
 
 def parse_catalog(text: str) -> list[tuple[str, str]]:
@@ -35,7 +47,25 @@ def parse_catalog(text: str) -> list[tuple[str, str]]:
     return entries
 
 
-def parse_rules(source: str) -> list[tuple[list[tuple[str, str]], str]]:
+def parse_ecg_names(source: str) -> frozenset[str]:
+    helper = re.search(
+        r'private static boolean isEcgShowcase\(String simple\)\s*\{\s*'
+        r'return switch \(simple\)\s*\{\s*case (?P<names>.*?)\s*-> true;\s*'
+        r'default -> false;\s*\};\s*\}', source, re.S)
+    if helper is None:
+        raise ValueError('Cannot determine the ECG showcase names from the shared helper')
+    names = []
+    for term in helper.group('names').split(','):
+        match = re.fullmatch(r'\s*"(\w+)"\s*', term)
+        if match is None:
+            raise ValueError('Unsupported ECG showcase selection; refusing stale output')
+        names.append(match.group(1))
+    if not names or len(set(names)) != len(names):
+        raise ValueError('ECG showcase names must be nonempty and unique')
+    return frozenset(names)
+
+
+def parse_rules(source: str) -> list[GridRule]:
     method = re.search(r'private void configureChart\([^\n]*\)\s*\{(.*?)\n    \}', source, re.S)
     if method is None:
         raise ValueError('Cannot locate DemoApplication.configureChart')
@@ -43,14 +73,15 @@ def parse_rules(source: str) -> list[tuple[list[tuple[str, str]], str]]:
     selection = re.fullmatch(
         r'\s*String category\s*=\s*entry\.category\(\);\s*'
         r'String simple\s*=\s*entry\.simpleName\(\);(?P<rules>.*?)'
-        r'\s*configureAxisForCategory\(entry\.category\(\),\s*panel\);\s*',
+        r'\s*if\s*\("medical"\.equals\(category\)\)\s*configureMedicalShowcase\(simple,\s*panel\);'
+        r'\s*else\s+configureAxisForCategory\(category,\s*panel\);\s*',
         body, re.S)
     if selection is None:
         raise ValueError('Grid selection structure changed; update this generator')
     branches = selection.group('rules')
     branch_pattern = re.compile(
         r'(?P<else>else\s+)?if\s*\((?P<condition>.*?)\)\s*\{\s*'
-        r'panel\.setGridLayer\(new (?P<grid>\w+)\(\)\);\s*\}', re.S)
+        r'panel\.setGridLayer\((?P<choice>.*?)\);\s*\}', re.S)
     rules = []
     position = 0
     for branch in branch_pattern.finditer(branches):
@@ -63,7 +94,17 @@ def parse_rules(source: str) -> list[tuple[list[tuple[str, str]], str]]:
                 raise ValueError(f'Unsupported grid condition: {term.strip()}')
             value, field = comparison.groups()
             conditions.append((field, value))
-        rules.append((conditions, branch.group('grid')))
+        new_grid = r'new\s+([\w.]+)\(\)'
+        direct = re.fullmatch(new_grid, branch.group('choice').strip())
+        conditional = re.fullmatch(r'isEcgShowcase\(simple\)\s*\?\s*' + new_grid
+                                   + r'\s*:\s*' + new_grid, branch.group('choice').strip())
+        if direct:
+            rules.append(GridRule(conditions, direct.group(1).rsplit('.', 1)[-1]))
+        elif conditional:
+            rules.append(GridRule(conditions, conditional.group(1).rsplit('.', 1)[-1], parse_ecg_names(source)))
+            rules.append(GridRule(conditions, conditional.group(2).rsplit('.', 1)[-1]))
+        else:
+            raise ValueError('Unsupported grid constructor selection; refusing stale output')
         position = branch.end()
     if not rules or branches[position:].strip():
         raise ValueError('Incomplete or unsupported grid selection; refusing stale output')
@@ -84,8 +125,7 @@ def render_document() -> str:
     groups = defaultdict(list)
     for category, class_name in entries:
         fields = {'category': category, 'simple': class_name.rsplit('.', 1)[-1]}
-        grid = next((grid for conditions, grid in rules
-                     if any(fields[field] == value for field, value in conditions)), default_grid)
+        grid = next((rule.grid for rule in rules if rule.matches(fields)), default_grid)
         groups[grid].append((category, class_name))
 
     lines = [
@@ -99,8 +139,10 @@ def render_document() -> str:
         'Axis settings and showcase presets control visibility separately; a selected layer does',
         'not imply that every grid line is visible. These are Swing workbench choices, not a',
         'required grid for a renderer in another application.', '',
+        'The shared ECG showcase helper selects the medical grid only for calibrated ECG',
+        'examples. Other medical examples use the default grid with their own axis units.', '',
     ]
-    order = list(dict.fromkeys([grid for _, grid in rules] + [default_grid]))
+    order = list(dict.fromkeys([rule.grid for rule in rules] + [default_grid]))
     for grid in order:
         if grid not in groups:
             continue

@@ -10,6 +10,9 @@ import java.util.Objects;
  *
  * <p>This is a stable, public implementation that applications and renderers can use
  * without depending on {@code com.arbergashi.charts.internal.*} types.</p>
+ * <p>Logarithmic axes require positive, finite bounds and data values. An
+ * invalid logarithmic coordinate maps to {@code NaN} on that axis so renderers
+ * can omit it without inventing a value at the plot boundary.</p>
  *
  * <p><b>Performance:</b> The zero-allocation {@link #mapToPixel(double, double, double[])} and
  * {@link #mapToData(double, double, double[])} methods are designed for the render hot-path.</p>
@@ -297,13 +300,8 @@ public final class DefaultPlotContext implements PlotContext {
         double bw = Math.max(1e-9, bounds.width());
         double bh = Math.max(1e-9, bounds.height());
 
-        double dx = (maxX - minX);
-        double dy = (maxY - minY);
-        if (dx == 0) dx = 1.0;
-        if (dy == 0) dy = 1.0;
-
-        double tX = (x - minX) / dx;
-        double tY = (y - minY) / dy;
+        double tX = fraction(x, minX, maxX, scaleModeX == NiceScale.ScaleMode.LOGARITHMIC);
+        double tY = fraction(y, minY, maxY, isLogarithmicY());
 
         if (invertedX) tX = 1.0 - tX;
         if (invertedY) tY = 1.0 - tY;
@@ -322,19 +320,51 @@ public final class DefaultPlotContext implements PlotContext {
         double bw = Math.max(1e-9, bounds.width());
         double bh = Math.max(1e-9, bounds.height());
 
-        double dx = (maxX - minX);
-        double dy = (maxY - minY);
-        if (dx == 0) dx = 1.0;
-        if (dy == 0) dy = 1.0;
-
         double tX = (pixelX - bx) / bw;
         double tY = (by + bh - pixelY) / bh;
 
         if (invertedX) tX = 1.0 - tX;
         if (invertedY) tY = 1.0 - tY;
 
-        dest[0] = minX + tX * dx;
-        dest[1] = minY + tY * dy;
+        dest[0] = valueAt(tX, minX, maxX, scaleModeX == NiceScale.ScaleMode.LOGARITHMIC);
+        dest[1] = valueAt(tY, minY, maxY, isLogarithmicY());
+    }
+
+    private static double fraction(double value, double min, double max, boolean logarithmic) {
+        if (!Double.isFinite(value) || !Double.isFinite(min) || !Double.isFinite(max)) return Double.NaN;
+        if (logarithmic) {
+            if (value <= 0 || min <= 0 || max <= 0) return Double.NaN;
+            double span = logRatio(max, min);
+            return logRatio(value, min) / (span == 0 ? 1 : span);
+        }
+        double span = max - min;
+        if (span == 0) return value - min;
+        // Halving first preserves a finite ratio for opposite finite extremes.
+        return Double.isFinite(span) ? (value - min) / span
+                : (value * 0.5 - min * 0.5) / (max * 0.5 - min * 0.5);
+    }
+
+    private static double valueAt(double fraction, double min, double max, boolean logarithmic) {
+        if (!Double.isFinite(fraction) || !Double.isFinite(min) || !Double.isFinite(max)) return Double.NaN;
+        if (logarithmic && (min <= 0 || max <= 0)) return Double.NaN;
+        if (fraction == 0) return min;
+        if (fraction == 1 && min != max) return max;
+        if (logarithmic) {
+            double span = logRatio(max, min);
+            double offset = fraction * (span == 0 ? 1 : span);
+            // Multiplication retains precision while zoomed into a narrow domain;
+            // adding logarithms avoids overflow across hundreds of decades.
+            return Math.abs(offset) < 1 ? Math.fma(min, Math.expm1(offset), min) : Math.exp(Math.log(min) + offset);
+        }
+        double span = max - min;
+        if (span == 0) span = 1;
+        return Double.isFinite(span) ? Math.fma(fraction, span, min)
+                : (1 - fraction) * min + fraction * max;
+    }
+
+    private static double logRatio(double value, double reference) {
+        double relative = (value - reference) / reference;
+        return Math.abs(relative) < 0.5 ? Math.log1p(relative) : Math.log(value) - Math.log(reference);
     }
 
     @Override
@@ -354,12 +384,14 @@ public final class DefaultPlotContext implements PlotContext {
 
     private static double getCalculatedMinX(ChartModel m) {
         if (m == null) return 0.0;
-        return m.getDataRange()[0];
+        double[] range = m.getDataRange();
+        return range[0] == range[1] ? paddedLower(range[0], constantPadding(range[0])) : range[0];
     }
 
     private static double getCalculatedMaxX(ChartModel m) {
         if (m == null) return 1.0;
-        return m.getDataRange()[1];
+        double[] range = m.getDataRange();
+        return range[0] == range[1] ? paddedUpper(range[1], constantPadding(range[1])) : range[1];
     }
 
     private static double getCalculatedMinY(ChartModel m) {
@@ -370,8 +402,10 @@ public final class DefaultPlotContext implements PlotContext {
                 return range[0];
             }
         }
-        double min = m.getDataRange()[2];
-        return min > 0 ? 0.0 : min; // baseline 0 for positive-only datasets
+        double[] range = m.getDataRange();
+        double min = range[2];
+        if (min > 0) return 0; // baseline 0 for positive-only datasets
+        return min == range[3] ? paddedLower(min, constantPadding(min)) : min;
     }
 
     private static double getCalculatedMaxY(ChartModel m) {
@@ -382,8 +416,22 @@ public final class DefaultPlotContext implements PlotContext {
                 return range[1];
             }
         }
-        double max = m.getDataRange()[3];
-        return max * 1.1; // 10% headroom
+        double[] range = m.getDataRange();
+        double max = range[3];
+        double padding = range[2] == max ? constantPadding(max) : Math.max(Math.abs(max) * 0.1, Math.ulp(max));
+        return paddedUpper(max, padding);
+    }
+
+    private static double constantPadding(double value) {
+        return value == 0 ? 1 : Math.max(Math.abs(value) * 0.1, Math.ulp(value));
+    }
+
+    private static double paddedLower(double value, double padding) {
+        return Math.max(-Double.MAX_VALUE, value - padding);
+    }
+
+    private static double paddedUpper(double value, double padding) {
+        return Math.min(Double.MAX_VALUE, value + padding);
     }
 
     private static double[] getFinancialRange(com.arbergashi.charts.model.FinancialChartModel fin) {
@@ -405,8 +453,8 @@ public final class DefaultPlotContext implements PlotContext {
             }
         }
         if (min == Double.POSITIVE_INFINITY || max == Double.NEGATIVE_INFINITY) return null;
-        double span = Math.max(1e-9, max - min);
-        double pad = span * 0.05;
-        return new double[]{min - pad, max + pad};
+        double pad = min == max ? constantPadding(min)
+                : Math.max(max * 0.05 - min * 0.05, Math.max(Math.ulp(min), Math.ulp(max)));
+        return new double[]{paddedLower(min, pad), paddedUpper(max, pad)};
     }
 }

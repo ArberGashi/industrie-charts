@@ -54,7 +54,7 @@ final class DemoExamples {
                     0, 1, 0, 100, DonutRenderer::new),
             new Example("radar", "Radar", "Comparison", "Synthetic system profile",
                     "Six normalized scores, each averaged from the selected number of measurements. Higher is better.",
-                    "Six metrics", "Score (0–100)", 96, "Samples / metric", Presentation.RADAR,
+                    "Six metrics", "Score (0-100)", 96, "Samples / metric", Presentation.RADAR,
                     0, 6, 0, 100, RadarRenderer::new),
             new Example("heatmap", "Heatmap", "Scientific", "Synthetic response field",
                     "Two smooth response peaks sampled on a square grid. The cell budget controls spatial resolution.",

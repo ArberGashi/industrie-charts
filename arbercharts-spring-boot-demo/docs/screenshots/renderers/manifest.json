@@ -1,6 +1,6 @@
 {
-  "artifact": "arbercharts-spring-boot-demo-2.2.0.jar",
-  "artifactSha256": "48a235d6e4eae16ae086d29c2a50adb4e9b15c65eef991751e174d3e8cecdbde",
+  "artifact": "arbercharts-spring-boot-demo-2.5.0.jar",
+  "artifactSha256": "a9ec87c7effd37647d80fb72656cb27810384552fd767927481aadf1d5512c66",
   "springBoot": "4.1.1",
   "java": 25,
   "runtime": "Eclipse Adoptium",
@@ -49,13 +49,13 @@
       "file": "radar-light.png",
       "renderer": "RadarRenderer",
       "request": "/api/charts/radar.png?width=1600&height=900&scale=2&samples=96&theme=light",
-      "sha256": "18b47d61b1079a43d9571c23f0606403f4ebfaf5dc0e899594b267f1a94fccdf"
+      "sha256": "3320fed60774ee998c1e2ce8aea7edccb13c24c2ff773a27eb9090a529a33b1e"
     },
     {
       "file": "radar-dark.png",
       "renderer": "RadarRenderer",
       "request": "/api/charts/radar.png?width=1600&height=900&scale=2&samples=96&theme=dark",
-      "sha256": "89c59bc2e03b1b89187f0247672e025b1a917abbb253fe144bed6db52aeef1bf"
+      "sha256": "445c7b3c5fbdc272760eaf35c65a69ed71765e4967e5427c286f138ad5be0558"
     },
     {
       "file": "boxplot-light.png",

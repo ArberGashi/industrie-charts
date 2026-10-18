@@ -1,6 +1,6 @@
-# ArberCharts 2.2.0 User Guide
+# ArberCharts 2.5.0 User Guide
 
-ArberCharts 2.2.0 is a Java charting framework for desktop and server workloads.
+ArberCharts 2.5.0 is a Java charting framework for desktop and server workloads.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ ArberCharts 2.2.0 is a Java charting framework for desktop and server workloads.
 - `arbercharts-demo`: executable Swing workbench
 - `arbercharts-spring-boot-demo`: executable browser workbench backed by the server bridge
 
-Use the same **2.2.0** version for Core and every bridge in an application. Core
+Use the same **2.5.0** version for Core and every bridge in an application. Core
 does not depend on `java.desktop`; Swing and server raster rendering do. A
 headless server runtime therefore still needs that JDK module.
 
@@ -29,7 +29,7 @@ For a Swing application, add the bridge, which includes Core as a dependency:
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-swing-bridge</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
@@ -48,13 +48,13 @@ mvn -B -Pquality-gate -Djava.awt.headless=true verify
 Run the Swing demo on a graphical desktop:
 
 ```bash
-java -jar arbercharts-demo/target/arbercharts-demo-2.2.0.jar
+java -jar arbercharts-demo/target/arbercharts-demo-2.5.0.jar
 ```
 
 Run the browser demo, then open `http://localhost:8080`:
 
 ```bash
-java -Djava.awt.headless=true -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.2.0.jar
+java -Djava.awt.headless=true -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.5.0.jar
 ```
 
 The optional `--add-modules jdk.incubator.vector` JVM argument enables vector

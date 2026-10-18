@@ -20,9 +20,15 @@ import javax.swing.SwingUtilities;
  * <ul>
  *   <li>Creates a properly configured JFrame with ArberChartPanel</li>
  *   <li>Thread-safe display using SwingUtilities.invokeLater</li>
- *   <li>FlatLaf dark theme by default</li>
+ *   <li>Uses the application's existing Swing look and feel</li>
  *   <li>Sensible default window size (800x600)</li>
  * </ul>
+ *
+ * <p>The provider uses the supplied title for the window. It does not apply the
+ * subtitle, axis-label or theme values stored by {@link SimpleChart}, and it does
+ * not install FlatLaf. Configure {@link ArberChartPanel} directly for presentation
+ * control. The default frame uses {@code EXIT_ON_CLOSE}; applications that need
+ * another close policy should own their frame or provide another display provider.
  *
  * <h2>ServiceLoader Registration</h2>
  * <p>Registered in: {@code META-INF/services/com.arbergashi.charts.ChartDisplayProvider}

@@ -1,6 +1,6 @@
 # Spring Boot chart workbench
 
-A runnable browser demo for the ArberCharts server backend, built with Spring Boot 4.1.1 and Java 25. It uses a compact IDE-inspired layout with an example navigator, chart preview, dataset inspector and render details. The design uses original assets and does not depend on an IDE installation or external web resources.
+A runnable browser demo for the ArberCharts 2.5.0 server backend, built with Spring Boot 4.1.1 and Java 25. It uses a compact IDE-inspired layout with an example navigator, chart preview, dataset inspector and render details. The design uses original assets and does not depend on an IDE installation or external web resources.
 
 Use the installed **Eclipse Temurin 25 (Adoptium)** JDK. No additional JDK installation is needed when Temurin is already available. Check the runtime used by Maven with `mvn -v`.
 
@@ -10,15 +10,15 @@ From the repository root:
 
 ```shell
 mvn -pl arbercharts-spring-boot-demo -am clean verify
-java -Djava.awt.headless=true --add-modules jdk.incubator.vector -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.2.0.jar
+java -Djava.awt.headless=true --add-modules jdk.incubator.vector -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.5.0.jar
 ```
 
 Open [the local workbench](http://127.0.0.1:8080). The server binds to `127.0.0.1` by default. Override the port with `--server.port=8081` or `SERVER_PORT=8081`. Stop the process with Ctrl+C; Spring closes the renderer session pool on shutdown.
 
-Packaging also stages the executable JAR and this README in `dist/releases/spring-boot/2.2.0/`. From that directory:
+Packaging also stages the executable JAR and this README in `dist/releases/spring-boot/2.5.0/`. From that directory:
 
 ```shell
-java -Djava.awt.headless=true --add-modules jdk.incubator.vector -jar arbercharts-spring-boot-demo-2.2.0.jar
+java -Djava.awt.headless=true --add-modules jdk.incubator.vector -jar arbercharts-spring-boot-demo-2.5.0.jar
 ```
 
 The vector module is optional; omitting `--add-modules jdk.incubator.vector` uses the framework's scalar fallback. The executable JAR contains its Spring Boot dependencies and needs no application server. This demo is excluded from Maven Central publishing.
@@ -50,7 +50,8 @@ The existing line, area, step, bar, scatter and candlestick examples retain thei
 
 The repository README uses actual **1280 × 720 browser captures**
 of the complete workbench. Each image includes the chart, renderer navigator,
-settings and dataset inspector.
+settings and dataset inspector. They were captured on 18 October 2026 from the
+verified 2.5.0 executable JAR, after the model, renderer and backend corrections.
 The [capture manifest](docs/screenshots/workbench-gallery/manifest.json) records
 the source executable checksum, page state, image dimensions and file checksums.
 
@@ -72,7 +73,7 @@ between captures; the chart datasets are deterministic.
 
 ## Standalone chart exports
 
-Separate PNG exports are available for reports and renderer comparisons. A 1600 × 900 output with `scale=2` provides a sharp image at an 800 × 450 display size, including readable labels. These stable example URLs use the default application port; change it to `8081` for the running development preview:
+Separate PNG exports are available for reports and renderer comparisons. A 1600 × 900 output with `scale=2` provides a sharp image at an 800 × 450 display size, including readable labels. These example URLs use the default application port; adjust the port if the local process uses an override:
 
 - [Donut, light](http://127.0.0.1:8080/api/charts/donut.png?width=1600&height=900&scale=2&samples=256&theme=light)
 - [Radar, light](http://127.0.0.1:8080/api/charts/radar.png?width=1600&height=900&scale=2&samples=96&theme=light)
@@ -82,13 +83,14 @@ Separate PNG exports are available for reports and renderer comparisons. A 1600 
 
 Change `theme=light` to `theme=dark` for the matching dark image. The checked-in
 [image manifest](docs/screenshots/renderers/manifest.json) records the source JAR,
-runtime, exact requests and image checksums. To regenerate the six chart examples
-in both themes from the current local application, run from the repository root:
+runtime, exact requests and image checksums for the 2.5.0 exports. To regenerate
+the six chart examples in both themes from the current
+local application, run from the repository root:
 
 ```shell
 python3 scripts/export-demo-gallery.py \
-    --base-url http://127.0.0.1:8081 \
-    --artifact dist/releases/spring-boot/2.2.0/arbercharts-spring-boot-demo-2.2.0.jar
+    --base-url http://127.0.0.1:8080 \
+    --artifact dist/releases/spring-boot/2.5.0/arbercharts-spring-boot-demo-2.5.0.jar
 ```
 
 The script validates the running renderer catalog, PNG format and dimensions before
@@ -135,7 +137,7 @@ The application is a local demo without authentication. Its configuration delibe
 
 ## Verification
 
-`ChartWorkbenchHttpTest` starts the real application on a random loopback port. It checks the workbench assets and catalog, all eleven PNG renderers in both themes, download dimensions and headers, malformed and oversized input, and concurrent deterministic rendering. Additional image checks verify donut category shares, the filled radar profile, heatmap orientation and color-scale endpoints, all boxplot median marks, and density-curve coordinates against an independent Gaussian sum. The five new examples are also exercised at both input limits and the smallest logical preview with `scale=2`. These tests use the real server bridge and PNG decoding, without renderer mocks.
+`ChartWorkbenchHttpTest` starts the real application on a random loopback port. It checks the workbench assets and catalog, all eleven PNG renderers in both themes, download dimensions and headers, malformed and oversized input, and concurrent deterministic rendering. Additional image checks verify donut category shares, the filled radar profile, heatmap orientation and color-scale endpoints, all boxplot median marks, and density-curve coordinates against an independent Gaussian sum. The five additional examples are also exercised at both input limits and the smallest logical preview with `scale=2`. These tests use the real server bridge and PNG decoding, without renderer mocks.
 
 `DemoExamplesTest` checks data semantics separately, including fixed category totals, six radial dimensions, heatmap cell centers and budgets, typed statistical models, request-owned renderer instances, and a hand-calculated quartile/outlier fixture.
 
@@ -153,17 +155,39 @@ node --test arbercharts-spring-boot-demo/src/test/frontend/workbench.test.mjs
 
 These tests cover catalog request deduplication, initialization failure and retry,
 empty catalogs, stale image responses, download availability during failed
-or pending renders, coordinate-specific accessibility text and the heatmap cell-budget control. They execute the production script with controlled network
-responses and a small DOM fixture; they do not replace the live browser layout
-and PNG checks. Node.js is not required to build or run the executable Java demo.
+or pending renders, image decoding failure, object URL cleanup, request
+cancellation, coordinate-specific accessibility text and the heatmap cell-budget
+control. They execute the production script with controlled network responses and
+a DOM fixture whose element IDs come from the actual HTML. They do not replace
+live browser layout and PNG checks. Node.js is not required to build or run the
+executable Java demo.
 
 The independent renderer and UI presentation audit remains the source for future rendering corrections. This demo does not claim that all framework renderers or all axis layouts have been visually perfected.
 
-The current workbench screenshots were refreshed from the final executable JAR:
-both themes at 1280 × 720 and the narrow layout at 502 × 766. The live browser
-reported no warnings or errors. Earlier browser checks also covered catalog
-search, renderer selection, sample and size changes, and a PNG download.
-Screenshots from the running application:
+Final packaged verification used the staged 2.5.0 executable JAR with SHA-256
+`a9ec87c7effd37647d80fb72656cb27810384552fd767927481aadf1d5512c66`.
+The HTTP smoke check exercised the running application over its real loopback
+socket: all 22 example/theme combinations decoded at 800 × 480 with chart content,
+12 invalid or unknown requests received the expected error response, and 44
+parallel repeat renders matched the corresponding PNG bytes. A download response
+decoded at 1280 × 720 with the expected attachment filename. The catalog reported
+Spring Boot 4.1.1, Java 25 and Eclipse Adoptium; application health remained `UP`.
+
+The twelve standalone exports were then requested again from that process at
+1600 × 900 with `scale=2`. Each PNG was fully decoded and checked for dimensions,
+theme, chart content and its manifest checksum. The changed radar exports were
+visually reviewed for the filled profile, radial scale and all six dimension
+labels. Deterministic exports can remain byte-identical across builds; the
+manifest records the actual executable used for this export pass.
+
+The workbench screenshots were captured from the same final executable: both
+themes at 1280 × 720 and the narrow layout at 502 × 766. The final browser session
+opened all six gallery examples in both themes, used the theme toggle on the Line
+example, checked complete chart images and their download links, and confirmed
+the radar's 0-100 scale in the inspector. The browser reported no warnings or
+errors. Search, empty-search results and changes through the sample and fixed-size
+controls were not repeated in this final capture session.
+The capture manifest records all fifteen browser views and their checksums:
 
 - [Dark workbench](docs/screenshots/workbench-dark.jpg)
 - [Light workbench](docs/screenshots/workbench-light.jpg)

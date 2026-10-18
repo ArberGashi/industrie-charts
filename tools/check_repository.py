@@ -14,7 +14,11 @@ NS = {"m": "http://maven.apache.org/POM/4.0.0"}
 LINK = re.compile(r"!?\[[^\]\n]*\]\(<?([^\s)>]+)>?(?:\s+\"[^\"]*\")?\)")
 HTML_LINK = re.compile(r"(?:src|srcset|href)=[\"']([^\"']+)[\"']")
 LEGACY_DOCUMENT = re.compile(r"(?:SLA(?:_[A-Z0-9]+)*|PRICING|BINARY-LICENSE|LICENSE-FAQ|LICENSING)\.md$", re.I)
-STALE_TERMS = re.compile(r"binary-first|source-access|PROPRIETARY AND CONFIDENTIAL", re.I)
+# Reject the retired About-dialog delivery claim without banning ordinary
+# technical support references or the MIT permission for commercial use.
+STALE_TERMS = re.compile(
+    r"binary-first|source-access|PROPRIETARY AND CONFIDENTIAL"
+    r"|commercial\s+support,\s*closed-source\s+product\s+delivery", re.I)
 PROJECT_URL = "https://github.com/ArberGashi/industrie-charts/"
 
 

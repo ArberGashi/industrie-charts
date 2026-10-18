@@ -1,111 +1,143 @@
 {
-  "artifact": "arbercharts-spring-boot-demo-2.2.0.jar",
-  "artifactSha256": "48a235d6e4eae16ae086d29c2a50adb4e9b15c65eef991751e174d3e8cecdbde",
+  "artifact": "arbercharts-spring-boot-demo-2.5.0.jar",
+  "artifactSha256": "a9ec87c7effd37647d80fb72656cb27810384552fd767927481aadf1d5512c66",
   "springBoot": "4.1.1",
   "java": 25,
   "runtime": "Eclipse Adoptium",
   "dataSource": "Synthetic demo data",
-  "capturedOn": "2026-10-16",
-  "capture": "Real browser viewport; unchanged application UI",
+  "capturedOn": "2026-10-18",
+  "capture": "Real browser viewport from the final executable; unchanged application UI; native JPEG capture",
   "width": 1280,
   "height": 720,
   "previewSize": "Fit panel",
   "images": [
     {
-      "file": "boxplot-dark.jpg",
       "example": "boxplot",
       "theme": "dark",
       "page": "/?example=boxplot&theme=dark",
-      "downloadRequest": "/api/charts/boxplot.png?width=1588&height=628&scale=2&samples=96&theme=dark&download=true",
-      "sha256": "158548d352c38cf2a4f84f32aad760818b4d75dad992dbf9c2de1affdc7dd55c"
+      "file": "boxplot-dark.jpg",
+      "downloadRequest": "/api/charts/boxplot.png?width=794&height=314&scale=1&samples=96&theme=dark&download=true",
+      "sha256": "8cd104f60120820cb86221e875d57c296b26e83d03b246bb2f956a9578cec672"
     },
     {
-      "file": "boxplot-light.jpg",
       "example": "boxplot",
       "theme": "light",
       "page": "/?example=boxplot&theme=light",
-      "downloadRequest": "/api/charts/boxplot.png?width=1588&height=628&scale=2&samples=96&theme=light&download=true",
-      "sha256": "b4c33c2c8242e8039708f13c616020a488810008c15b4be8a3182513f455622a"
+      "file": "boxplot-light.jpg",
+      "downloadRequest": "/api/charts/boxplot.png?width=794&height=314&scale=1&samples=96&theme=light&download=true",
+      "sha256": "31aec0af37f95de285cd586b78f9b79e04b5a62d33c92b36243cf2868243302e"
     },
     {
-      "file": "candlestick-dark.jpg",
       "example": "candlestick",
       "theme": "dark",
       "page": "/?example=candlestick&theme=dark",
-      "downloadRequest": "/api/charts/candlestick.png?width=1588&height=628&scale=2&samples=96&theme=dark&download=true",
-      "sha256": "0ecef9a9550c25164a513a863b409fc4f7ebd1265bab3fc1c33c91598fdf1b21"
+      "file": "candlestick-dark.jpg",
+      "downloadRequest": "/api/charts/candlestick.png?width=794&height=314&scale=1&samples=96&theme=dark&download=true",
+      "sha256": "d8849ce840de12c91e8ec8daa1dc1d3fbe9b3f222472612b7d71cab0b0018498"
     },
     {
-      "file": "candlestick-light.jpg",
       "example": "candlestick",
       "theme": "light",
       "page": "/?example=candlestick&theme=light",
-      "downloadRequest": "/api/charts/candlestick.png?width=1588&height=628&scale=2&samples=96&theme=light&download=true",
-      "sha256": "f8006ce5d4ea81e91c787bbad5b1b513fad392f5e033b548ad1dcb3387050bfc"
+      "file": "candlestick-light.jpg",
+      "downloadRequest": "/api/charts/candlestick.png?width=794&height=314&scale=1&samples=96&theme=light&download=true",
+      "sha256": "3947510c4f8dff5bcf39be5281b3e4c9b919838925bd937e97744f41bac1e50b"
     },
     {
-      "file": "donut-dark.jpg",
       "example": "donut",
       "theme": "dark",
       "page": "/?example=donut&theme=dark",
-      "downloadRequest": "/api/charts/donut.png?width=1588&height=628&scale=2&samples=256&theme=dark&download=true",
-      "sha256": "56ab0a6897181454579ac69ca57e90b71f504510ab44fd0d988352681eeb1f20"
+      "file": "donut-dark.jpg",
+      "downloadRequest": "/api/charts/donut.png?width=794&height=314&scale=1&samples=256&theme=dark&download=true",
+      "sha256": "969aba02a4c9f887bc5e2940e9fa3da4808711d34c8efa5df66c49ef1a369889"
     },
     {
-      "file": "donut-light.jpg",
       "example": "donut",
       "theme": "light",
       "page": "/?example=donut&theme=light",
-      "downloadRequest": "/api/charts/donut.png?width=1588&height=628&scale=2&samples=256&theme=light&download=true",
-      "sha256": "a9c49cba6c02a08a9b9dadb13e8cf2ce0736a01fd8a2c29827b35ce18012a914"
+      "file": "donut-light.jpg",
+      "downloadRequest": "/api/charts/donut.png?width=794&height=314&scale=1&samples=256&theme=light&download=true",
+      "sha256": "36196b76eaaa0828f80c3f7e688a6f30ad7868465eb42c55934f5bd2f5258916"
     },
     {
-      "file": "heatmap-dark.jpg",
       "example": "heatmap",
       "theme": "dark",
       "page": "/?example=heatmap&theme=dark",
-      "downloadRequest": "/api/charts/heatmap.png?width=1588&height=592&scale=2&samples=1024&theme=dark&download=true",
-      "sha256": "11f2a262a94df6878507d3e9cbdef50708586cb9f31e1d0a1b219c22964c8d5f"
+      "file": "heatmap-dark.jpg",
+      "downloadRequest": "/api/charts/heatmap.png?width=794&height=296&scale=1&samples=1024&theme=dark&download=true",
+      "sha256": "fa010856148070d8427c2d9d61b5cfb178ab17d3b8cf992a66f8cb8b298a7a37"
     },
     {
-      "file": "heatmap-light.jpg",
       "example": "heatmap",
       "theme": "light",
       "page": "/?example=heatmap&theme=light",
-      "downloadRequest": "/api/charts/heatmap.png?width=1588&height=592&scale=2&samples=1024&theme=light&download=true",
-      "sha256": "82f1173301c4320e4dfac3725a78006a285d27449002209e54f993687332c98c"
+      "file": "heatmap-light.jpg",
+      "downloadRequest": "/api/charts/heatmap.png?width=794&height=296&scale=1&samples=1024&theme=light&download=true",
+      "sha256": "eaf07b029381365de8519dc1d9e2979e48725f8122f174eaa2d189f6e3711409"
     },
     {
-      "file": "kde-dark.jpg",
       "example": "kde",
       "theme": "dark",
       "page": "/?example=kde&theme=dark",
-      "downloadRequest": "/api/charts/kde.png?width=1588&height=592&scale=2&samples=256&theme=dark&download=true",
-      "sha256": "3ae4fdb31749310ba6ceb9286f571a328e1b87e8f9b711a5d18948c5805a2222"
+      "file": "kde-dark.jpg",
+      "downloadRequest": "/api/charts/kde.png?width=794&height=296&scale=1&samples=256&theme=dark&download=true",
+      "sha256": "226b344bd94b8cc7e52cca9f1544de0f02161b0ce83eea73ac6624d0a2dcface"
     },
     {
-      "file": "kde-light.jpg",
       "example": "kde",
       "theme": "light",
       "page": "/?example=kde&theme=light",
-      "downloadRequest": "/api/charts/kde.png?width=1588&height=592&scale=2&samples=256&theme=light&download=true",
-      "sha256": "ac5b348b215f86fd868586f259ada58afb4642c3ad5a9ef35b95c6343ab49493"
+      "file": "kde-light.jpg",
+      "downloadRequest": "/api/charts/kde.png?width=794&height=296&scale=1&samples=256&theme=light&download=true",
+      "sha256": "749d540ecfea4c2601b5ef26789f9390895d03d73bc76e967483c4062e41dd1b"
     },
     {
-      "file": "radar-dark.jpg",
       "example": "radar",
       "theme": "dark",
       "page": "/?example=radar&theme=dark",
-      "downloadRequest": "/api/charts/radar.png?width=1588&height=592&scale=2&samples=96&theme=dark&download=true",
-      "sha256": "04800e13a986c7fdd2a98574c8316306a841ca1608d88f36e451a8b3a49994ca"
+      "file": "radar-dark.jpg",
+      "downloadRequest": "/api/charts/radar.png?width=794&height=296&scale=1&samples=96&theme=dark&download=true",
+      "sha256": "2e692c992c455b3026fb3687c88bb00684defeada9552bb45d82067d6c0b699e"
     },
     {
-      "file": "radar-light.jpg",
       "example": "radar",
       "theme": "light",
       "page": "/?example=radar&theme=light",
-      "downloadRequest": "/api/charts/radar.png?width=1588&height=592&scale=2&samples=96&theme=light&download=true",
-      "sha256": "83240ee37e5f3b407f01046d34ece6f57acc33c1d4830201bcff738cc9f1e5bf"
+      "file": "radar-light.jpg",
+      "downloadRequest": "/api/charts/radar.png?width=794&height=296&scale=1&samples=96&theme=light&download=true",
+      "sha256": "67c65815991b27bd704867c27f32f8a7f679ef32e9d3af1d1a955392d28a4f21"
+    }
+  ],
+  "workbenchViews": [
+    {
+      "example": "line",
+      "theme": "dark",
+      "page": "/?example=line&theme=dark",
+      "file": "../workbench-dark.jpg",
+      "width": 1280,
+      "height": 720,
+      "downloadRequest": "/api/charts/line.png?width=794&height=314&scale=1&samples=256&theme=dark&download=true",
+      "sha256": "6fd95f6a1f243b2e36d3febf63ff2c0c30631b9664cfa12a5933cde2cfc15965"
+    },
+    {
+      "example": "line",
+      "theme": "light",
+      "page": "/?example=line&theme=light",
+      "file": "../workbench-light.jpg",
+      "width": 1280,
+      "height": 720,
+      "downloadRequest": "/api/charts/line.png?width=794&height=314&scale=1&samples=256&theme=light&download=true",
+      "sha256": "8b9626122da7f39adce059c871606a83dddb672654fdc95cefc907145a720b32"
+    },
+    {
+      "example": "line",
+      "theme": "dark",
+      "page": "/?example=line&theme=dark",
+      "file": "../workbench-mobile.jpg",
+      "width": 502,
+      "height": 766,
+      "downloadRequest": "/api/charts/line.png?width=486&height=280&scale=1&samples=256&theme=dark&download=true",
+      "sha256": "fb8bff950134f0c856d3a6f4774b6dccf3e8cde97f9c73a79576404ec980a386"
     }
   ]
 }

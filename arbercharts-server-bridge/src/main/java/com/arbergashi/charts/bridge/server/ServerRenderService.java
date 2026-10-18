@@ -25,6 +25,7 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.ArrayDeque;
+import java.util.function.ToDoubleFunction;
 
 /**
  * Headless render service with a lightweight session pool.
@@ -43,6 +44,9 @@ public final class ServerRenderService implements AutoCloseable {
     private final Timer renderTimer;
     private final Counter renderSuccess;
     private final Counter renderFailure;
+    private final MeterRegistry registry;
+    private final Gauge ownedActiveGauge;
+    private final Gauge ownedIdleGauge;
 
     public ServerRenderService() {
         this(Math.max(1, Runtime.getRuntime().availableProcessors()), true, null);
@@ -55,6 +59,7 @@ public final class ServerRenderService implements AutoCloseable {
     public ServerRenderService(int poolSize, boolean metricsEnabled, MeterRegistry registry) {
         this.pool = new RenderSessionPool(Math.max(1, poolSize));
         this.metricsEnabled = metricsEnabled;
+        this.registry = registry;
         if (registry != null) {
             this.renderTimer = Timer.builder("arber.charts.render.time").register(registry);
             this.renderSuccess = Counter.builder("arber.charts.render.count")
@@ -63,14 +68,14 @@ public final class ServerRenderService implements AutoCloseable {
             this.renderFailure = Counter.builder("arber.charts.render.count")
                     .tag("result", "failure")
                     .register(registry);
-            Gauge.builder("arber.charts.pool.active", pool, RenderSessionPool::activeCount)
-                    .register(registry);
-            Gauge.builder("arber.charts.pool.idle", pool, RenderSessionPool::idleCount)
-                    .register(registry);
+            this.ownedActiveGauge = registerPoolGauge("arber.charts.pool.active", RenderSessionPool::activeCount);
+            this.ownedIdleGauge = registerPoolGauge("arber.charts.pool.idle", RenderSessionPool::idleCount);
         } else {
             this.renderTimer = null;
             this.renderSuccess = null;
             this.renderFailure = null;
+            this.ownedActiveGauge = null;
+            this.ownedIdleGauge = null;
         }
     }
 
@@ -78,24 +83,30 @@ public final class ServerRenderService implements AutoCloseable {
         return renderToImage(model, size, ChartThemes.getDarkTheme(), null);
     }
 
+    /**
+     * Renders a model to a PNG using the default theme and renderer.
+     *
+     * @param model the chart data
+     * @param size the requested image size
+     * @return the encoded PNG bytes
+     * @throws IllegalStateException if no PNG writer is available or encoding fails
+     */
     public byte[] renderToPng(ChartModel model, Dimension size) {
-        BufferedImage image = renderToImage(model, size);
-        try (java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-            javax.imageio.ImageIO.write(image, "png", out);
-            return out.toByteArray();
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException("Failed to encode PNG", e);
-        }
+        return encodePng(renderToImage(model, size));
     }
 
+    /**
+     * Renders a model to a PNG using the supplied theme and renderer.
+     *
+     * @param model the chart data
+     * @param size the requested image size
+     * @param theme the chart theme, or {@code null} for the default theme
+     * @param renderer the chart renderer, or {@code null} for automatic selection
+     * @return the encoded PNG bytes
+     * @throws IllegalStateException if no PNG writer is available or encoding fails
+     */
     public byte[] renderToPng(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer) {
-        BufferedImage image = renderToImage(model, size, theme, renderer);
-        try (java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-            javax.imageio.ImageIO.write(image, "png", out);
-            return out.toByteArray();
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException("Failed to encode PNG", e);
-        }
+        return encodePng(renderToImage(model, size, theme, renderer));
     }
 
     /**
@@ -105,14 +116,25 @@ public final class ServerRenderService implements AutoCloseable {
      * e.g. oscillator indicators (MACD, Stochastic) that are shown in their own
      * pane with their own scale inside a chart panel.</p>
      *
+     * @param model the chart data
+     * @param size the requested image size
+     * @param theme the chart theme, or {@code null} for the default theme
+     * @param renderer the chart renderer, or {@code null} for automatic selection
      * @param viewMinY lower bound of the visible Y range
      * @param viewMaxY upper bound of the visible Y range
+     * @return the encoded PNG bytes
+     * @throws IllegalStateException if no PNG writer is available or encoding fails
      */
     public byte[] renderToPng(ChartModel model, Dimension size, ChartTheme theme, ChartRenderer renderer,
                               double viewMinY, double viewMaxY) {
-        BufferedImage image = renderToImage(model, size, theme, renderer, viewMinY, viewMaxY);
+        return encodePng(renderToImage(model, size, theme, renderer, viewMinY, viewMaxY));
+    }
+
+    private static byte[] encodePng(BufferedImage image) {
         try (java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
-            javax.imageio.ImageIO.write(image, "png", out);
+            if (!javax.imageio.ImageIO.write(image, "png", out)) {
+                throw new IllegalStateException("Failed to encode PNG: no PNG image writer is available");
+            }
             return out.toByteArray();
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Failed to encode PNG", e);
@@ -263,11 +285,35 @@ public final class ServerRenderService implements AutoCloseable {
     /**
      * Releases idle drawing contexts and rejects new render requests.
      * In-flight renders may finish; their contexts are released on return.
-     * Repeated calls have no effect.
+     * Pool gauges registered by this service are removed; shared render counters
+     * and timers remain available. Repeated calls have no effect.
      */
     @Override
     public void close() {
         pool.close();
+        removeOwnedGauge(ownedActiveGauge);
+        removeOwnedGauge(ownedIdleGauge);
+    }
+
+    private Gauge registerPoolGauge(String name, ToDoubleFunction<RenderSessionPool> value) {
+        synchronized (registry) {
+            var existing = registry.getMeters();
+            Gauge gauge = Gauge.builder(name, pool, value).register(registry);
+            // Registration may return an existing meter, including one mapped by a filter.
+            return existing.stream().anyMatch(meter -> meter == gauge) ? null : gauge;
+        }
+    }
+
+    private void removeOwnedGauge(Gauge gauge) {
+        if (gauge == null) {
+            return;
+        }
+        synchronized (registry) {
+            // Micrometer removes by ID; an externally replaced meter must remain registered.
+            if (registry.getMeters().stream().anyMatch(meter -> meter == gauge)) {
+                registry.remove(gauge);
+            }
+        }
     }
 
     private static ChartRenderer selectRenderer(ChartModel model) {
@@ -289,7 +335,7 @@ public final class ServerRenderService implements AutoCloseable {
         }
         applyDefaultSpatialStyle(session.canvas, context);
 
-        SpatialServerConsumer consumer = new SpatialServerConsumer(session.canvas, builder, session);
+        SpatialServerConsumer consumer = new SpatialServerConsumer(session.canvas, builder, session, context);
         renderer.renderSpatial(model, context, consumer);
 
         SpatialPathBatch batch = builder.getBatch();
@@ -309,15 +355,18 @@ public final class ServerRenderService implements AutoCloseable {
 
         for (int i = 0; i < count; i++) {
             if (!batch.isVisible(i)) {
-                outCount = flushSpatial(session.canvas, outX, outY, outCount);
+                outCount = flushSpatial(session.canvas, outX, outY, outCount, currentStyle);
                 continue;
             }
             if (builder.isMoveTo(i)) {
-                outCount = flushSpatial(session.canvas, outX, outY, outCount);
+                outCount = flushSpatial(session.canvas, outX, outY, outCount, currentStyle);
             }
             long style = batch.getStyleKey(i);
             if (style != currentStyle) {
-                outCount = flushSpatial(session.canvas, outX, outY, outCount);
+                boolean continuesPath = outCount > 0;
+                float previousX = continuesPath ? outX[outCount - 1] : 0f;
+                float previousY = continuesPath ? outY[outCount - 1] : 0f;
+                outCount = flushSpatial(session.canvas, outX, outY, outCount, currentStyle);
                 if (style == 0L) {
                     // No style emitted by the renderer: keep the theme default
                     // instead of unpacking key 0 into a fully transparent color.
@@ -326,13 +375,20 @@ public final class ServerRenderService implements AutoCloseable {
                     applySpatialStyle(session.canvas, style);
                 }
                 currentStyle = style;
+                if (continuesPath) {
+                    // A point's style applies to its incoming segment, matching
+                    // the Swing consumer. A style change does not start a new path.
+                    outX[outCount] = previousX;
+                    outY[outCount] = previousY;
+                    outCount++;
+                }
             }
             outX[outCount] = (float) xs[i];
             outY[outCount] = (float) ys[i];
             outCount++;
             drawSpatialMarker(session, style, (float) xs[i], (float) ys[i]);
         }
-        flushSpatial(session.canvas, outX, outY, outCount);
+        flushSpatial(session.canvas, outX, outY, outCount, currentStyle);
     }
 
     private static boolean isValidRange(double[] range) {
@@ -382,12 +438,21 @@ public final class ServerRenderService implements AutoCloseable {
         int argb = SpatialStyleDescriptor.unpackArgb(styleKey);
         float stroke = SpatialStyleDescriptor.unpackStrokeWidth(styleKey);
         canvas.setColor(new ArberColor(argb));
-        canvas.setStroke(stroke);
+        canvas.setSpatialStroke(stroke, SpatialStyleDescriptor.unpackDashId(styleKey));
     }
 
-    private static int flushSpatial(ImageBufferCanvas canvas, float[] xs, float[] ys, int count) {
+    private static int flushSpatial(ImageBufferCanvas canvas, float[] xs, float[] ys, int count, long styleKey) {
         if (count > 1) {
-            canvas.drawPolyline(xs, ys, count);
+            int dashId = SpatialStyleDescriptor.unpackDashId(styleKey);
+            if (dashId >= 1 && dashId <= 3) {
+                // Spatial segments restart their dash phase at each point,
+                // matching the existing Swing consumer's drawLine semantics.
+                for (int i = 1; i < count; i++) {
+                    canvas.drawLine(xs[i - 1], ys[i - 1], xs[i], ys[i]);
+                }
+            } else {
+                canvas.drawPolyline(xs, ys, count);
+            }
         }
         return 0;
     }
@@ -446,11 +511,14 @@ public final class ServerRenderService implements AutoCloseable {
         private final ImageBufferCanvas canvas;
         private final SpatialPathBatchBuilder builder;
         private final RenderSession session;
+        private final DefaultPlotContext context;
 
-        private SpatialServerConsumer(ImageBufferCanvas canvas, SpatialPathBatchBuilder builder, RenderSession session) {
+        private SpatialServerConsumer(ImageBufferCanvas canvas, SpatialPathBatchBuilder builder,
+                                      RenderSession session, DefaultPlotContext context) {
             this.canvas = canvas;
             this.builder = builder;
             this.session = session;
+            this.context = context;
         }
 
         @Override
@@ -464,7 +532,11 @@ public final class ServerRenderService implements AutoCloseable {
                              double x3, double y3,
                              double x4, double y4) {
             long styleKey = builder.getStyleKey();
-            applySpatialStyle(canvas, styleKey);
+            if (styleKey == 0L) {
+                applyDefaultSpatialStyle(canvas, context);
+            } else {
+                applySpatialStyle(canvas, styleKey);
+            }
             session.quadX[0] = (float) x1;
             session.quadY[0] = (float) y1;
             session.quadX[1] = (float) x2;

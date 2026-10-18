@@ -43,4 +43,24 @@ public class CircularFastMedicalModelTest {
         m.clear();
         assertEquals(0, m.getRawSize());
     }
+
+    @Test
+    public void clearResetsAnIncompleteSweep() {
+        CircularFastMedicalModel model = new CircularFastMedicalModel(4, 1);
+        model.add(1, new double[]{10});
+        model.add(2, new double[]{20});
+        assertEquals(2, model.getSweepIndex());
+        long stamp = model.getUpdateStamp();
+
+        model.clear();
+
+        assertEquals(0, model.getRawSize());
+        assertEquals(0, model.getHeadIndex());
+        assertEquals(0, model.getSweepIndex());
+        assertEquals(stamp + 1, model.getUpdateStamp());
+
+        model.add(3, new double[]{30});
+        assertEquals(1, model.getSweepIndex());
+        assertEquals(30.0, model.getY(0));
+    }
 }

@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * or application-specific Look&amp;Feel state. Instead it should request a theme from the
  * active {@link PlotContext} and only fall back to the stable defaults exposed here.</p>
  *
- * <h2>Available Themes (v2.0)</h2>
+ * <h2>Built-in Themes</h2>
  * <ul>
  *   <li><strong>dark</strong> - Default dark theme</li>
  *   <li><strong>light</strong> - Default light theme</li>
@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li><strong>solarized-dark</strong> - Solarized dark variant</li>
  *   <li><strong>solarized-light</strong> - Solarized light variant</li>
  *   <li><strong>github-dark</strong> - GitHub dark mode colors</li>
- *   <li><strong>medical</strong> - IEC 60601 compliant (green grid)</li>
+ *   <li><strong>medical</strong> - Green-on-black medical-style palette</li>
  * </ul>
  *
  * <h2>Usage Example</h2>
@@ -203,7 +203,7 @@ public final class ChartThemes {
             null
     );
 
-    // ===== MEDICAL THEME (IEC 60601 compliant, green grid) =====
+    // ===== MEDICAL THEME (green-on-black palette) =====
     private static final ChartTheme MEDICAL = new BasicChartTheme(
             ColorRegistry.ofArgb(0xFF000000),      // background (black for contrast)
             ColorRegistry.ofArgb(0xFF00FF00),      // foreground (medical green)
@@ -363,10 +363,10 @@ public final class ChartThemes {
     }
 
     /**
-     * Gets the Medical theme (IEC 60601 compliant).
+     * Gets the green-on-black Medical theme.
      *
-     * <p>Green-on-black color scheme compliant with medical device standards.
-     * Suitable for ECG, EEG, and patient monitoring displays.
+     * <p>This is a visual palette only. It does not establish medical-device
+     * compliance, physical calibration or suitability for clinical use.
      *
      * @return the Medical theme
      * @since 2.0.0
@@ -389,7 +389,7 @@ public final class ChartThemes {
      *   <li>{@code solarized-dark} - Solarized dark variant</li>
      *   <li>{@code solarized-light} - Solarized light variant</li>
      *   <li>{@code github-dark} - GitHub dark mode</li>
-     *   <li>{@code medical} - IEC 60601 compliant</li>
+     *   <li>{@code medical} - Green-on-black medical-style palette</li>
      * </ul>
      *
      * @param name the theme name (case-insensitive)

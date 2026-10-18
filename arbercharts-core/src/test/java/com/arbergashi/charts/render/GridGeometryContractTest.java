@@ -31,6 +31,7 @@ import com.arbergashi.charts.render.specialized.TernaryContourRenderer;
 import com.arbergashi.charts.render.specialized.TernaryPhasediagramRenderer;
 import com.arbergashi.charts.render.specialized.TernaryPlotRenderer;
 import com.arbergashi.charts.util.ChartAssets;
+import com.arbergashi.charts.util.NiceScale;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -56,6 +57,10 @@ class GridGeometryContractTest {
     static Stream<GridLayer> cartesianGrids() {
         return Stream.of(new DefaultGridLayer(), new MedicalGridLayer(), new FinancialGridLayer(),
                 new StatisticalGridLayer(), new AnalysisGridLayer(), new GeoGridLayer(), new LogarithmicGridLayer());
+    }
+
+    static Stream<GridLayer> numericTickGrids() {
+        return Stream.of(new DefaultGridLayer(), new FinancialGridLayer());
     }
 
     @ParameterizedTest
@@ -144,6 +149,55 @@ class GridGeometryContractTest {
                 && line.y1 == line.y2 && line.y1 > 1 && line.y1 < 399).toList();
         assertEquals(1, majorHorizontal.size());
         assertEquals(200.5f, majorHorizontal.getFirst().y1);
+    }
+
+    @ParameterizedTest
+    @MethodSource("numericTickGrids")
+    void narrowLargeOffsetWindowDoesNotOverdrawOneGridPosition(GridLayer grid) {
+        for (double min : new double[]{1e16, -1e16}) {
+            DefaultPlotContext context = new DefaultPlotContext(new ArberRect(0, 0, 600, 400),
+                    new DefaultChartModel("offset"), min, min + 4, 0, 10);
+            RecordingCanvas canvas = new RecordingCanvas();
+            grid.renderGrid(canvas, context);
+            assertTrue(canvas.lines.size() < 100);
+            List<Line> vertical = canvas.lines.stream().filter(line -> line.x1 == line.x2).toList();
+            assertEquals(2, vertical.stream().filter(line -> line.x1 == 300.5f).count());
+            assertTrue(vertical.size() < 10);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("numericTickGrids")
+    void gridsTerminateWithFiniteGeometryAtExtremeFiniteBounds(GridLayer grid) {
+        for (double[] domain : new double[][]{{-Double.MAX_VALUE, Double.MAX_VALUE},
+                {0, Double.MAX_VALUE}, {Math.nextDown(Double.MAX_VALUE), Double.MAX_VALUE}}) {
+            DefaultPlotContext context = new DefaultPlotContext(new ArberRect(0, 0, 600, 400),
+                    new DefaultChartModel("extremes"), domain[0], domain[1], domain[0], domain[1]);
+            RecordingCanvas canvas = new RecordingCanvas();
+            grid.renderGrid(canvas, context);
+            assertTrue(canvas.lines.size() < 200);
+            for (Line line : canvas.lines) {
+                assertTrue(Float.isFinite(line.x1) && Float.isFinite(line.x2));
+                assertTrue(Float.isFinite(line.y1) && Float.isFinite(line.y2));
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("numericTickGrids")
+    void invalidLogarithmicCoordinatesAreNotSnappedToThePlotEdge(GridLayer grid) {
+        DefaultPlotContext context = new DefaultPlotContext(new ArberRect(0, 0, 600, 400),
+                0, 10, 0, 1000, true, NiceScale.ScaleMode.LINEAR, NiceScale.ScaleMode.LOGARITHMIC);
+        RecordingCanvas canvas = new RecordingCanvas();
+        grid.renderGrid(canvas, context);
+        assertTrue(canvas.lines.stream().anyMatch(line -> line.x1 == line.x2 && line.x1 > 0 && line.x1 < 600));
+        for (Line line : canvas.lines) {
+            assertTrue(Float.isFinite(line.y1) && Float.isFinite(line.y2));
+            if (line.y1 == line.y2) {
+                assertTrue(line.y1 == 0 || line.y1 == 400
+                        || (grid instanceof FinancialGridLayer && line.y1 == 300), "Only the frame and volume separator remain");
+            }
+        }
     }
 
     @Test

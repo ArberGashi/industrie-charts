@@ -357,10 +357,10 @@ class StatisticalGeometryRegressionTest {
             PlotContext context = new DefaultPlotContext(new ArberRect(0, 0, 400, 400), 0, 4, 1, 1000,
                     true, NiceScale.ScaleMode.LINEAR, NiceScale.ScaleMode.LOGARITHMIC);
             Geometry canvas = render(new LiveDistributionOverlayRenderer(), model, context);
-            double[] pixel = new double[2];
-            context.mapToPixel(0, 1 + 11 * (999.0 / 12), pixel);
+            double lowerBinEdge = 1 + 11 * (999.0 / 12);
+            double expectedLowerPixel = 400 * (1 - Math.log10(lowerBinEdge) / 3);
             assertEquals(0, canvas.fills.getFirst().y, EPSILON);
-            assertEquals(pixel[1] - 1, canvas.fills.getFirst().h, EPSILON);
+            assertEquals(expectedLowerPixel - 1, canvas.fills.getFirst().h, EPSILON);
         });
     }
 

@@ -9,6 +9,7 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.fonts.inter.FlatInterFont;
+import com.formdev.flatlaf.util.UIScale;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -58,9 +59,7 @@ final class DemoThemeSupport {
             FlatDarkLaf.setup();
         }
 
-        Font interFont = UIManager.getFont("defaultFont").deriveFont(13f);
-        UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, 12.5f));
-        UIManager.put("defaultFont", interFont);
+        applyTypography();
 
         return theme;
     }
@@ -81,7 +80,14 @@ final class DemoThemeSupport {
         } else {
             FlatDarkLaf.setup();
         }
+        applyTypography();
         FlatLaf.updateUI();
+    }
+
+    private static void applyTypography() {
+        Font interFont = UIManager.getFont("defaultFont").deriveFont(UIScale.scale(13f));
+        UIManager.put("Chart.font", interFont.deriveFont(Font.PLAIN, UIScale.scale(12.5f)));
+        UIManager.put("defaultFont", interFont);
     }
 
     static DemoPalette currentPalette() {

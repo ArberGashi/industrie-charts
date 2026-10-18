@@ -1,6 +1,6 @@
 # Logging policy
 
-ArberCharts **2.2.0** uses limited JDK logging in Core and delegates application
+ArberCharts **2.5.0** uses limited JDK logging in Core and delegates application
 observability to the bridges and host application. Core has no SLF4J or Logback
 dependency.
 

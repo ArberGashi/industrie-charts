@@ -75,7 +75,7 @@ browser geometry confirmed that the field and icon now scroll together.
 The README shows **twelve actual 1280 × 720 Workbench captures**:
 Candlestick, Heatmap, Donut, Radar, Boxplot and KDE in both themes. They include
 example navigation, chart settings and the dataset inspector. The
-[capture manifest](../../../arbercharts-spring-boot-demo/docs/screenshots/workbench-gallery/manifest.json)
+[original 2.2.0 capture manifest](https://github.com/ArberGashi/industrie-charts/blob/486fa7bdcf4ba41a036f35e733d3c39713e21dc3/arbercharts-spring-boot-demo/docs/screenshots/workbench-gallery/manifest.json)
 records the selected page states, viewport, image hashes and final executable
 artifact hash. All twelve images were visually reviewed. The README displays
 each example at full content width; its six obsolete image files were removed.
@@ -84,14 +84,14 @@ The staged browser distribution includes the refreshed documentation images.
 Six renderer families were exported in both themes through the running HTTP
 application at **1600 × 900** output pixels and **2×** scale: Candlestick,
 Heatmap, Donut, Radar, Boxplot and KDE. All twelve images were visually reviewed.
-The [export manifest](../../../arbercharts-spring-boot-demo/docs/screenshots/renderers/manifest.json)
+The [original 2.2.0 export manifest](https://github.com/ArberGashi/industrie-charts/blob/486fa7bdcf4ba41a036f35e733d3c39713e21dc3/arbercharts-spring-boot-demo/docs/screenshots/renderers/manifest.json)
 records exact requests, image hashes and the executable artifact hash. These
 standalone chart exports remain available separately for reports and renderer
 comparisons.
 
 Swing documentation images were also repainted from the final executable JAR
 on the EDT at 2× scale, including the corrected initial multi-series range.
-The [Swing workbench documentation](../../../arbercharts-demo/docs/WORKBENCH.md)
+The [original 2.2.0 Swing workbench documentation](https://github.com/ArberGashi/industrie-charts/blob/486fa7bdcf4ba41a036f35e733d3c39713e21dc3/arbercharts-demo/docs/WORKBENCH.md)
 contains the dimensions, artifact checksum and reproducible capture command.
 
 ## Coverage limits

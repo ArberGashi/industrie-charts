@@ -130,11 +130,9 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setStroke(ChartScale.scale(minorStrokeWidth));
         double yMinorSpacing = yMinorScale.getTickSpacing();
         if (context.isGridVisibleY() && yMinorSpacing > 0) {
-            double tick = yMinorScale.getNiceMin();
-            double end = yMinorScale.getNiceMax();
-            double epsilon = yMinorSpacing * 0.5;
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += yMinorSpacing) {
-                mapToPixel(context, context.getMinX(), tick, buf);
+            double[] ticks = yMinorScale.getTicks();
+            for (int i = 0; i < yMinorScale.getTickCount(); i++) {
+                mapToPixel(context, context.getMinX(), ticks[i], buf);
                 double y = snap(buf[1]);
                 if (y >= minY && y <= maxY) {
                     drawLine(canvas, minX, y, maxX, y);
@@ -148,11 +146,9 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setStroke(ChartScale.scale(majorStrokeWidth));
         double yMajorSpacing = yMajorScale.getTickSpacing();
         if (context.isGridVisibleY() && yMajorSpacing > 0) {
-            double tick = yMajorScale.getNiceMin();
-            double end = yMajorScale.getNiceMax();
-            double epsilon = yMajorSpacing * 0.5;
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += yMajorSpacing) {
-                mapToPixel(context, context.getMinX(), tick, buf);
+            double[] ticks = yMajorScale.getTicks();
+            for (int i = 0; i < yMajorScale.getTickCount(); i++) {
+                mapToPixel(context, context.getMinX(), ticks[i], buf);
                 double y = snap(buf[1]);
                 if (y >= minY && y <= maxY) {
                     drawLine(canvas, minX, y, maxX, y);
@@ -167,11 +163,9 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setStroke(ChartScale.scale(minorStrokeWidth));
         double xMinorSpacing = xMinorScale.getTickSpacing();
         if (context.isGridVisibleX() && xMinorSpacing > 0) {
-            double tick = xMinorScale.getNiceMin();
-            double end = xMinorScale.getNiceMax();
-            double epsilon = xMinorSpacing * 0.5;
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += xMinorSpacing) {
-                mapToPixel(context, tick, context.getMinY(), buf);
+            double[] ticks = xMinorScale.getTicks();
+            for (int i = 0; i < xMinorScale.getTickCount(); i++) {
+                mapToPixel(context, ticks[i], context.getMinY(), buf);
                 double x = snap(buf[0]);
                 if (x >= minX && x <= maxX) {
                     drawLine(canvas, x, minY, x, maxY);
@@ -185,11 +179,9 @@ public class DefaultGridLayer implements GridLayer {
         canvas.setStroke(ChartScale.scale(majorStrokeWidth));
         double xMajorSpacing = xMajorScale.getTickSpacing();
         if (context.isGridVisibleX() && xMajorSpacing > 0) {
-            double tick = xMajorScale.getNiceMin();
-            double end = xMajorScale.getNiceMax();
-            double epsilon = xMajorSpacing * 0.5;
-            for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += xMajorSpacing) {
-                mapToPixel(context, tick, context.getMinY(), buf);
+            double[] ticks = xMajorScale.getTicks();
+            for (int i = 0; i < xMajorScale.getTickCount(); i++) {
+                mapToPixel(context, ticks[i], context.getMinY(), buf);
                 double x = snap(buf[0]);
                 if (x >= minX && x <= maxX) {
                     drawLine(canvas, x, minY, x, maxY);
@@ -203,7 +195,7 @@ public class DefaultGridLayer implements GridLayer {
             double y = snap(buf[1]);
             canvas.setColor(zeroLineColor);
             canvas.setStroke(ChartScale.scale(zeroStrokeWidth));
-            drawLine(canvas, minX, y, maxX, y);
+            if (Double.isFinite(y)) drawLine(canvas, minX, y, maxX, y);
         }
 
         // Frame
@@ -221,7 +213,7 @@ public class DefaultGridLayer implements GridLayer {
     }
 
     private double snap(double v) {
-        return Math.round(v) + 0.5;
+        return Double.isFinite(v) ? Math.round(v) + 0.5 : Double.NaN;
     }
 
     private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {

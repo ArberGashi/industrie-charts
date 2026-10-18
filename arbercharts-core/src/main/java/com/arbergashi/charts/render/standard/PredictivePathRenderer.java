@@ -44,6 +44,48 @@ public final class PredictivePathRenderer extends BaseRenderer {
         this.style = (style != null) ? style : Style.LINEAR;
     }
 
+    /** Includes the complete extension, including its smoothed endpoint, when fitting the X axis. */
+    @Override
+    public double[] getPreferredXRange(ChartModel model) {
+        return predictionRange(model, true);
+    }
+
+    /** Includes the complete extension, including its smoothed endpoint, when fitting the Y axis. */
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        return predictionRange(model, false);
+    }
+
+    private double[] predictionRange(ChartModel model, boolean xAxis) {
+        if (model == null || model.isEmpty()) return null;
+        double[] data = model.getDataRange();
+        double min = data[xAxis ? 0 : 2];
+        double max = data[xAxis ? 1 : 3];
+        int last = model.getPointCount() - 1;
+        if (last >= 1) {
+            double value = xAxis ? model.getX(last) : model.getY(last);
+            double previous = xAxis ? model.getX(last - 1) : model.getY(last - 1);
+            int lookahead = ChartAssets.getInt(KEY_LOOKAHEAD, 32);
+            double currentEndpoint = PredictiveMath.extrapolate(value, xAxis ? smoothedDx : smoothedDy, lookahead);
+            double finalEndpoint = PredictiveMath.extrapolate(value, value - previous, lookahead);
+            for (double endpoint : new double[]{currentEndpoint, finalEndpoint}) {
+                if (!Double.isFinite(endpoint)) continue;
+                double halfWidth = xAxis && style == Style.BAR ? Math.abs(endpoint - value) * 0.35 : 0.0;
+                double low = endpoint - halfWidth;
+                double high = endpoint + halfWidth;
+                if (Double.isFinite(low) && Double.isFinite(high)) {
+                    min = Math.min(min, low);
+                    max = Math.max(max, high);
+                }
+            }
+        }
+        if (!xAxis && style == Style.BAR) {
+            min = Math.min(min, 0.0);
+            max = Math.max(max, 0.0);
+        }
+        return new double[]{min, max};
+    }
+
     /**
      * @since 1.5.0
      */

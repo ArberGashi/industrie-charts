@@ -19,21 +19,33 @@ public class CircularChartModelPropertyTest {
             model.setPoint(i, y, y, y, 1.0, null);
         }
 
-        int n = model.getPointCount();
+        int expectedCount = Math.min(values.size(), 2048);
+        int first = values.size() - expectedCount;
+        Assertions.assertEquals(expectedCount, model.getPointCount());
         double[] xs = model.getXData();
         double[] ys = model.getYData();
-        int count = Math.min(n, Math.min(xs.length, ys.length));
-        Assertions.assertTrue(count >= 0);
-
-        for (int i = 1; i < count; i++) {
-            Assertions.assertTrue(xs[i] >= xs[i - 1], "X values must be monotonic for sequential inputs.");
+        double[] lows = model.getLowData();
+        double[] highs = model.getHighData();
+        double[] weights = model.getWeightData();
+        for (double[] snapshot : new double[][]{xs, ys, lows, highs, weights}) {
+            Assertions.assertTrue(snapshot.length >= expectedCount,
+                    "Every snapshot must contain all retained logical points");
         }
 
-        double[] range = model.getDataRange();
-        if (count > 0) {
-            Assertions.assertTrue(range[0] <= range[1], "minX <= maxX");
-            Assertions.assertTrue(range[2] <= range[3], "minY <= maxY");
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < expectedCount; i++) {
+            double expectedY = values.get(first + i);
+            Assertions.assertEquals(first + i, xs[i], "Snapshot X must follow retained insertion order");
+            Assertions.assertEquals(expectedY, ys[i]);
+            Assertions.assertEquals(expectedY, lows[i]);
+            Assertions.assertEquals(expectedY, highs[i]);
+            Assertions.assertEquals(1.0, weights[i]);
+            minY = Math.min(minY, expectedY);
+            maxY = Math.max(maxY, expectedY);
         }
+
+        Assertions.assertArrayEquals(new double[]{first, values.size() - 1, minY, maxY}, model.getDataRange());
     }
 
     @Provide

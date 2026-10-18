@@ -112,6 +112,11 @@ public class DefaultSignalChartModel implements SignalChartModel {
     }
 
     @Override
+    public double getY(int index, int channel) {
+        return getValue(index, channel);
+    }
+
+    @Override
     public double getValue(int index, int channel) {
         if (channel < 0 || channel >= channelData.length) return 0.0;
         int idx = physicalIndex(index);
@@ -122,6 +127,13 @@ public class DefaultSignalChartModel implements SignalChartModel {
     @Override
     public long[] getTimestampNanosData() {
         return timestampNanos;
+    }
+
+    @Override
+    public long getTimestampNanos(int index) {
+        int idx = physicalIndex(index);
+        if (idx < 0 || idx >= timestampNanos.length) return 0L;
+        return timestampNanos[idx];
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.arbergashi.charts.render.medical;
 
+import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.PlotContext;
-import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.CircularFastMedicalModel;
@@ -9,7 +9,6 @@ import com.arbergashi.charts.model.SignalChartModel;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.tools.RendererAllocationCache;
 import com.arbergashi.charts.util.ChartScale;
-import com.arbergashi.charts.util.ColorRegistry;
 /**
  * EEG renderer: visualizes multi-channel electroencephalogram (EEG) data.
  * Draws simultaneous channels over the same logical time range in separate vertical bands.
@@ -48,12 +47,12 @@ public class EEGRenderer extends BaseRenderer {
         float[] ys = RendererAllocationCache.getFloatArray(this, "eeg.y", count);
         double centerY = context.getMinY() * 0.5 + context.getMaxY() * 0.5;
         double bandHeight = (context.getMaxY() - context.getMinY()) / n;
+        ChartTheme theme = getResolvedTheme(context);
         for (int ch = 0; ch < n; ch++) {
             int cCount = 0;
             double previousX = Double.NaN;
             double yOffset = context.getMinY() + (ch + 0.5) * bandHeight;
-            ArberColor color = ColorRegistry.of(80, 80, Math.min(255, 80 + 20 * ch), 255);
-            canvas.setColor(color);
+            canvas.setColor(theme.getSeriesColor(ch));
             canvas.setStroke(ChartScale.scale(1.2f));
             for (int i = 0; i < count; i++) {
                 double x = model.getX(i);

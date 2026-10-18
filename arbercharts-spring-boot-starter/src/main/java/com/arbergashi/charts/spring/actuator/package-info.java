@@ -6,17 +6,21 @@
  * values. These change only when its {@code recordRender} method is called;
  * the rendering services do not call it automatically.
  *
- * <p>The endpoint also returns fixed status, renderer counts and performance
- * placeholders. Its {@code p99RenderTime} field holds the maximum recorded
- * duration, not a calculated percentile. Do not interpret these placeholders
- * as rendering health, live registry contents or measured percentiles.
+ * <p>Since 2.5.0, the JSON field {@code maxRenderTime} replaces the misleading
+ * {@code p99RenderTime}. Fixed health, renderer counts, percentiles, allocations,
+ * failures and concurrency values have been removed. Responses identify their
+ * {@code measurementSource} as {@code manual} after a sample is recorded, or
+ * {@code unavailable} before it. Unrecorded durations and memory values are
+ * {@code null}; the render count starts at zero. Each response is an atomic
+ * snapshot. Root responses retain formatted values, while performance and
+ * memory sections return numeric milliseconds and bytes.
  *
  * <h2>Available Endpoints</h2>
  * <ul>
- *   <li><strong>/actuator/charts:</strong> Recorded statistics and fixed status/counts</li>
- *   <li><strong>/actuator/charts/performance:</strong> Render statistics and placeholders</li>
- *   <li><strong>/actuator/charts/memory:</strong> Supplied memory values and placeholders</li>
- *   <li><strong>/actuator/charts/renderers:</strong> Fixed renderer counts</li>
+ *   <li><strong>/actuator/charts:</strong> Recorded statistics and measurement source</li>
+ *   <li><strong>/actuator/charts/performance:</strong> Mean, maximum and count of recorded renders</li>
+ *   <li><strong>/actuator/charts/memory:</strong> Supplied current and peak memory values</li>
+ *   <li><strong>/actuator/charts/renderers:</strong> Measurement source {@code unavailable}</li>
  * </ul>
  *
  * <h2>Configuration</h2>

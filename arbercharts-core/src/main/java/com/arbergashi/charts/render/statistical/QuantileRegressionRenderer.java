@@ -39,13 +39,13 @@ public class QuantileRegressionRenderer extends BaseRenderer {
         if (highColor == null) highColor = baseColor;
         if (lowColor == null) lowColor = baseColor;
 
-        // 50% Quantil (Median) - component 1
+        // 50% quantile (median) - component 1
         drawQuantilePath(canvas, model, context, medianColor, 2.5f, 1.0f, 1);
 
-        // 90% Quantil - max -> component 4
+        // 90% quantile - max -> component 4
         drawQuantilePath(canvas, model, context, highColor, 1.5f, 0.6f, 4);
 
-        // 10% Quantil - min -> component 3
+        // 10% quantile - min -> component 3
         drawQuantilePath(canvas, model, context, lowColor, 1.5f, 0.6f, 3);
     }
 

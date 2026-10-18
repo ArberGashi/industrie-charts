@@ -1,6 +1,6 @@
 # Concurrency model
 
-This document describes the **2.2.0** model implementations and host ownership
+This document describes the **2.5.0** model implementations and host ownership
 rules. `ChartModel` does not define a universal lock-free or atomic-snapshot
 guarantee. Choose the implementation and access pattern for the application.
 
@@ -56,9 +56,13 @@ supply `SwingUtilities::invokeLater` from the bridge/application layer.
 If the executor rejects a notification, the models log a warning and notify on
 the caller thread. A listener that touches Swing must therefore preserve its own
 EDT boundary. Listener exceptions are logged and isolated from other listeners.
-Keep callbacks short and do not synchronously append to the same circular model
-from a callback: `setPoint` still holds its writer lock during notification.
-Remove listeners when their owner is disposed.
+`CircularChartModel.setPoint` publishes its update stamp while holding the writer
+lock, then releases the lock before notifying listeners. A listener can append to
+the same model, and another writer can progress while a callback is running.
+With synchronous dispatch, notifications from different writers can overlap or
+arrive out of mutation order; listeners must coordinate their own mutable state.
+Keep callbacks short, avoid unbounded notification recursion, and remove listeners
+when their owner is disposed.
 
 Create and modify Swing components on the EDT. Publish background data through
 the chosen model contract; thread-safe data ingestion does not make Swing
@@ -78,8 +82,13 @@ but do not establish a universal zero-allocation rendering guarantee.
 
 ## Verification
 
-`CircularChartModelTest` and `CircularChartModelPropertyTest` cover bounded model
-behavior. `ConcurrentModelTest` contains opt-in concurrent-writer stress cases:
+`CircularChartModelTest` covers reentrant listener writes, progress of another
+writer during notification and logical timestamp indexing across ring wrap.
+`CircularChartModelPropertyTest` covers bounded model behavior.
+`DefaultSignalChartModelTest` checks logical channel and timestamp access across
+wrap and growth. These focused regressions do not establish an atomic snapshot
+contract for concurrent readers. `ConcurrentModelTest` contains opt-in
+concurrent-writer stress cases:
 
 ```bash
 mvn -B -pl arbercharts-core -Pstress -Dtest=ConcurrentModelTest test

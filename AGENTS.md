@@ -15,6 +15,7 @@
 
 - Keep GitHub focused on source, technical documentation, tests, and current demo images.
 - Commercial offers, pricing and service agreements belong in the separate business portal.
+- The product website is maintained in the separate portal. Do not restore a repository-root `site/` directory or a second product website here.
 - Keep one canonical MIT `LICENSE`; do not add contradictory source-access or binary-only delivery terms.
 - Remove obsolete release instructions, migration scripts and generated state from the current tree. Git history retains earlier versions.
 - Run `python3 tools/check_repository.py` to check documentation links, release metadata and repository content before publishing.
@@ -24,9 +25,9 @@
 - `mvn clean package` builds all modules and produces JARs in each module `target/`.
 - `mvn -pl arbercharts-core test` runs core unit tests (JUnit Jupiter).
 - `mvn -pl arbercharts-demo -am package` builds the demo JAR with dependencies.
-- `java -jar arbercharts-demo/target/arbercharts-demo-2.2.0.jar` runs the Swing demo on a graphical desktop.
-- `java -Djava.awt.headless=true -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.2.0.jar` runs the browser demo.
-- `mvn -Pperf test` runs performance tests tagged for JMH.
+- `java -jar arbercharts-demo/target/arbercharts-demo-2.5.0.jar` runs the Swing demo on a graphical desktop.
+- `java -Djava.awt.headless=true -jar arbercharts-spring-boot-demo/target/arbercharts-spring-boot-demo-2.5.0.jar` runs the browser demo.
+- `mvn -Pperf test` runs JUnit tests tagged `perf`. JMH benchmarks live in the Swing bridge and run through the JMH launcher; see `docs/VERIFICATION_STRATEGY.md`.
 
 ## Coding Style & Naming Conventions
 

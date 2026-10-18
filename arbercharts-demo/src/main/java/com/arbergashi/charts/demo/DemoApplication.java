@@ -2,6 +2,7 @@ package com.arbergashi.charts.demo;
 
 import com.arbergashi.charts.api.ChartTheme;
 import com.arbergashi.charts.api.AnimationProfile;
+import com.arbergashi.charts.api.AxisConfig;
 import com.arbergashi.charts.model.ChartModel;
 import com.arbergashi.charts.model.CircularFastMedicalModel;
 import com.arbergashi.charts.model.DefaultChartModel;
@@ -22,14 +23,20 @@ import com.arbergashi.charts.render.predictive.AnomalyGapRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
 import com.arbergashi.charts.util.LatencyTracker;
 import com.arbergashi.charts.platform.export.ChartExportService;
+import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.util.SystemFileChooser;
 import com.formdev.flatlaf.util.SystemInfo;
+import com.formdev.flatlaf.util.UIScale;
 
 import javax.swing.BorderFactory;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.Icon;
@@ -40,11 +47,14 @@ import javax.swing.JMenuItem;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
 import javax.swing.JTree;
 import javax.swing.ToolTipManager;
+import javax.swing.ListSelectionModel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -52,13 +62,13 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
-import java.awt.Toolkit;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import javax.swing.border.Border;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -67,7 +77,6 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Desktop;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
@@ -125,7 +134,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * java --add-modules jdk.incubator.vector -jar arbercharts-demo.jar
  * }</pre>
  *
- * <p><strong>License:</strong> ArberCharts binaries are licensed under the MIT License.
+ * <p><strong>License:</strong> Industrie Charts is distributed under the MIT License.
  * See {@code META-INF/LICENSE} for full license text.
  *
  * @author Arber Gashi
@@ -138,9 +147,11 @@ public final class DemoApplication {
 
     /** Application name for display. */
     private static final String APP_NAME = "Industrie Charts";
+    private static final int MAC_TITLEBAR_HEIGHT = 36;
+    private static final int TITLEBAR_CONTROL_OFFSET = 2;
 
     /** Copyright notice. */
-    private static final String COPYRIGHT = "© 2026 Arber Gashi";
+    private static final String COPYRIGHT = "© 2024-2026 Arber Gashi";
     private static final Map<String, Icon> ICON_CACHE = new ConcurrentHashMap<>();
 
     /**
@@ -215,16 +226,26 @@ public final class DemoApplication {
     private final JLabel countLabel = new JLabel();
     private final JLabel metricsLabel = new JLabel();
     private final JTree tree;
+    private final Action reloadAction;
+    private final Action exportPngAction;
+    private final Action exportPdfAction;
+    private final Action exportSvgAction;
+    private final Action benchmarkAction;
+    private final Action catalogToggleAction;
+    private final Action toolsToggleAction;
     private JMenuItem aboutMenuItem;
-    private JMenuItem preferencesMenuItem;
     private JMenuItem exitMenuItem;
-    private JMenuItem exportMenuItem;
-    private JMenuItem benchmarkMenuItem;
     private JFrame mainFrame;
-    private JPanel headerPanel;
+    private JPanel titleBarPanel;
     private JPanel footerPanel;
     private JPanel sidebarPanel;
     private JPanel editorToolbar;
+    private DemoToolWindowShell toolWindowShell;
+    private JPanel chartToolsPanel;
+    private JTextArea rendererInfo;
+    private JButton toolsReloadButton;
+    private JToggleButton catalogToggleButton;
+    private JToggleButton toolsToggleButton;
     private JLabel activeRendererLabel;
     private JLabel categoryLabel;
     private JPanel catalogBody;
@@ -233,14 +254,14 @@ public final class DemoApplication {
     private JButton searchEverywhereButton;
     private JButton reloadButton;
     private JButton exportButton;
-    private JLabel headerTitleLabel;
-    private JLabel headerMarkLabel;
     private JLabel versionLabel;
     private JDialog searchEverywhereDialog;
     private JTextField searchEverywhereField;
     private JList<RendererCatalogEntry> searchEverywhereResults;
     private DefaultListModel<RendererCatalogEntry> searchEverywhereModel;
     private ArberChartPanel currentChartPanel;
+    private final boolean pdfExportAvailable = exportBackendAvailable("org.apache.pdfbox.pdmodel.PDDocument");
+    private final boolean svgExportAvailable = exportBackendAvailable("org.jfree.svg.SVGGraphics2D");
     private final boolean vectorAvailable = isVectorAvailable();
     private final StringBuilder speedSearch = new StringBuilder();
     private Timer speedSearchTimer;
@@ -257,6 +278,18 @@ public final class DemoApplication {
      */
     public DemoApplication(String initialTheme) {
         this.currentThemeName = initialTheme;
+        reloadAction = createAction("Reload", KeyEvent.VK_R, "Reload the selected chart", this::refreshCurrent);
+        exportPngAction = createAction("Export PNG", KeyEvent.VK_E, "Export the selected chart as PNG", this::exportCurrentChart);
+        exportPdfAction = createAction("Export PDF", 0, "Export the selected chart as PDF", this::exportCurrentChartAsPdf);
+        exportSvgAction = createAction("Export SVG", 0, "Export the selected chart as SVG", this::exportCurrentChartAsSvg);
+        benchmarkAction = createAction("Run Benchmark", KeyEvent.VK_B, "Benchmark the selected renderer", this::runBenchmark);
+        catalogToggleAction = createAction("Renderer catalog", KeyEvent.VK_1, "Show or hide the renderer catalog", this::toggleCatalog);
+        toolsToggleAction = createAction("Chart tools", KeyEvent.VK_2, "Show or hide chart tools", this::toggleChartTools);
+        for (Action action : new Action[]{reloadAction, exportPngAction, exportPdfAction, exportSvgAction, benchmarkAction}) {
+            action.setEnabled(false);
+        }
+        catalogToggleAction.putValue(Action.SELECTED_KEY, Boolean.TRUE);
+        toolsToggleAction.putValue(Action.SELECTED_KEY, Boolean.FALSE);
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Renderers");
         Map<String, DefaultMutableTreeNode> categories = new LinkedHashMap<>();
         for (RendererCatalogEntry entry : catalog.entries()) {
@@ -269,7 +302,8 @@ public final class DemoApplication {
         tree = new JTree(new DefaultTreeModel(root));
         tree.setRootVisible(false);
         tree.setShowsRootHandles(true);
-        tree.setBorder(BorderFactory.createEmptyBorder(4, 6, 8, 6));
+        tree.setBorder(scaledEmptyBorder(4, 8, 8, 8));
+        tree.setRowHeight(UIScale.scale(28));
         tree.getAccessibleContext().setAccessibleName("Renderer catalog");
         ToolTipManager.sharedInstance().registerComponent(tree);
         tree.setCellRenderer(new RendererTreeCell());
@@ -278,6 +312,7 @@ public final class DemoApplication {
     }
 
     private void show() {
+        JFrame.setDefaultLookAndFeelDecorated(!SystemInfo.isMacOS);
         mainFrame = new JFrame(APP_NAME);
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mainFrame.addWindowListener(new WindowAdapter() {
@@ -296,9 +331,9 @@ public final class DemoApplication {
         mainFrame.setJMenuBar(buildMenuBar(mainFrame));
         mainFrame.setContentPane(buildWorkspace());
 
-        configurePlatformWindow(mainFrame);
+        configurePlatformWindow(mainFrame.getRootPane(), SystemInfo.isMacOS);
         configureMacOSMenuHandlers(mainFrame);
-        setupKeyboardShortcuts();
+        setupKeyboardShortcuts(mainFrame.getRootPane());
         startMetricsTimer();
         applyApplicationIcons(mainFrame);
 
@@ -316,8 +351,12 @@ public final class DemoApplication {
 
     /** Builds the same Swing content for the desktop window and offscreen visual checks. */
     JPanel buildWorkspace() {
+        return buildWorkspace(SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported);
+    }
+
+    JPanel buildWorkspace(boolean macTitleBar) {
         JPanel workspace = new JPanel(new BorderLayout());
-        workspace.add(buildHeader(), BorderLayout.NORTH);
+        if (macTitleBar) workspace.add(buildMacTitleBar(), BorderLayout.NORTH);
         detailHost.add(buildEmptyDetail(), "empty");
         detailLayout.show(detailHost, "empty");
         detailHost.setMinimumSize(new Dimension(420, 320));
@@ -326,13 +365,14 @@ public final class DemoApplication {
         editor.add(buildEditorToolbar(), BorderLayout.NORTH);
         editor.add(detailHost, BorderLayout.CENTER);
         editor.setMinimumSize(new Dimension(420, 320));
-        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildSidebar(), editor);
-        split.setDividerLocation(292);
-        split.setResizeWeight(0.0);
-        split.setDividerSize(1);
-        split.setBorder(BorderFactory.createEmptyBorder());
-        split.setContinuousLayout(true);
-        workspace.add(split, BorderLayout.CENTER);
+        JPanel catalogPanel = buildSidebar();
+        JPanel tools = buildChartTools();
+        catalogToggleButton = createToolWindowToggle(catalogToggleAction);
+        toolsToggleButton = createToolWindowToggle(toolsToggleAction);
+        toolWindowShell = new DemoToolWindowShell(catalogPanel, editor, tools,
+                buildToolWindowStripe(catalogToggleButton), buildToolWindowStripe(toolsToggleButton),
+                catalogToggleAction, toolsToggleAction, this::focusChart);
+        workspace.add(toolWindowShell, BorderLayout.CENTER);
         workspace.add(buildFooter(), BorderLayout.SOUTH);
 
         catalog.entries().stream()
@@ -340,7 +380,14 @@ public final class DemoApplication {
                 .findFirst()
                 .or(() -> catalog.entries().stream().findFirst())
                 .ifPresent(this::selectRenderer);
-        SwingUtilities.invokeLater(() -> tree.scrollRowToVisible(0));
+        SwingUtilities.invokeLater(() -> {
+            TreePath selected = tree.getSelectionPath();
+            Rectangle row = selected == null ? null : tree.getPathBounds(selected);
+            if (row != null) {
+                tree.scrollRectToVisible(new Rectangle(0, 0, 1, 1));
+                tree.scrollRectToVisible(new Rectangle(0, row.y, 1, row.height));
+            }
+        });
         applyDemoPalette();
         return workspace;
     }
@@ -348,43 +395,28 @@ public final class DemoApplication {
     /**
      * Sets up keyboard shortcuts for the application.
      */
-    private void setupKeyboardShortcuts() {
-        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-
-        // Cmd/Ctrl+E - Export
-        mainFrame.getRootPane().registerKeyboardAction(
-            e -> exportCurrentChart(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_E, mask),
-            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
-
-        // Cmd/Ctrl+R - Reload
-        mainFrame.getRootPane().registerKeyboardAction(
-            e -> refreshCurrent(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_R, mask),
-            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
+    private void setupKeyboardShortcuts(JRootPane rootPane) {
+        int mask = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+        for (Action action : new Action[]{exportPngAction, reloadAction, benchmarkAction, catalogToggleAction, toolsToggleAction}) {
+            rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                    (KeyStroke) action.getValue(Action.ACCELERATOR_KEY), action);
+            rootPane.getActionMap().put(action, action);
+        }
 
         // Cmd/Ctrl+T - Toggle Theme
-        mainFrame.getRootPane().registerKeyboardAction(
+        rootPane.registerKeyboardAction(
             e -> toggleTheme(),
             KeyStroke.getKeyStroke(KeyEvent.VK_T, mask),
             javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 
         // Cmd/Ctrl+F - Focus Search
-        mainFrame.getRootPane().registerKeyboardAction(
+        rootPane.registerKeyboardAction(
             e -> showSearchEverywhereDialog(),
             KeyStroke.getKeyStroke(KeyEvent.VK_F, mask),
             javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 
-        // Cmd/Ctrl+B - Benchmark
-        mainFrame.getRootPane().registerKeyboardAction(
-            e -> runBenchmark(),
-            KeyStroke.getKeyStroke(KeyEvent.VK_B, mask),
-            javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
     }
 
     /**
@@ -406,64 +438,190 @@ public final class DemoApplication {
         metricsLabel.setToolTipText("Average chart construction time; excludes frame rendering");
     }
 
-    private JPanel buildHeader() {
-        DemoPalette palette = currentPalette();
-        JPanel header = new JPanel(new BorderLayout(24, 0));
-        this.headerPanel = header;
-        header.setPreferredSize(new Dimension(0, 48));
+    private JPanel buildMacTitleBar() {
+        titleBarPanel = new JPanel(new BorderLayout());
+        titleBarPanel.setPreferredSize(new Dimension(0, UIScale.scale(MAC_TITLEBAR_HEIGHT)));
+        titleBarPanel.setBorder(scaledEmptyBorder(TITLEBAR_CONTROL_OFFSET, 10, 0, 2));
+        titleBarPanel.getAccessibleContext().setAccessibleName("Window controls");
 
-        JPanel identity = new JPanel();
-        identity.setLayout(new BoxLayout(identity, BoxLayout.X_AXIS));
-        identity.setOpaque(false);
-        if (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) {
-            identity.add(Box.createHorizontalStrut(76));
-        }
-        JLabel mark = new JLabel(loadTablerOutlineIcon("chart-line.svg", 20,
-                UIManager.getIcon("FileView.fileIcon"), palette.accent()));
-        headerMarkLabel = mark;
-        mark.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
-        headerTitleLabel = new JLabel(APP_NAME);
-        headerTitleLabel.setFont(headerTitleLabel.getFont().deriveFont(Font.BOLD, 13f));
-        identity.add(mark);
-        identity.add(headerTitleLabel);
-        JLabel context = new JLabel("  /  Swing demo");
-        context.putClientProperty("demo.muted", true);
-        identity.add(context);
+        JPanel windowButtons = new JPanel();
+        windowButtons.setOpaque(false);
+        windowButtons.putClientProperty(FlatClientProperties.FULL_WINDOW_CONTENT_BUTTONS_PLACEHOLDER,
+                "mac horizontal zeroInFullScreen");
+        titleBarPanel.add(windowButtons, BorderLayout.WEST);
 
+        JLabel caption = new JLabel(APP_NAME, SwingConstants.CENTER);
+        caption.setFont(caption.getFont().deriveFont(Font.PLAIN));
+        caption.putClientProperty(FlatClientProperties.COMPONENT_TITLE_BAR_CAPTION, Boolean.TRUE);
+        titleBarPanel.add(caption, BorderLayout.CENTER);
+        titleBarPanel.add(buildTitleBarActions(), BorderLayout.EAST);
+        return titleBarPanel;
+    }
+
+    private JPanel buildTitleBarActions() {
         JPanel actions = new JPanel();
         actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
         actions.setOpaque(false);
-        searchEverywhereButton = new JButton("Find renderer");
-        searchEverywhereButton.putClientProperty("JButton.buttonType", "toolBarButton");
+        searchEverywhereButton = createToolbarIconButton(loadTablerOutlineIcon("search.svg", 18,
+                UIManager.getIcon("FileView.fileIcon"), currentPalette().muted()));
         searchEverywhereButton.setToolTipText("Find renderer (" + shortcutLabel("F") + ")");
-        searchEverywhereButton.addActionListener(evt -> showSearchEverywhereDialog());
         searchEverywhereButton.getAccessibleContext().setAccessibleName("Find renderer");
+        searchEverywhereButton.addActionListener(event -> showSearchEverywhereDialog());
         actions.add(searchEverywhereButton);
-        JLabel shortcut = new JLabel(shortcutLabel("F"));
-        shortcut.putClientProperty("demo.muted", true);
-        shortcut.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 16));
-        shortcut.setFont(shortcut.getFont().deriveFont(11f));
-        actions.add(shortcut);
-
-        themeSwitchButton = createTitlebarIconButton(null);
+        actions.add(Box.createHorizontalStrut(UIScale.scale(4)));
+        themeSwitchButton = createToolbarIconButton(loadTablerOutlineIcon("sun-moon.svg", 18,
+                UIManager.getIcon("Tree.expandedIcon"), currentPalette().muted()));
         themeSwitchButton.setToolTipText("Toggle light or dark theme (" + shortcutLabel("T") + ")");
         themeSwitchButton.getAccessibleContext().setAccessibleName("Toggle light or dark theme");
-        themeSwitchButton.addActionListener(evt -> toggleTheme());
+        themeSwitchButton.addActionListener(event -> toggleTheme());
         actions.add(themeSwitchButton);
-        header.add(identity, BorderLayout.WEST);
-        header.add(actions, BorderLayout.EAST);
-        installHeaderWindowGestures(header);
-        return header;
+        return actions;
     }
 
-    private JButton createTitlebarIconButton(Icon icon) {
+    private JButton createToolbarIconButton(Icon icon) {
         JButton button = new JButton(icon);
         button.putClientProperty("JButton.buttonType", "toolBarButton");
-        button.putClientProperty("JComponent.minimumWidth", 30);
-        button.setPreferredSize(new Dimension(32, 30));
-        button.setMinimumSize(new Dimension(32, 30));
-        button.setMaximumSize(new Dimension(32, 30));
+        button.putClientProperty(FlatClientProperties.STYLE, "margin: 5,5,5,5; minimumWidth: 30; minimumHeight: 30");
+        Dimension size = new Dimension(UIScale.scale(30), UIScale.scale(30));
+        button.setPreferredSize(size);
+        button.setMinimumSize(size);
+        button.setMaximumSize(size);
         return button;
+    }
+
+    private static Action createAction(String name, int key, String description, Runnable handler) {
+        Action action = new AbstractAction(name) {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent event) {
+                handler.run();
+            }
+        };
+        if (key != 0) {
+            int mask = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
+            action.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(key, mask));
+            description += " (" + shortcutLabel(KeyEvent.getKeyText(key)) + ")";
+        }
+        action.putValue(Action.SHORT_DESCRIPTION, description);
+        return action;
+    }
+
+    private static JButton createChartActionButton(Action action, boolean stretch) {
+        JButton button = new JButton(action) {
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension size = super.getPreferredSize();
+                size.height = Math.max(size.height, UIScale.scale(30));
+                return size;
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                Dimension size = getPreferredSize();
+                if (stretch) size.width = Integer.MAX_VALUE;
+                return size;
+            }
+        };
+        button.putClientProperty(FlatClientProperties.STYLE, "margin: 4,8,4,8");
+        return button;
+    }
+
+    private JToggleButton createToolWindowToggle(Action action) {
+        JToggleButton button = new JToggleButton(action);
+        button.setHideActionText(true);
+        button.getAccessibleContext().setAccessibleName((String) action.getValue(Action.NAME));
+        button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+        Dimension size = new Dimension(UIScale.scale(30), UIScale.scale(30));
+        button.setPreferredSize(size);
+        button.setMinimumSize(size);
+        button.setMaximumSize(size);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return button;
+    }
+
+    private static JPanel buildToolWindowStripe(JToggleButton toggle) {
+        JPanel stripe = new JPanel();
+        stripe.setLayout(new BoxLayout(stripe, BoxLayout.Y_AXIS));
+        stripe.setBorder(scaledEmptyBorder(4, 4, 4, 4));
+        stripe.add(toggle);
+        stripe.add(Box.createVerticalGlue());
+        return stripe;
+    }
+
+    private JPanel buildChartTools() {
+        chartToolsPanel = new JPanel(new BorderLayout());
+        chartToolsPanel.getAccessibleContext().setAccessibleName("Chart tools");
+        JLabel heading = new JLabel("Chart tools");
+        heading.setFont(heading.getFont().deriveFont(Font.BOLD));
+        heading.setBorder(scaledEmptyBorder(14, 12, 12, 12));
+        chartToolsPanel.add(heading, BorderLayout.NORTH);
+
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setOpaque(false);
+        content.setBorder(scaledEmptyBorder(0, 12, 12, 12));
+        rendererInfo = new JTextArea(4, 0);
+        rendererInfo.setEditable(false);
+        rendererInfo.setLineWrap(true);
+        rendererInfo.setWrapStyleWord(false);
+        rendererInfo.setOpaque(false);
+        rendererInfo.setBorder(BorderFactory.createEmptyBorder());
+        rendererInfo.setFont(UIManager.getFont("Label.font"));
+        rendererInfo.getAccessibleContext().setAccessibleName("Current renderer");
+        rendererInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rendererInfo.setMaximumSize(new Dimension(Integer.MAX_VALUE, UIScale.scale(96)));
+        content.add(rendererInfo);
+        content.add(Box.createVerticalStrut(UIScale.scale(12)));
+        for (Action action : new Action[]{reloadAction, exportPngAction, exportPdfAction, exportSvgAction, benchmarkAction}) {
+            if ((action == exportPdfAction && !pdfExportAvailable) || (action == exportSvgAction && !svgExportAvailable)) {
+                continue;
+            }
+            JButton button = createChartActionButton(action, true);
+            button.setAlignmentX(Component.LEFT_ALIGNMENT);
+            if (action == reloadAction) toolsReloadButton = button;
+            content.add(button);
+            content.add(Box.createVerticalStrut(UIScale.scale(8)));
+        }
+        content.add(Box.createVerticalGlue());
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        chartToolsPanel.add(scroll, BorderLayout.CENTER);
+        return chartToolsPanel;
+    }
+
+    private void toggleCatalog() {
+        if (toolWindowShell == null) return;
+        toolWindowShell.setCatalogVisible(!toolWindowShell.isCatalogVisible());
+        SwingUtilities.invokeLater(() -> {
+            if (toolWindowShell.isCatalogVisible()) catalogFilter.requestFocusInWindow();
+            else focusChart();
+        });
+    }
+
+    private void toggleChartTools() {
+        if (toolWindowShell == null) return;
+        toolWindowShell.setToolsVisible(!toolWindowShell.isToolsVisible());
+        SwingUtilities.invokeLater(() -> {
+            if (toolWindowShell.isToolsVisible()) {
+                if (toolsReloadButton.isEnabled()) toolsReloadButton.requestFocusInWindow();
+                else rendererInfo.requestFocusInWindow();
+            } else {
+                focusChart();
+            }
+        });
+    }
+
+    private void focusChart() {
+        if (currentChartPanel == null || !currentChartPanel.requestFocusInWindow()) {
+            reloadButton.requestFocusInWindow();
+        }
+    }
+
+    private static Border scaledEmptyBorder(int top, int left, int bottom, int right) {
+        return BorderFactory.createEmptyBorder(UIScale.scale(top), UIScale.scale(left),
+                UIScale.scale(bottom), UIScale.scale(right));
     }
 
     private JPanel buildSidebar() {
@@ -471,17 +629,19 @@ public final class DemoApplication {
         sidebarPanel.setMinimumSize(new Dimension(200, 200));
         JPanel heading = new JPanel(new BorderLayout());
         heading.setOpaque(false);
-        heading.setBorder(BorderFactory.createEmptyBorder(13, 16, 10, 14));
+        heading.setBorder(scaledEmptyBorder(16, 16, 12, 16));
         JLabel title = new JLabel("Renderer catalog");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 13f));
+        title.setFont(title.getFont().deriveFont(Font.BOLD, UIScale.scale(13f)));
         countLabel.setText(Integer.toString(catalog.entries().size()));
-        countLabel.setFont(countLabel.getFont().deriveFont(12f));
+        countLabel.setFont(countLabel.getFont().deriveFont(UIScale.scale(12f)));
         heading.add(title, BorderLayout.WEST);
         heading.add(countLabel, BorderLayout.EAST);
 
         catalogFilter = new JTextField();
-        catalogFilter.putClientProperty("JTextField.placeholderText", "Filter by name or category");
+        catalogFilter.putClientProperty("JTextField.placeholderText", "Filter renderers");
+        catalogFilter.putClientProperty(FlatClientProperties.STYLE, "margin: 8,12,8,12");
         catalogFilter.putClientProperty("JTextField.showClearButton", true);
+        catalogFilter.setToolTipText("Filter by renderer name or category");
         catalogFilter.getAccessibleContext().setAccessibleName("Filter renderer catalog");
         catalogFilter.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -513,7 +673,7 @@ public final class DemoApplication {
         });
         JPanel search = new JPanel(new BorderLayout());
         search.setOpaque(false);
-        search.setBorder(BorderFactory.createEmptyBorder(0, 12, 10, 12));
+        search.setBorder(scaledEmptyBorder(0, 16, 12, 16));
         search.add(catalogFilter);
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
@@ -530,15 +690,10 @@ public final class DemoApplication {
         JLabel empty = new JLabel("No matching renderers", SwingConstants.CENTER);
         empty.putClientProperty("demo.muted", true);
         empty.setVerticalAlignment(SwingConstants.TOP);
-        empty.setBorder(BorderFactory.createEmptyBorder(20, 8, 0, 8));
+        empty.setBorder(scaledEmptyBorder(24, 16, 0, 16));
         catalogBody.add(empty, "empty");
         sidebarPanel.add(catalogBody, BorderLayout.CENTER);
 
-        JLabel hint = new JLabel("Type to filter. Enter to open.");
-        hint.putClientProperty("demo.muted", true);
-        hint.setBorder(BorderFactory.createEmptyBorder(9, 16, 10, 12));
-        hint.setFont(hint.getFont().deriveFont(11f));
-        sidebarPanel.add(hint, BorderLayout.SOUTH);
         return sidebarPanel;
     }
 
@@ -604,16 +759,16 @@ public final class DemoApplication {
     private JPanel buildFooter() {
         JPanel footer = new JPanel(new BorderLayout());
         this.footerPanel = footer;
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
-        statusLabel.setFont(statusLabel.getFont().deriveFont(11f));
-        metricsLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 14));
+        statusLabel.setBorder(scaledEmptyBorder(8, 16, 8, 16));
+        statusLabel.setFont(statusLabel.getFont().deriveFont(UIScale.scale(11f)));
+        metricsLabel.setBorder(scaledEmptyBorder(8, 16, 8, 8));
         metricsLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        metricsLabel.setFont(metricsLabel.getFont().deriveFont(11f));
+        metricsLabel.setFont(metricsLabel.getFont().deriveFont(UIScale.scale(11f)));
         updateMetrics();
         versionLabel = new JLabel(VERSION);
         versionLabel.setToolTipText("Demo artifact version");
-        versionLabel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 14));
-        versionLabel.setFont(versionLabel.getFont().deriveFont(11f));
+        versionLabel.setBorder(scaledEmptyBorder(8, 8, 8, 16));
+        versionLabel.setFont(versionLabel.getFont().deriveFont(UIScale.scale(11f)));
         JPanel details = new JPanel(new BorderLayout());
         details.setOpaque(false);
         details.add(metricsLabel, BorderLayout.WEST);
@@ -647,25 +802,19 @@ public final class DemoApplication {
     }
 
     private JMenuBar buildMenuBar(JFrame frame) {
+        return buildMenuBar(frame, SystemInfo.isMacOS);
+    }
+
+    private JMenuBar buildMenuBar(JFrame frame, boolean screenMenuBar) {
         JMenuBar menuBar = new JMenuBar();
-        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        int mask = SystemInfo.isMacOS ? KeyEvent.META_DOWN_MASK : KeyEvent.CTRL_DOWN_MASK;
 
         // File menu
         JMenu fileMenu = new JMenu("File");
 
-        exportMenuItem = new JMenuItem("Export Chart...");
-        exportMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, mask));
-        exportMenuItem.addActionListener(evt -> exportCurrentChart());
-
-        JMenuItem exportPdfItem = new JMenuItem("Export as PDF...");
-        exportPdfItem.addActionListener(evt -> exportCurrentChartAsPdf());
-
-        JMenuItem exportSvgItem = new JMenuItem("Export as SVG...");
-        exportSvgItem.addActionListener(evt -> exportCurrentChartAsSvg());
-
-        fileMenu.add(exportMenuItem);
-        fileMenu.add(exportPdfItem);
-        fileMenu.add(exportSvgItem);
+        fileMenu.add(new JMenuItem(exportPngAction));
+        if (pdfExportAvailable) fileMenu.add(new JMenuItem(exportPdfAction));
+        if (svgExportAvailable) fileMenu.add(new JMenuItem(exportSvgAction));
         fileMenu.addSeparator();
 
         exitMenuItem = new JMenuItem("Quit");
@@ -677,10 +826,10 @@ public final class DemoApplication {
         // View menu
         JMenu viewMenu = new JMenu("View");
 
-        JMenuItem reloadItem = new JMenuItem("Reload Renderer");
-        reloadItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, mask));
-        reloadItem.addActionListener(evt -> refreshCurrent());
-        viewMenu.add(reloadItem);
+        viewMenu.add(new JMenuItem(reloadAction));
+        viewMenu.addSeparator();
+        viewMenu.add(new JCheckBoxMenuItem(catalogToggleAction));
+        viewMenu.add(new JCheckBoxMenuItem(toolsToggleAction));
 
         viewMenu.addSeparator();
 
@@ -703,10 +852,7 @@ public final class DemoApplication {
         // Tools menu
         JMenu toolsMenu = new JMenu("Tools");
 
-        benchmarkMenuItem = new JMenuItem("Run Benchmark");
-        benchmarkMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_B, mask));
-        benchmarkMenuItem.addActionListener(evt -> runBenchmark());
-        toolsMenu.add(benchmarkMenuItem);
+        toolsMenu.add(new JMenuItem(benchmarkAction));
 
         JMenuItem resetMetricsItem = new JMenuItem("Reset Metrics");
         resetMetricsItem.addActionListener(evt -> resetMetrics());
@@ -727,11 +873,12 @@ public final class DemoApplication {
         aboutMenuItem.addActionListener(evt -> showAboutDialog(frame));
         helpMenu.add(aboutMenuItem);
 
-        preferencesMenuItem = new JMenuItem("Preferences");
-        preferencesMenuItem.addActionListener(evt -> updateStatus("Preferences not available."));
-        helpMenu.add(preferencesMenuItem);
-
         menuBar.add(helpMenu);
+
+        if (!screenMenuBar) {
+            menuBar.add(Box.createHorizontalGlue());
+            menuBar.add(buildTitleBarActions());
+        }
 
         return menuBar;
     }
@@ -739,12 +886,6 @@ public final class DemoApplication {
     private void configureMacOSMenuHandlers(JFrame frame) {
         if (!SystemInfo.isMacOS) {
             return;
-        }
-        if (aboutMenuItem != null) {
-            aboutMenuItem.setVisible(false);
-        }
-        if (preferencesMenuItem != null) {
-            preferencesMenuItem.setVisible(false);
         }
         if (exitMenuItem != null) {
             exitMenuItem.setVisible(false);
@@ -756,9 +897,6 @@ public final class DemoApplication {
         if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
             desktop.setAboutHandler(evt -> showAboutDialog(frame));
         }
-        if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) {
-            desktop.setPreferencesHandler(evt -> statusLabel.setText("Preferences not available."));
-        }
         if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
             desktop.setQuitHandler((evt, response) -> {
                 response.performQuit();
@@ -767,76 +905,19 @@ public final class DemoApplication {
     }
 
     private void showAboutDialog(JFrame frame) {
-        DemoPalette palette = currentPalette();
-        Color muted = palette.muted();
-
         JDialog dialog = new JDialog(frame, "About " + APP_NAME, true);
         dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-        dialog.setLayout(new BorderLayout());
         dialog.setResizable(false);
-        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(palette.border(), 1));
         configurePlatformDialog(dialog);
-        int topInset = (SystemInfo.isMacOS && SystemInfo.isMacFullWindowContentSupported) ? 44 : 22;
-
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(topInset, 22, 14, 22));
-        content.setBackground(palette.surfaceBackground());
-
-        JLabel appTitle = new JLabel(APP_NAME);
-        appTitle.setFont(appTitle.getFont().deriveFont(Font.BOLD, 20f));
-        appTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel subtitle = new JLabel("Enterprise charting demo for production-grade Swing applications");
-        subtitle.setForeground(muted);
-        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel version = new JLabel("Version " + VERSION);
-        version.setForeground(muted);
-        version.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel renderers = new JLabel("Renderers: " + catalog.entries().size());
-        renderers.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel runtime = new JLabel("Java Runtime: " + System.getProperty("java.version") +
-                " (" + System.getProperty("java.vendor") + ")");
-        runtime.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel license = new JLabel("License: MIT");
-        license.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel support = new JLabel("Support: Commercial support, closed-source product delivery");
-        support.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel copyright = new JLabel(COPYRIGHT);
-        copyright.setForeground(muted);
-        copyright.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton close = new JButton("Close");
-        close.setAlignmentX(Component.LEFT_ALIGNMENT);
-        close.addActionListener(evt -> dialog.dispose());
-
-        content.add(appTitle);
-        content.add(Box.createVerticalStrut(6));
-        content.add(subtitle);
-        content.add(Box.createVerticalStrut(8));
-        content.add(version);
-        content.add(Box.createVerticalStrut(14));
-        content.add(renderers);
-        content.add(Box.createVerticalStrut(5));
-        content.add(runtime);
-        content.add(Box.createVerticalStrut(5));
-        content.add(license);
-        content.add(Box.createVerticalStrut(5));
-        content.add(support);
-        content.add(Box.createVerticalStrut(16));
-        content.add(copyright);
-        content.add(Box.createVerticalStrut(12));
-        content.add(close);
-
-        dialog.add(content, BorderLayout.CENTER);
-        dialog.setSize(620, 338);
+        DemoAboutPanel content = new DemoAboutPanel(APP_NAME, VERSION, COPYRIGHT,
+                catalog.entries().size(), vectorAvailable, applicationIcon(72), dialog::dispose);
+        dialog.setContentPane(content);
+        dialog.getRootPane().setDefaultButton(content.closeButton());
+        dialog.getRootPane().registerKeyboardAction(evt -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        dialog.pack();
         dialog.setLocationRelativeTo(frame);
+        SwingUtilities.invokeLater(() -> content.closeButton().requestFocusInWindow());
         dialog.setVisible(true);
     }
 
@@ -1040,12 +1121,14 @@ public final class DemoApplication {
         dialog.setLayout(new BorderLayout());
         dialog.getRootPane().setBorder(BorderFactory.createLineBorder(currentPalette().border(), 1));
 
-        JPanel content = new JPanel(new BorderLayout(0, 8));
-        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel content = new JPanel(new BorderLayout(0, UIScale.scale(12)));
+        content.setBorder(scaledEmptyBorder(16, 16, 16, 16));
         content.setBackground(currentPalette().surfaceBackground());
 
         JTextField field = new JTextField();
-        field.putClientProperty("JTextField.placeholderText", "Search Everywhere");
+        field.putClientProperty("JTextField.placeholderText", "Find renderer by name or category");
+        field.putClientProperty(FlatClientProperties.STYLE, "margin: 8,12,8,12");
+        field.getAccessibleContext().setAccessibleName("Find renderer");
         field.addActionListener(evt -> openSelectedFromSearchEverywhere());
         field.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             @Override
@@ -1066,10 +1149,6 @@ public final class DemoApplication {
         field.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    dialog.setVisible(false);
-                    return;
-                }
                 if (searchEverywhereResults == null) {
                     return;
                 }
@@ -1092,11 +1171,15 @@ public final class DemoApplication {
         DefaultListModel<RendererCatalogEntry> model = new DefaultListModel<>();
         JList<RendererCatalogEntry> results = new JList<>(model);
         results.setVisibleRowCount(12);
+        results.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        results.getAccessibleContext().setAccessibleName("Matching renderers");
         results.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                           boolean isSelected, boolean cellHasFocus) {
                 JLabel cell = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                cell.setBorder(BorderFactory.createCompoundBorder(cell.getBorder(), scaledEmptyBorder(8, 12, 8, 12)));
+                cell.setIconTextGap(8);
                 if (value instanceof RendererCatalogEntry entry) {
                     cell.setText(entry.simpleName() + "  [" + entry.category() + "]");
                     Color iconTint = isSelected ? list.getSelectionForeground() : currentPalette().muted();
@@ -1113,6 +1196,15 @@ public final class DemoApplication {
                 }
             }
         });
+        results.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "openRenderer");
+        results.getActionMap().put("openRenderer", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent event) {
+                openSelectedFromSearchEverywhere();
+            }
+        });
+        dialog.getRootPane().registerKeyboardAction(event -> dialog.setVisible(false),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         JScrollPane resultsScroll = new JScrollPane(results);
         resultsScroll.setBorder(BorderFactory.createEmptyBorder());
@@ -1120,7 +1212,6 @@ public final class DemoApplication {
         content.add(field, BorderLayout.NORTH);
         content.add(resultsScroll, BorderLayout.CENTER);
         dialog.add(content, BorderLayout.CENTER);
-        dialog.setSize(new Dimension(620, 420));
 
         this.searchEverywhereDialog = dialog;
         this.searchEverywhereField = field;
@@ -1167,74 +1258,19 @@ public final class DemoApplication {
         if (searchEverywhereDialog == null || mainFrame == null) {
             return;
         }
-        int width = Math.min(700, Math.max(520, mainFrame.getWidth() / 2));
-        int x = mainFrame.getX() + ((mainFrame.getWidth() - width) / 2);
-        int y = mainFrame.getY() + 56;
-        searchEverywhereDialog.setSize(new Dimension(width, 420));
+        Container content = mainFrame.getContentPane();
+        Point origin = content.getLocationOnScreen();
+        int inset = UIScale.scale(16);
+        int availableWidth = Math.max(1, content.getWidth() - 2 * inset);
+        int width = Math.min(availableWidth, Math.min(UIScale.scale(700),
+                Math.max(UIScale.scale(520), content.getWidth() / 2)));
+        int top = SwingUtilities.convertPoint(editorToolbar, 0, editorToolbar.getHeight(), content).y + inset;
+        int availableHeight = Math.max(1, content.getHeight() - top - footerPanel.getHeight() - inset);
+        int height = Math.min(UIScale.scale(480), availableHeight);
+        int x = origin.x + (content.getWidth() - width) / 2;
+        int y = origin.y + top;
+        searchEverywhereDialog.setSize(new Dimension(width, height));
         searchEverywhereDialog.setLocation(x, y);
-    }
-
-    private void installHeaderWindowGestures(JPanel header) {
-        HeaderWindowMouseHandler handler = new HeaderWindowMouseHandler();
-        header.addMouseListener(handler);
-        header.addMouseMotionListener(handler);
-    }
-
-    private final class HeaderWindowMouseHandler extends MouseAdapter {
-        private Point dragOffset;
-
-        @Override
-        public void mousePressed(MouseEvent e) {
-            if (!SwingUtilities.isLeftMouseButton(e)) {
-                return;
-            }
-            dragOffset = e.getPoint();
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent e) {
-            dragOffset = null;
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent e) {
-            if (mainFrame == null || dragOffset == null || !SwingUtilities.isLeftMouseButton(e)) {
-                return;
-            }
-            if ((mainFrame.getExtendedState() & Frame.MAXIMIZED_BOTH) != 0) {
-                return;
-            }
-            Point screen = e.getLocationOnScreen();
-            mainFrame.setLocation(screen.x - dragOffset.x, screen.y - dragOffset.y);
-        }
-
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            if (!SwingUtilities.isLeftMouseButton(e) || e.getClickCount() != 2) {
-                return;
-            }
-            toggleWindowMaximizeRestore();
-        }
-    }
-
-    private void toggleWindowMaximizeRestore() {
-        if (mainFrame == null) {
-            return;
-        }
-        int state = mainFrame.getExtendedState();
-        if ((state & Frame.MAXIMIZED_BOTH) != 0) {
-            mainFrame.setExtendedState(state & ~Frame.MAXIMIZED_BOTH);
-            return;
-        }
-        Rectangle screenBounds = mainFrame.getGraphicsConfiguration().getBounds();
-        java.awt.Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(mainFrame.getGraphicsConfiguration());
-        mainFrame.setMaximizedBounds(new Rectangle(
-                screenBounds.x + insets.left,
-                screenBounds.y + insets.top,
-                screenBounds.width - insets.left - insets.right,
-                screenBounds.height - insets.top - insets.bottom
-        ));
-        mainFrame.setExtendedState(state | Frame.MAXIMIZED_BOTH);
     }
 
     private TreePath findTreePath(RendererCatalogEntry entry) {
@@ -1331,32 +1367,63 @@ public final class DemoApplication {
     }
 
     private JPanel buildEditorToolbar() {
-        editorToolbar = new JPanel(new BorderLayout(16, 0));
-        editorToolbar.setPreferredSize(new Dimension(0, 48));
-        JPanel identity = new JPanel();
-        identity.setLayout(new BoxLayout(identity, BoxLayout.X_AXIS));
+        JPanel identity = new JPanel(new BorderLayout(0, UIScale.scale(4)));
         identity.setOpaque(false);
         activeRendererLabel = new JLabel("Chart workspace");
-        activeRendererLabel.setFont(activeRendererLabel.getFont().deriveFont(Font.BOLD, 13f));
+        activeRendererLabel.setFont(activeRendererLabel.getFont().deriveFont(Font.BOLD, UIScale.scale(13f)));
         categoryLabel = new JLabel();
-        categoryLabel.setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 0));
-        categoryLabel.setFont(categoryLabel.getFont().deriveFont(12f));
-        identity.add(activeRendererLabel);
-        identity.add(categoryLabel);
+        categoryLabel.setBorder(scaledEmptyBorder(0, 24, 0, 0));
+        categoryLabel.setFont(categoryLabel.getFont().deriveFont(UIScale.scale(12f)));
+        identity.add(activeRendererLabel, BorderLayout.NORTH);
+        identity.add(categoryLabel, BorderLayout.CENTER);
         JPanel actions = new JPanel();
         actions.setLayout(new BoxLayout(actions, BoxLayout.X_AXIS));
         actions.setOpaque(false);
-        reloadButton = new JButton("Reload");
+        reloadButton = createChartActionButton(reloadAction, false);
         reloadButton.putClientProperty("JButton.buttonType", "toolBarButton");
-        reloadButton.setToolTipText("Reload the selected chart (" + shortcutLabel("R") + ")");
-        reloadButton.addActionListener(event -> refreshCurrent());
-        exportButton = new JButton("Export PNG");
+        reloadButton.getAccessibleContext().setAccessibleName("Reload renderer");
+        exportButton = createChartActionButton(exportPngAction, false);
         exportButton.putClientProperty("JButton.buttonType", "toolBarButton");
-        exportButton.setToolTipText("Export the selected chart (" + shortcutLabel("E") + ")");
-        exportButton.addActionListener(event -> exportCurrentChart());
+        exportButton.getAccessibleContext().setAccessibleName("Export chart as PNG");
         actions.add(reloadButton);
-        actions.add(Box.createHorizontalStrut(6));
+        actions.add(Box.createHorizontalStrut(UIScale.scale(4)));
         actions.add(exportButton);
+        editorToolbar = new JPanel(new BorderLayout(UIScale.scale(16), 0)) {
+            private boolean stacked;
+
+            private int inlineWidth() {
+                return identity.getPreferredSize().width + UIScale.scale(16) + actions.getPreferredSize().width
+                        + getInsets().left + getInsets().right;
+            }
+
+            private void arrange(int width) {
+                boolean next = width > 0 && width < inlineWidth();
+                if (next == stacked) return;
+                stacked = next;
+                remove(actions);
+                add(actions, stacked ? BorderLayout.SOUTH : BorderLayout.EAST);
+                ((BorderLayout) getLayout()).setVgap(stacked ? UIScale.scale(8) : 0);
+            }
+
+            @Override
+            public Dimension getMinimumSize() {
+                return new Dimension(Math.max(identity.getMinimumSize().width, actions.getPreferredSize().width)
+                        + getInsets().left + getInsets().right, getPreferredSize().height);
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                arrange(getParent() == null ? getWidth() : getParent().getWidth());
+                return super.getPreferredSize();
+            }
+
+            @Override
+            public void doLayout() {
+                arrange(getWidth());
+                super.doLayout();
+            }
+        };
+        editorToolbar.getAccessibleContext().setAccessibleName("Chart toolbar");
         editorToolbar.add(identity, BorderLayout.CENTER);
         editorToolbar.add(actions, BorderLayout.EAST);
         updateChartActions();
@@ -1383,28 +1450,37 @@ public final class DemoApplication {
             categoryLabel.setText(capitalize(entry.category()));
         }
         updateChartActions();
-        updateStatus(currentChartPanel == null ? "Opening " + entry.simpleName() + "…" : "Ready — " + entry.simpleName());
+        updateStatus(currentChartPanel == null ? "Opening " + entry.simpleName() + "…" : "Ready - " + entry.simpleName());
     }
 
     private void updateChartActions() {
-        if (reloadButton != null) {
-            reloadButton.setEnabled(currentRendererKey != null);
+        reloadAction.setEnabled(currentRendererKey != null);
+        for (Action action : new Action[]{exportPngAction, benchmarkAction}) {
+            action.setEnabled(currentChartPanel != null);
         }
-        if (exportButton != null) {
-            exportButton.setEnabled(currentChartPanel != null);
+        exportPdfAction.setEnabled(currentChartPanel != null && pdfExportAvailable);
+        exportSvgAction.setEnabled(currentChartPanel != null && svgExportAvailable);
+        if (rendererInfo != null) {
+            RendererCatalogEntry entry = currentRendererKey == null ? null : catalog.getRequired(currentRendererKey);
+            rendererInfo.setText(entry == null ? "Select a renderer in the catalog."
+                    : entry.simpleName() + "\n" + capitalize(entry.category()));
+            rendererInfo.setCaretPosition(0);
         }
-        if (exportMenuItem != null) {
-            exportMenuItem.setEnabled(currentChartPanel != null);
-        }
-        if (benchmarkMenuItem != null) {
-            benchmarkMenuItem.setEnabled(currentChartPanel != null);
+    }
+
+    private static boolean exportBackendAvailable(String className) {
+        try {
+            Class.forName(className, false, ChartExportService.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError unavailable) {
+            return false;
         }
     }
 
     private JPanel buildRendererPanel(RendererCatalogEntry entry) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(currentPalette().contentBackground());
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(scaledEmptyBorder(16, 16, 16, 16));
         panel.add(buildChart(entry), BorderLayout.CENTER);
         return panel;
     }
@@ -1413,10 +1489,9 @@ public final class DemoApplication {
         DemoPalette palette = currentPalette();
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(palette.contentBackground());
-        wrapper.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         JLabel status = new JLabel("Rendering...", SwingConstants.CENTER);
         status.setForeground(palette.muted());
-        status.setFont(status.getFont().deriveFont(13f));
+        status.setFont(status.getFont().deriveFont(UIScale.scale(13f)));
         wrapper.add(status, BorderLayout.CENTER);
 
         Timer timer = new Timer(80, evt -> {
@@ -1435,8 +1510,10 @@ public final class DemoApplication {
                     model = new ShowcaseFinancialModel(financial);
                 }
                 ChartModel animatedModel = model;
+                java.util.List<ChartModel> displayedModels = java.util.List.of(model);
                 renderer = instantiateRenderer(className);
                 ArberChartPanel chartPanel = new ArberChartPanel(model, renderer);
+                chartPanel.setFocusable(true);
                 if ("standard".equals(entry.category())) {
                     java.util.List<ChartModel> series = RendererDemoDataFactory.standardSeries(3);
                     if (!series.isEmpty()) {
@@ -1449,6 +1526,7 @@ public final class DemoApplication {
                         chartPanel.setMultiColorEnabled(true);
                         chartPanel.resetZoom();
                         animatedModel = series.getFirst();
+                        displayedModels = series;
                     }
                 }
                 chartPanel.setTheme(getActiveTheme());
@@ -1456,9 +1534,35 @@ public final class DemoApplication {
                 chartPanel.setMinimumSize(new Dimension(360, 260));
                 configureChart(entry, chartPanel);
                 applyShowcasePreset(entry, chartPanel, renderer);
+                if (renderer instanceof com.arbergashi.charts.render.common.PhysicalScaleRenderer) {
+                    // This renderer is a reference overlay, so show the signal it annotates.
+                    chartPanel.setPreDataLayer(model, new com.arbergashi.charts.render.standard.LineRenderer());
+                } else if (renderer instanceof com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer) {
+                    chartPanel.setPreDataLayer(model, new com.arbergashi.charts.render.circular.GaugeRenderer());
+                } else if (renderer instanceof com.arbergashi.charts.render.medical.CalibrationRenderer) {
+                    chartPanel.setPreDataLayer(model, new com.arbergashi.charts.render.medical.ECGRenderer());
+                } else if (renderer instanceof PredictiveCandleRenderer) {
+                    chartPanel.setPreDataLayer(model, new com.arbergashi.charts.render.financial.CandlestickRenderer());
+                } else if (renderer instanceof PredictiveShadowRenderer
+                        || renderer instanceof com.arbergashi.charts.render.standard.PredictivePathRenderer
+                        || renderer instanceof com.arbergashi.charts.render.analysis.MinMaxMarkerRenderer
+                        || renderer instanceof com.arbergashi.charts.render.analysis.PeakDetectionRenderer
+                        || renderer instanceof PlaybackStatusRenderer) {
+                    for (int i = 0; i < displayedModels.size(); i++) {
+                        var history = new com.arbergashi.charts.render.standard.LineRenderer();
+                        history.setLayerIndex(i);
+                        chartPanel.setPreDataLayer(displayedModels.get(i), history);
+                    }
+                }
                 installShowcaseRendererAnimation(entry, animatedModel, chartPanel);
                 wrapper.removeAll();
                 wrapper.add(chartPanel, BorderLayout.CENTER);
+                if (renderer instanceof com.arbergashi.charts.render.common.PhysicalScaleRenderer) {
+                    JLabel explanation = new JLabel("Physical reference over a sample signal · display calibration required");
+                    explanation.setForeground(currentPalette().muted());
+                    explanation.setBorder(scaledEmptyBorder(12, 0, 0, 0));
+                    wrapper.add(explanation, BorderLayout.SOUTH);
+                }
                 wrapper.revalidate();
                 wrapper.repaint();
 
@@ -1472,7 +1576,7 @@ public final class DemoApplication {
                 if (entry.className().equals(currentRendererKey)) {
                     currentChartPanel = chartPanel;
                     updateChartActions();
-                    updateStatus("Ready — " + entry.simpleName());
+                    updateStatus("Ready - " + entry.simpleName());
                 }
                 updateMetrics();
             } catch (RuntimeException ex) {
@@ -1497,7 +1601,8 @@ public final class DemoApplication {
         String category = entry.category();
         String simple = entry.simpleName();
         if ("medical".equals(category)) {
-            panel.setGridLayer(new MedicalGridLayer());
+            panel.setGridLayer(isEcgShowcase(simple) ? new MedicalGridLayer()
+                    : new com.arbergashi.charts.render.grid.DefaultGridLayer());
         } else if ("financial".equals(category)) {
             panel.setGridLayer(new FinancialGridLayer());
         } else if ("statistical".equals(category)) {
@@ -1523,8 +1628,47 @@ public final class DemoApplication {
         }
 
         // Configure axis for optimal presentation
-        configureAxisForCategory(entry.category(), panel);
+        if ("medical".equals(category)) configureMedicalShowcase(simple, panel);
+        else configureAxisForCategory(category, panel);
 
+    }
+
+    private static boolean isEcgShowcase(String simple) {
+        return switch (simple) {
+            case "CalibrationRenderer", "ECGRenderer", "ECGRhythmRenderer", "MedicalSweepRenderer",
+                    "SweepEraseEKGRenderer" -> true;
+            default -> false;
+        };
+    }
+
+    private static void configureMedicalShowcase(String simple, ArberChartPanel panel) {
+        AxisConfig x = new AxisConfig().setRequestedTickCount(8).setUnitSuffix("s");
+        AxisConfig y = new AxisConfig().setRequestedTickCount(6);
+        if (isEcgShowcase(simple)) {
+            x.setMedicalScale(25.0).setRequestedTickCount(12);
+            y.setMedicalScale(10.0).setRequestedTickCount(8).setUnitSuffix("mV");
+        } else {
+            switch (simple) {
+                case "VCGRenderer" -> {
+                    x.setUnitSuffix("mV");
+                    y.setUnitSuffix("mV");
+                }
+                case "SpirometryRenderer" -> {
+                    x.setUnitSuffix("L");
+                    y.setUnitSuffix("L/s");
+                }
+                case "EEGRenderer" -> y.setUnitSuffix("µV");
+                case "EMGRenderer", "EOGRenderer" -> y.setUnitSuffix("mV");
+                case "CapnographyRenderer", "IBPRenderer" -> y.setUnitSuffix("mmHg");
+                case "NIRSRenderer" -> y.setUnitSuffix("%");
+                case "PPGRenderer", "VentilatorWaveformRenderer" -> y.setUnitSuffix("relative");
+                case "SpectrogramMedicalRenderer" -> y.setUnitSuffix("Hz");
+                case "UltrasoundMModeRenderer" -> y.setUnitSuffix("mm");
+                default -> throw new IllegalArgumentException("No medical showcase axes for " + simple);
+            }
+        }
+        panel.setXAxisConfig(x);
+        panel.setYAxisConfig(y);
     }
 
     private void applyShowcasePreset(RendererCatalogEntry entry, ArberChartPanel panel, ChartRenderer renderer) {
@@ -1549,6 +1693,13 @@ public final class DemoApplication {
         if (specialized) {
             panel.setLegend(true);
             panel.setOverlayLegend(com.arbergashi.charts.domain.legend.LegendPosition.TOP_RIGHT);
+        }
+        if ("com.arbergashi.charts.render.circular.SunburstRenderer".equals(className)
+                || "com.arbergashi.charts.render.specialized.SunburstRenderer".equals(className)) {
+            panel.setXAxisConfig(new AxisConfig().setShowGrid(false));
+            panel.setYAxisConfig(new AxisConfig().setShowGrid(false));
+            panel.setAxisLabelsVisible(false);
+            return;
         }
         if (analysis) {
             panel.setLegend(false);
@@ -1619,6 +1770,9 @@ public final class DemoApplication {
             y.setRequestedTickCount(5).setShowGrid(false).setFixedRange(0.0, 100.0);
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
+            if ("com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer".equals(className)) {
+                panel.setAxisLabelsVisible(false);
+            }
             return;
         }
 
@@ -1638,7 +1792,7 @@ public final class DemoApplication {
             com.arbergashi.charts.api.AxisConfig x = new com.arbergashi.charts.api.AxisConfig();
             com.arbergashi.charts.api.AxisConfig y = new com.arbergashi.charts.api.AxisConfig();
             x.setRequestedTickCount(8).setShowGrid(false);
-            y.setRequestedTickCount(5).setShowGrid(true).setFixedRange(-2.0, 2.0);
+            y.setRequestedTickCount(5).setShowGrid(true);
             panel.setXAxisConfig(x);
             panel.setYAxisConfig(y);
             return;
@@ -1733,7 +1887,9 @@ public final class DemoApplication {
         }
 
         String className = entry.className();
-        if ("com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer".equals(className)) {
+        if ("com.arbergashi.charts.render.circular.CircularLatencyOverlayRenderer".equals(className)
+                || "com.arbergashi.charts.render.financial.PointAndFigureRenderer".equals(className)) {
+            // Discrete historical P&F boxes must not drift under the generic continuous animation.
             return;
         }
 
@@ -1942,17 +2098,49 @@ public final class DemoApplication {
             return;
         }
 
+        final double[] baselineX = new double[count];
         final double[][] baseline = new double[channels][count];
         for (int i = 0; i < count; i++) {
+            baselineX[i] = model.getX(i);
             for (int c = 0; c < channels; c++) {
                 baseline[c][i] = model.getY(i, c);
             }
+        }
+        final double[] channelSpan = new double[channels];
+        for (int c = 0; c < channels; c++) {
+            double min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY;
+            for (double value : baseline[c]) {
+                min = Math.min(min, value);
+                max = Math.max(max, value);
+            }
+            channelSpan[c] = max - min;
+        }
+
+        if (panel.getPrimaryRenderer() instanceof com.arbergashi.charts.render.medical.SpirometryRenderer
+                || panel.getPrimaryRenderer() instanceof com.arbergashi.charts.render.medical.VCGRenderer) {
+            // XY curves describe a complete measurement domain, rather than a time sweep.
+            final double[] values = new double[channels];
+            final double[] modulation = new double[channels];
+            ShowcaseAnimation.install(panel, (elapsedSeconds, deltaSeconds) -> {
+                double blend = com.arbergashi.charts.util.AnimationUtils.easeInOut(Math.min(1.0, elapsedSeconds / 0.25));
+                for (int c = 0; c < channels; c++) {
+                    modulation[c] = 1.0 + 0.03 * blend * Math.sin(elapsedSeconds * (0.9 + c * 0.2));
+                }
+                model.clear();
+                for (int i = 0; i < count; i++) {
+                    for (int c = 0; c < channels; c++) {
+                        values[c] = baseline[c][i] * modulation[c];
+                    }
+                    model.add(baselineX[i], values);
+                }
+                panel.repaint();
+            });
+            return;
         }
 
         final double sampleRate = 250.0;
         final double dt = 1.0 / sampleRate;
         final double[] t = {model.getX(count - 1)};
-        final int[] cursor = {0};
         final double[] carry = {0.0};
         final double[] channelsBuffer = new double[channels];
 
@@ -1962,16 +2150,17 @@ public final class DemoApplication {
             carry[0] -= samples;
 
             for (int s = 0; s < samples; s++) {
-                int idx = cursor[0] % count;
+                int idx = model.getRawHeadIndex() % count;
                 t[0] += dt;
                 for (int c = 0; c < channels; c++) {
                     double base = baseline[c][idx];
-                    // Keep renderer character: use baseline shape and only subtle dynamic breathing.
-                    double mod = 1.0 + 0.03 * Math.sin(t[0] * (0.9 + c * 0.2));
-                    channelsBuffer[c] = base * mod;
+                    // Limit motion by signal excursion, so a large pressure or percentage offset stays stable.
+                    double amplitude = Math.min(Math.abs(base), channelSpan[c] * 0.5);
+                    channelsBuffer[c] = base + Math.copySign(amplitude, base) * 0.03
+                            * Math.sin(t[0] * (0.9 + c * 0.2));
                 }
-                model.add(t[0], channelsBuffer);
-                cursor[0]++;
+                // The sweep revisits fixed screen positions; elapsed time only drives modulation.
+                model.add(baselineX[idx], channelsBuffer);
             }
             panel.repaint();
         });
@@ -2118,16 +2307,6 @@ public final class DemoApplication {
                 xCfg.setRequestedTickCount(10);
                 yCfg.setRequestedTickCount(8);
             }
-            case "medical" -> {
-                // Physical scale for medical charts
-                double pixelsPerMm = resolvePixelsPerMm();
-                if (Double.isFinite(pixelsPerMm) && pixelsPerMm > 0.0) {
-                    xCfg.setUnitsPerPixel((1.0 / 25.0) / pixelsPerMm);
-                    yCfg.setUnitsPerPixel((1.0 / 10.0) / pixelsPerMm);
-                }
-                xCfg.setRequestedTickCount(12);
-                yCfg.setRequestedTickCount(8);
-            }
             case "statistical" -> {
                 xCfg.setRequestedTickCount(6);
                 yCfg.setRequestedTickCount(8);
@@ -2164,16 +2343,6 @@ public final class DemoApplication {
         panel.setYAxisConfig(yCfg);
     }
 
-
-    private double resolvePixelsPerMm() {
-        try {
-            int ppi = Toolkit.getDefaultToolkit().getScreenResolution();
-            if (ppi <= 0) return Double.NaN;
-            return ppi / 25.4;
-        } catch (Exception ex) {
-            return Double.NaN;
-        }
-    }
 
     private void refreshCurrent() {
         if (currentRendererKey == null || currentRendererKey.isBlank()) {
@@ -2287,12 +2456,48 @@ public final class DemoApplication {
                     new PerformanceAuditRendererAdapter(sampleLatencyTracker());
             case "com.arbergashi.charts.render.common.PhysicalScaleRenderer" ->
                     new com.arbergashi.charts.render.common.PhysicalScaleRenderer().setEnabled(true);
+            case "com.arbergashi.charts.render.medical.CalibrationRenderer" ->
+                    new com.arbergashi.charts.render.medical.CalibrationRenderer().setEnabled(true);
+            case "com.arbergashi.charts.render.medical.EEGRenderer" ->
+                    new com.arbergashi.charts.render.medical.EEGRenderer() {
+                        @Override
+                        public double[] getPreferredYRange(ChartModel model) {
+                            return medicalDisplayRange(model);
+                        }
+                    };
+            case "com.arbergashi.charts.render.medical.VentilatorWaveformRenderer" ->
+                    new com.arbergashi.charts.render.medical.VentilatorWaveformRenderer() {
+                        @Override
+                        public double[] getPreferredYRange(ChartModel model) {
+                            return medicalDisplayRange(model);
+                        }
+                    };
+            case "com.arbergashi.charts.render.medical.SpectrogramMedicalRenderer" ->
+                    new com.arbergashi.charts.render.medical.SpectrogramMedicalRenderer() {
+                        @Override
+                        public double[] getPreferredYRange(ChartModel model) {
+                            return medicalDisplayRange(model);
+                        }
+                    };
+            case "com.arbergashi.charts.render.medical.UltrasoundMModeRenderer" ->
+                    new com.arbergashi.charts.render.medical.UltrasoundMModeRenderer() {
+                        @Override
+                        public double[] getPreferredYRange(ChartModel model) {
+                            return medicalDisplayRange(model);
+                        }
+                    };
             case "com.arbergashi.charts.render.specialized.SunburstRenderer" ->
                     new com.arbergashi.charts.render.specialized.SunburstRenderer();
             case "com.arbergashi.charts.render.circular.SunburstRenderer" ->
-                    new com.arbergashi.charts.render.specialized.SunburstRenderer();
+                    new com.arbergashi.charts.render.circular.SunburstRenderer();
             default -> null;
         };
+    }
+
+    private static double[] medicalDisplayRange(ChartModel model) {
+        // Swing's default fit reads channel 0; these showcases also display other channels or a zero baseline.
+        double[] range = model.getDataRange();
+        return new double[]{range[2], range[3]};
     }
 
     private static String resolveRendererClass(String className) {
@@ -2329,40 +2534,28 @@ public final class DemoApplication {
         }
     }
 
-    private static void configurePlatformWindow(JFrame frame) {
-        if (SystemInfo.isMacOS) {
-            if (SystemInfo.isMacFullWindowContentSupported) {
-                frame.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
-                frame.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-                if (SystemInfo.isJava_17_orLater) {
-                    frame.getRootPane().putClientProperty("apple.awt.windowTitleVisible", false);
-                } else {
-                    frame.setTitle(null);
-                }
-            }
-            if (!SystemInfo.isJava_11_orLater) {
-                frame.getRootPane().putClientProperty("apple.awt.fullscreenable", true);
-            }
+    private static void configurePlatformWindow(JRootPane rootPane, boolean macOS) {
+        if (macOS) {
+            rootPane.putClientProperty("apple.awt.fullWindowContent", Boolean.TRUE);
+            rootPane.putClientProperty("apple.awt.transparentTitleBar", Boolean.TRUE);
+            rootPane.putClientProperty("apple.awt.windowTitleVisible", Boolean.FALSE);
             return;
         }
 
         // Cross-platform FlatLaf title bar hints (Windows/Linux).
-        frame.getRootPane().putClientProperty("JRootPane.useWindowDecorations", Boolean.TRUE);
-        frame.getRootPane().putClientProperty("JRootPane.menuBarEmbedded", Boolean.TRUE);
-        frame.getRootPane().putClientProperty("JRootPane.titleBarShowIcon", Boolean.TRUE);
-        frame.getRootPane().putClientProperty("JRootPane.titleBarShowTitle", Boolean.FALSE);
-        frame.getRootPane().putClientProperty("JRootPane.titleBarBackground",
+        rootPane.putClientProperty(FlatClientProperties.USE_WINDOW_DECORATIONS, Boolean.TRUE);
+        rootPane.putClientProperty(FlatClientProperties.MENU_BAR_EMBEDDED, Boolean.TRUE);
+        rootPane.putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_ICON, Boolean.FALSE);
+        rootPane.putClientProperty(FlatClientProperties.TITLE_BAR_SHOW_TITLE, Boolean.TRUE);
+        rootPane.putClientProperty(FlatClientProperties.TITLE_BAR_BACKGROUND,
                 DemoThemeSupport.uiColor("TitlePane.background", "Panel.background"));
-        frame.getRootPane().putClientProperty("JRootPane.titleBarForeground",
+        rootPane.putClientProperty(FlatClientProperties.TITLE_BAR_FOREGROUND,
                 DemoThemeSupport.uiColor("TitlePane.foreground", "Label.foreground"));
     }
 
     private static void configurePlatformDialog(JDialog dialog) {
         if (SystemInfo.isMacOS) {
-            if (SystemInfo.isMacFullWindowContentSupported) {
-                dialog.getRootPane().putClientProperty("apple.awt.fullWindowContent", true);
-                dialog.getRootPane().putClientProperty("apple.awt.transparentTitleBar", true);
-            }
+            dialog.setBackground(DemoThemeSupport.currentPalette().windowBackground());
             return;
         }
 
@@ -2415,12 +2608,17 @@ public final class DemoApplication {
 
     private void applyDemoPalette() {
         DemoPalette palette = currentPalette();
-        if (headerPanel != null) {
-            headerPanel.setBackground(palette.windowBackground());
-            headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()),
-                    BorderFactory.createEmptyBorder(0, 14, 0, 12)));
-            applyMutedLabels(headerPanel, palette.muted());
+        if (toolWindowShell != null) toolWindowShell.applyPalette(palette);
+        catalogToggleAction.putValue(Action.SMALL_ICON, loadTablerOutlineIcon("folder.svg", 18,
+                UIManager.getIcon("Tree.closedIcon"), palette.muted()));
+        toolsToggleAction.putValue(Action.SMALL_ICON, loadTablerOutlineIcon("chart-arrows.svg", 18,
+                UIManager.getIcon("FileView.fileIcon"), palette.muted()));
+        if (chartToolsPanel != null) {
+            chartToolsPanel.setBackground(palette.sidebarBackground());
+            rendererInfo.setForeground(palette.foreground());
+        }
+        if (titleBarPanel != null) {
+            titleBarPanel.setBackground(palette.windowBackground());
         }
         if (footerPanel != null) {
             footerPanel.setBackground(palette.windowBackground());
@@ -2434,20 +2632,13 @@ public final class DemoApplication {
             editorToolbar.setBackground(palette.contentBackground());
             editorToolbar.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, palette.border()),
-                    BorderFactory.createEmptyBorder(0, 16, 0, 12)));
+                    scaledEmptyBorder(8, 16, 8, 16)));
             categoryLabel.setForeground(palette.muted());
             activeRendererLabel.setForeground(palette.foreground());
             if (currentRendererKey != null) {
                 activeRendererLabel.setIcon(rendererIconForCategory(
                         catalog.getRequired(currentRendererKey).category(), palette.accent()));
             }
-        }
-        if (headerTitleLabel != null) {
-            headerTitleLabel.setForeground(palette.foreground());
-        }
-        if (headerMarkLabel != null) {
-            headerMarkLabel.setIcon(loadTablerOutlineIcon("chart-line.svg", 20,
-                    UIManager.getIcon("FileView.fileIcon"), palette.accent()));
         }
         if (versionLabel != null) {
             versionLabel.setForeground(palette.softMuted());
@@ -2457,8 +2648,9 @@ public final class DemoApplication {
                     UIManager.getIcon("Tree.expandedIcon"), palette.muted()));
         }
         if (searchEverywhereButton != null) {
-            searchEverywhereButton.setIcon(loadTablerOutlineIcon("search.svg", 16,
+            searchEverywhereButton.setIcon(loadTablerOutlineIcon("search.svg", 18,
                     UIManager.getIcon("FileView.fileIcon"), palette.muted()));
+            searchEverywhereButton.setForeground(palette.muted());
         }
         if (catalogFilter != null) {
             catalogFilter.putClientProperty("JTextField.leadingIcon", loadTablerOutlineIcon("search.svg", 15,
@@ -2568,13 +2760,13 @@ public final class DemoApplication {
             if (user instanceof RendererCatalogEntry entry) {
                 setText(entry.simpleName());
                 setToolTipText(entry.className());
-                setFont(baseFont.deriveFont(Font.PLAIN, 13f));
+                setFont(baseFont.deriveFont(Font.PLAIN, UIScale.scale(13f)));
                 Color iconColor = sel ? tree.getForeground() : DemoThemeSupport.uiColor("Label.foreground", "textText");
                 setIcon(rendererIconForCategory(entry.category(), iconColor));
             } else if (user instanceof String label) {
                 setText(capitalize(label) + "  " + node.getChildCount());
                 setToolTipText(null);
-                setFont(baseFont.deriveFont(Font.PLAIN, 13f));
+                setFont(baseFont.deriveFont(Font.PLAIN, UIScale.scale(13f)));
                 Color categoryColor = UIManager.getColor("Component.grayForeground");
                 if (categoryColor == null) {
                     categoryColor = tree.getForeground();
@@ -2654,6 +2846,10 @@ public final class DemoApplication {
             // fall through to fallback
         }
         return fallback;
+    }
+
+    private static Icon applicationIcon(int size) {
+        return loadTablerOutlineIcon("app-icon.svg", size, UIManager.getIcon("FileView.fileIcon"), null);
     }
 
     private static void applyApplicationIcons(JFrame frame) {

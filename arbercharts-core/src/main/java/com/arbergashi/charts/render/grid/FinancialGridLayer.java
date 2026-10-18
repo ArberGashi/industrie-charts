@@ -140,7 +140,7 @@ public class FinancialGridLayer implements GridLayer {
             double y = snap(buf[1]);
             canvas.setColor(zeroColor);
             canvas.setStroke(ChartScale.scale(majorStrokeWidth));
-            drawLine(canvas, minX, y, maxX, y);
+            if (Double.isFinite(y)) drawLine(canvas, minX, y, maxX, y);
         }
 
         // Volume separator (bottom 25% line)
@@ -165,13 +165,9 @@ public class FinancialGridLayer implements GridLayer {
 
     private void drawScaleY(ArberCanvas canvas, PlotContext context, NiceScale scale, double minX, double maxX, double minY, double maxY) {
         if (!context.isGridVisibleY()) return;
-        double spacing = scale.getTickSpacing();
-        if (!(spacing > 0)) return;
-        double tick = scale.getNiceMin();
-        double end = scale.getNiceMax();
-        double epsilon = spacing * 0.5;
-        for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += spacing) {
-            mapToPixel(context, context.getMinX(), tick, buf);
+        double[] ticks = scale.getTicks();
+        for (int i = 0; i < scale.getTickCount(); i++) {
+            mapToPixel(context, context.getMinX(), ticks[i], buf);
             double y = snap(buf[1]);
             if (y >= minY && y <= maxY) {
                 drawLine(canvas, minX, y, maxX, y);
@@ -181,13 +177,9 @@ public class FinancialGridLayer implements GridLayer {
 
     private void drawScaleX(ArberCanvas canvas, PlotContext context, NiceScale scale, double minX, double maxX, double minY, double maxY) {
         if (!context.isGridVisibleX()) return;
-        double spacing = scale.getTickSpacing();
-        if (!(spacing > 0)) return;
-        double tick = scale.getNiceMin();
-        double end = scale.getNiceMax();
-        double epsilon = spacing * 0.5;
-        for (int i = 0; i < 10000 && tick <= end + epsilon; i++, tick += spacing) {
-            mapToPixel(context, tick, context.getMinY(), buf);
+        double[] ticks = scale.getTicks();
+        for (int i = 0; i < scale.getTickCount(); i++) {
+            mapToPixel(context, ticks[i], context.getMinY(), buf);
             double x = snap(buf[0]);
             if (x >= minX && x <= maxX) {
                 drawLine(canvas, x, minY, x, maxY);
@@ -196,7 +188,7 @@ public class FinancialGridLayer implements GridLayer {
     }
 
     private double snap(double v) {
-        return Math.round(v) + 0.5;
+        return Double.isFinite(v) ? Math.round(v) + 0.5 : Double.NaN;
     }
 
     private void drawLine(ArberCanvas canvas, double x1, double y1, double x2, double y2) {

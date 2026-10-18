@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "arbercharts.export.directory",
+      "defaultValue": null
+    }
+  ]
+}

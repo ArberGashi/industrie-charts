@@ -1,13 +1,13 @@
 # ArberCharts Quick Start Guide
 
-Create a Swing chart or render a PNG with the APIs available in ArberCharts 2.2.0.
+Create a Swing chart or render a PNG with the APIs available in ArberCharts 2.5.0.
 
 ---
 
 ## Installation
 
 Use Eclipse Temurin JDK 25 from Adoptium. An existing Temurin 25 installation is sufficient.
-Keep all ArberCharts dependencies at version **2.2.0**.
+Keep all ArberCharts dependencies at version **2.5.0**.
 
 ### Maven
 
@@ -15,14 +15,14 @@ Keep all ArberCharts dependencies at version **2.2.0**.
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-swing-bridge</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```kotlin
-implementation("com.arbergashi:arbercharts-swing-bridge:2.2.0")
+implementation("com.arbergashi:arbercharts-swing-bridge:2.5.0")
 ```
 
 ---
@@ -107,7 +107,7 @@ In an existing Spring Boot 4.1.1 web application, add:
 <dependency>
     <groupId>com.arbergashi</groupId>
     <artifactId>arbercharts-spring-boot-starter</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 </dependency>
 ```
 

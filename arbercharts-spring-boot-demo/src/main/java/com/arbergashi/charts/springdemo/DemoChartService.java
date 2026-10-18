@@ -196,7 +196,7 @@ final class DemoChartService {
             graphics.drawString(Integer.toString(ring * 20), (float) (cx + 5 * scale),
                     (float) (cy - radius * ring / 5.0 + 4 * scale));
         }
-        String note = "Mean scores · 0–100";
+        String note = "Mean scores · 0-100";
         graphics.drawString(note, (float) (cx - graphics.getFontMetrics().stringWidth(note) / 2.0),
                 area.bottom() + 30 * scale);
     }

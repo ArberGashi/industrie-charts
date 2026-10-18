@@ -4,6 +4,8 @@ import test from "node:test";
 import vm from "node:vm";
 
 const source = await readFile(new URL("../../main/resources/static/workbench.js", import.meta.url), "utf8");
+const html = await readFile(new URL("../../main/resources/static/index.html", import.meta.url), "utf8");
+const elementIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
 const examples = ["line", "scatter"].map((id) => ({
     id, name: id, category: "Examples", dataset: `${id} dataset`, description: `${id} description`,
     xLabel: "X", yLabel: "Y", defaultSamples: 256, renderer: `${id}Renderer`
@@ -12,7 +14,7 @@ examples.push(
     { id: "donut", name: "Donut", category: "Composition", dataset: "Energy mix", description: "Category shares.",
         xLabel: "Energy source", yLabel: "Share (%)", defaultSamples: 256, sampleLabel: "Observations", presentation: "donut", renderer: "DonutRenderer" },
     { id: "radar", name: "Radar", category: "Comparison", dataset: "System profile", description: "Six normalized scores.",
-        xLabel: "Six metrics", yLabel: "Score (0–100)", defaultSamples: 96, sampleLabel: "Samples / metric", presentation: "radar", renderer: "RadarRenderer" },
+        xLabel: "Six metrics", yLabel: "Score (0-100)", defaultSamples: 96, sampleLabel: "Samples / metric", presentation: "radar", renderer: "RadarRenderer" },
     { id: "heatmap", name: "Heatmap", category: "Scientific", dataset: "Response field", description: "A sampled grid.",
         xLabel: "Position X (mm)", yLabel: "Position Y (mm)", defaultSamples: 1024, sampleLabel: "Cell budget", presentation: "heatmap", renderer: "HeatmapRenderer" }
 );
@@ -20,7 +22,7 @@ const catalog = { examples, springBoot: "test", java: 25, runtime: "test" };
 
 // These tests exercise the actual script's asynchronous UI state without a DOM package.
 // Browser layout, keyboard navigation and real PNG decoding are checked separately.
-function workbench() {
+function workbench({ automaticImageDecoding = true } = {}) {
     const elements = new Map();
     let document;
     class Element {
@@ -60,6 +62,9 @@ function workbench() {
         }
     }
     const element = (id) => {
+        // A browser returns null for an unknown ID. Inventing missing elements
+        // here would hide a startup failure caused by HTML/script drift.
+        if (!elementIds.has(id)) return null;
         if (!elements.has(id)) elements.set(id, new Element());
         return elements.get(id);
     };
@@ -72,26 +77,56 @@ function workbench() {
     element("samples").value = "256";
     element("download").setAttribute("aria-disabled", "true");
     const requests = [];
+    const imageDecodes = [];
+    const imageDecoding = { automatic: automaticImageDecoding };
+    const activeImageUrls = new Set();
+    const createdImageUrls = [];
+    const revokedImageUrls = [];
+    const windowEvents = new Map();
     let imageSequence = 0;
     class ImageUrl extends URL {
-        static createObjectURL() { return `blob:test-${++imageSequence}`; }
-        static revokeObjectURL() {}
+        static createObjectURL() {
+            const url = `blob:test-${++imageSequence}`;
+            createdImageUrls.push(url);
+            activeImageUrls.add(url);
+            return url;
+        }
+        static revokeObjectURL(url) {
+            revokedImageUrls.push(url);
+            activeImageUrls.delete(url);
+        }
     }
     const window = {
         location: { search: "", href: "http://127.0.0.1:8080/" }, devicePixelRatio: 1,
-        history: { replaceState() {} }, addEventListener() {}
+        history: { replaceState() {} },
+        addEventListener(name, listener) { windowEvents.set(name, listener); }
     };
     const context = vm.createContext({
         document, window, URL: ImageUrl, URLSearchParams, AbortController, performance, setTimeout, clearTimeout,
         localStorage: { getItem() { return null; }, setItem() {} },
         ResizeObserver: class { observe() {} },
-        Image: class { naturalWidth = 640; naturalHeight = 360; async decode() {} },
-        fetch(url) {
-            return new Promise((resolve, reject) => requests.push({ url, resolve, reject }));
+        Image: class {
+            naturalWidth = 640;
+            naturalHeight = 360;
+            decode() {
+                return new Promise((resolve, reject) => {
+                    imageDecodes.push({ url: this.src, resolve, reject });
+                    if (imageDecoding.automatic) resolve();
+                });
+            }
+        },
+        fetch(url, options = {}) {
+            // Keep completion controllable even after cancellation to exercise
+            // late network/decoder responses as well as observing the real signal.
+            return new Promise((resolve, reject) => requests.push({ url, signal: options.signal, resolve, reject }));
         }
     });
     vm.runInContext(source, context, { filename: "workbench.js" });
-    return { context, element, requests };
+    return {
+        context, element, requests, imageDecodes, imageDecoding,
+        activeImageUrls, createdImageUrls, revokedImageUrls,
+        fireWindow(name) { windowEvents.get(name)?.(); }
+    };
 }
 
 function respond(request, json = null, status = 200) {
@@ -208,6 +243,129 @@ test("an obsolete image response cannot reactivate its download", async () => {
     respond(app.requests[3]);
     await settle();
     assert.match(app.element("download").href, /charts\/line\.png/);
+});
+
+test("the actual page controls initialize and its theme button requests the new theme", async () => {
+    const app = await ready();
+    assert.equal(app.element("copy-url-missing"), null, "Missing HTML controls must not be fabricated.");
+    assert.ok(app.element("copy-url"));
+    app.element("theme-toggle").fire("click");
+    assert.match(app.requests[2].url, /theme=light/);
+    assert.equal(app.element("download").href, null);
+    respond(app.requests[2]);
+    await settle();
+    assert.match(app.element("download").href, /theme=light/);
+    assert.equal(app.element("theme-toggle").getAttribute("aria-label"), "Switch to dark theme");
+});
+
+test("an image remains unavailable until the browser has decoded it successfully", async () => {
+    const app = workbench({ automaticImageDecoding: false });
+    respond(app.requests[0], catalog);
+    await settle();
+    respond(app.requests[1]);
+    await settle();
+    assert.equal(app.imageDecodes.length, 1);
+    assert.equal(app.element("chart-stage").dataset.state, "loading");
+    assert.equal(app.element("chart-stage").getAttribute("aria-busy"), "true");
+    assert.equal(app.element("download").href, null);
+    assert.equal(app.element("copy-url").disabled, true);
+    app.imageDecodes[0].resolve();
+    await settle();
+    assert.equal(app.element("chart-stage").dataset.state, "ready");
+    assert.equal(app.element("chart-stage").getAttribute("aria-busy"), "false");
+    assert.equal(app.element("chart-image").src, app.imageDecodes[0].url);
+    assert.match(app.element("download").href, /charts\/line\.png/);
+});
+
+test("a corrupt image releases its URL and keeps export unavailable until a decoded retry", async () => {
+    const app = workbench({ automaticImageDecoding: false });
+    respond(app.requests[0], catalog);
+    await settle();
+    respond(app.requests[1]);
+    await settle();
+    const failedUrl = app.imageDecodes[0].url;
+    app.imageDecodes[0].reject(new Error("The PNG could not be decoded."));
+    await settle();
+    assert.equal(app.element("chart-stage").dataset.state, "error");
+    assert.match(app.element("chart-message").textContent, /PNG could not be decoded/);
+    assert.equal(app.element("chart-image").hidden, true);
+    assert.equal(app.element("download").href, null);
+    assert.equal(app.element("copy-url").disabled, true);
+    assert.deepEqual(app.revokedImageUrls, [failedUrl]);
+    assert.equal(app.activeImageUrls.size, 0);
+    app.element("render").fire("click");
+    respond(app.requests[2]);
+    await settle();
+    assert.equal(app.element("download").href, null);
+    app.imageDecodes[1].resolve();
+    await settle();
+    assert.equal(app.element("chart-stage").dataset.state, "ready");
+    assert.equal(app.element("chart-image").src, app.imageDecodes[1].url);
+    assert.equal(app.activeImageUrls.size, 1);
+    assert.match(app.element("download").href, /charts\/line\.png/);
+});
+
+test("replacing a decoded chart and leaving the page release the owned image URLs", async () => {
+    const app = await ready();
+    const previous = app.element("chart-image").src;
+    app.imageDecoding.automatic = false;
+    choose(app, "scatter");
+    respond(app.requests[2]);
+    await settle();
+    const replacement = app.imageDecodes[1].url;
+    assert.deepEqual([...app.activeImageUrls], [previous, replacement]);
+    assert.deepEqual(app.revokedImageUrls, [], "The displayed image must remain valid while its replacement decodes.");
+    app.imageDecodes[1].resolve();
+    await settle();
+    assert.equal(app.element("chart-image").src, replacement);
+    assert.deepEqual(app.revokedImageUrls, [previous]);
+    assert.deepEqual([...app.activeImageUrls], [replacement]);
+    app.fireWindow("pagehide");
+    assert.deepEqual(app.revokedImageUrls, [previous, replacement]);
+    assert.equal(app.activeImageUrls.size, 0);
+});
+
+test("an obsolete decode cannot replace a newer chart and releases its unused URL", async () => {
+    const app = await ready();
+    const previous = app.element("chart-image").src;
+    app.imageDecoding.automatic = false;
+    choose(app, "scatter");
+    respond(app.requests[2]);
+    await settle();
+    const obsolete = app.imageDecodes[1];
+    choose(app, "line");
+    respond(app.requests[3]);
+    await settle();
+    const current = app.imageDecodes[2];
+    current.resolve();
+    await settle();
+    obsolete.resolve();
+    await settle();
+    assert.equal(app.element("chart-image").src, current.url);
+    assert.match(app.element("download").href, /charts\/line\.png/);
+    assert.deepEqual(app.revokedImageUrls, [previous, obsolete.url]);
+    assert.deepEqual([...app.activeImageUrls], [current.url]);
+});
+
+test("superseding a render and leaving the page abort the outstanding requests", async () => {
+    const app = await ready();
+    choose(app, "scatter");
+    const previous = app.requests[2];
+    assert.ok(previous.signal instanceof AbortSignal);
+    assert.equal(previous.signal.aborted, false);
+    let previousAborts = 0;
+    previous.signal.addEventListener("abort", () => previousAborts++);
+    choose(app, "line");
+    const current = app.requests[3];
+    assert.equal(previous.signal.aborted, true);
+    assert.equal(previousAborts, 1);
+    assert.equal(current.signal.aborted, false);
+    app.fireWindow("pagehide");
+    assert.equal(current.signal.aborted, true);
+    previous.reject(Object.assign(new Error("Obsolete request cancelled."), { name: "AbortError" }));
+    current.reject(Object.assign(new Error("Page closed."), { name: "AbortError" }));
+    await settle();
+    assert.notEqual(app.element("chart-stage").dataset.state, "error");
 });
 
 

@@ -5,7 +5,7 @@ This independent investigation records presentation and numerical defects in the
 - [Renderer and grid report](renderer-report.md): eleven prioritized findings, all catalog entries and demo aliases, grid dispatch results, and the regression corpus required for each family.
 - [UI integration report](ui-report.md): ten finding groups covering medical scaling, axes, dock layout, legends, interaction, secondary axes, locale, freeze measurement, and export.
 - [Subsequent correction record](corrections.md): implemented fixes, repaired test oracles and reviewed host images. The baseline reports and original evidence below remain unchanged.
-- [Final verification record](verification.md): reactor and scalar results, current demo captures, local portal checks and remaining acceptance limits.
+- [Historical 2.2.0 verification record](verification.md): reactor and scalar results, the original demo captures and the acceptance limits recorded for that release.
 
 ## Coverage
 
@@ -61,7 +61,7 @@ Use Java 25 and an existing shaded demo JAR from the current checkout. Run these
 
 ```sh
 audit_dir=docs/audits/2026-10-16-rendering
-audit_jar=arbercharts-demo/target/arbercharts-demo-2.2.0.jar
+audit_jar=arbercharts-demo/target/arbercharts-demo-2.5.0.jar
 audit_output=$(mktemp -d)
 mkdir -p "$audit_output/classes" "$audit_output/ui"
 

@@ -1,4 +1,4 @@
-# Renderer Catalog (2.2.0)
+# Renderer Catalog (2.5.0)
 
 The [demo catalog](../arbercharts-demo/src/main/resources/data/renderer-catalog.txt)
 contains **156 entries** across the categories below, including overlays and demo

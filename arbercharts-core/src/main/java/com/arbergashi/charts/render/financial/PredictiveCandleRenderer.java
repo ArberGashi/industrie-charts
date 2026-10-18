@@ -1,6 +1,7 @@
 package com.arbergashi.charts.render.financial;
 
 import com.arbergashi.charts.api.ChartTheme;
+import com.arbergashi.charts.api.DefaultPredictionBuffer;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
@@ -29,6 +30,7 @@ public final class PredictiveCandleRenderer extends BaseRenderer {
     private static final String KEY_ATR_PERIOD = "Chart.atr.period";
 
     private final PredictiveShadowRenderer shadow;
+    private final DefaultPredictionBuffer rangeBuffer = new DefaultPredictionBuffer();
 
     private final double[] pxHigh = new double[2];
     private final double[] pxLow = new double[2];
@@ -48,6 +50,68 @@ public final class PredictiveCandleRenderer extends BaseRenderer {
     @Override
     public boolean isLegendRequired() {
         return false;
+    }
+
+    /** Includes the next candle and its body width when fitting the X axis. */
+    @Override
+    public double[] getPreferredXRange(ChartModel model) {
+        if (model == null || model.isEmpty()) return null;
+        double[] data = model.getDataRange();
+        double min = data[0];
+        double max = data[1];
+        int last = lastFiniteIndex(model);
+        if (last >= 1 && shadow != null && ChartAssets.getBoolean(KEY_ENABLED, true)) {
+            double step = model.getX(last) - model.getX(last - 1);
+            if (step == 0.0) step = 1.0;
+            double nextX = model.getX(last) + step;
+            double halfWidth = Math.abs(step) * 0.35;
+            if (Double.isFinite(nextX - halfWidth) && Double.isFinite(nextX + halfWidth)) {
+                min = Math.min(min, nextX - halfWidth);
+                max = Math.max(max, nextX + halfWidth);
+            }
+        }
+        return new double[]{min, max};
+    }
+
+    /** Includes historical OHLC values and the forecast candle's complete wick when fitting the Y axis. */
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        if (model == null || model.isEmpty()) return null;
+        double[] data = model.getDataRange();
+        double min = data[2];
+        double max = data[3];
+        for (int i = 0; i < model.getPointCount(); i++) {
+            if (Double.isFinite(model.getMin(i))) min = Math.min(min, model.getMin(i));
+            if (Double.isFinite(model.getMax(i))) max = Math.max(max, model.getMax(i));
+        }
+        int last = lastFiniteIndex(model);
+        if (last >= 1 && shadow != null && ChartAssets.getBoolean(KEY_ENABLED, true)) {
+            shadow.predictForAutoScale(model, rangeBuffer);
+            double lastX = model.getX(last);
+            double step = lastX - model.getX(last - 1);
+            if (step == 0.0) step = 1.0;
+            double close = predictedCloseForRange(lastX, lastX + step);
+            double range = getPredictionRange(model, rangeBuffer.residualStd(), rangeBuffer.residualScale());
+            double low = Math.min(model.getY(last), close) - range;
+            double high = Math.max(model.getY(last), close) + range;
+            if (Double.isFinite(low) && Double.isFinite(high)) {
+                min = Math.min(min, low);
+                max = Math.max(max, high);
+            }
+        }
+        return new double[]{min, max};
+    }
+
+    private double predictedCloseForRange(double lastX, double nextX) {
+        int count = Math.min(rangeBuffer.count(), Math.min(rangeBuffer.x().length, rangeBuffer.y().length));
+        if (count == 0) return Double.NaN;
+        double step = rangeBuffer.x()[0] - lastX;
+        if (!Double.isFinite(step) || Math.abs(step) < 1e-12) step = 1.0;
+        if ((step > 0 && nextX <= lastX) || (step < 0 && nextX >= lastX)) return Double.NaN;
+        int index = (int) Math.round((nextX - lastX) / step) - 1;
+        double tolerance = Math.abs(step) * Math.max(0.05, ChartAssets.getFloat("Chart.predictive.delta.tolerance", 0.35f));
+        if (index < 0 || index >= count || Math.abs(lastX + step * (index + 1) - nextX) > tolerance) return Double.NaN;
+        return rangeBuffer.y()[index];
     }
 
     @Override/**
@@ -75,13 +139,7 @@ public final class PredictiveCandleRenderer extends BaseRenderer {
         final double open = lastClose;
         final double close = predictedClose;
 
-        final double atr = getComputedAtr(model, Math.max(2, ChartAssets.getInt(KEY_ATR_PERIOD, 14)));
-        final double sigma = shadow.residualStd();
-        final double sigmaFactor = Math.max(0.1, ChartAssets.getFloat(KEY_SIGMA_FACTOR, 1.0f));
-        final double rangeFactor = Math.max(0.1, ChartAssets.getFloat(KEY_RANGE_FACTOR, 1.0f));
-        final double minRange = Math.max(1e-9, ChartAssets.getFloat(KEY_MIN_RANGE, 1e-6f));
-        final double sigmaRange = (Double.isFinite(sigma) && sigma > 0.0) ? sigma * shadow.residualScale() * sigmaFactor : 0.0;
-        final double range = Math.max(minRange, Math.max(atr, sigmaRange) * rangeFactor);
+        final double range = getPredictionRange(model, shadow.residualStd(), shadow.residualScale());
 
         final double high = Math.max(open, close) + range;
         final double low = Math.min(open, close) - range;
@@ -128,6 +186,15 @@ public final class PredictiveCandleRenderer extends BaseRenderer {
         canvas.fillRect((float) bodyLeft, (float) bodyTop, (float) candleWidth, (float) bodyHeight);
         canvas.setColor(strokeColor);
         canvas.drawRect((float) bodyLeft, (float) bodyTop, (float) candleWidth, (float) bodyHeight);
+    }
+
+    private double getPredictionRange(ChartModel model, double sigma, double residualScale) {
+        double atr = getComputedAtr(model, Math.max(2, ChartAssets.getInt(KEY_ATR_PERIOD, 14)));
+        double sigmaFactor = Math.max(0.1, ChartAssets.getFloat(KEY_SIGMA_FACTOR, 1.0f));
+        double rangeFactor = Math.max(0.1, ChartAssets.getFloat(KEY_RANGE_FACTOR, 1.0f));
+        double minRange = Math.max(1e-9, ChartAssets.getFloat(KEY_MIN_RANGE, 1e-6f));
+        double sigmaRange = Double.isFinite(sigma) && sigma > 0.0 ? sigma * residualScale * sigmaFactor : 0.0;
+        return Math.max(minRange, Math.max(atr, sigmaRange) * rangeFactor);
     }
 
     private double getResolvedCandleWidth(PlotContext context, double prevX, double lastX, double refY, int count) {

@@ -1,6 +1,6 @@
 # Architecture policy
 
-These rules apply to the **2.2.0** module layout. The
+These rules apply to the **2.5.0** module layout. The
 [rendering architecture](RENDERING_ARCHITECTURE.md) describes integration and
 migration details.
 

@@ -101,7 +101,7 @@ public final class CsvExportService {
      *     .delimiter(';')           // European format
      *     .decimalSeparator(',')    // European decimal
      *     .includeHeader(true)
-     *     .headerNames("Zeit", "Wert", "Gewicht")
+     *     .headerNames("Time", "Value", "Weight")
      *     .export(model, file);
      * }</pre>
      */

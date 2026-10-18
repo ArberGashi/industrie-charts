@@ -164,7 +164,11 @@ public final class AwtCanvasAdapter implements ArberCanvas {
             yi[i] = Math.round(ys[i]);
         }
         if (integerSafe) {
-            g2.drawPolyline(xi, yi, n);
+            if (n == 2) {
+                g2.drawLine(xi[0], yi[0], xi[1], yi[1]);
+            } else {
+                g2.drawPolyline(xi, yi, n);
+            }
         } else {
             drawPolylinePath(xs, ys, n);
         }

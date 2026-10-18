@@ -1,6 +1,6 @@
 # ArberCharts documentation
 
-The source tree, installation examples and technical documentation target **2.2.0**.
+The source tree, installation examples and technical documentation target **2.5.0**.
 Earlier release documentation is available in the Git history.
 
 ## Start here
@@ -14,7 +14,7 @@ Earlier release documentation is available in the Git history.
 
 ## Architecture and verification
 
-- [Rendering architecture and 2.2.0 migration](RENDERING_ARCHITECTURE.md)
+- [Rendering architecture and migration from 2.1.0](RENDERING_ARCHITECTURE.md)
 - [Verification strategy and test limits](VERIFICATION_STRATEGY.md)
 - [Independent renderer, axes and UI audit — 16 October 2026](audits/2026-10-16-rendering/README.md)
 - [Dependency updates](DEPENDENCY_UPDATES.md)

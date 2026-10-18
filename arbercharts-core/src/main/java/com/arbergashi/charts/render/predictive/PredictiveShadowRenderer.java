@@ -1,10 +1,12 @@
 package com.arbergashi.charts.render.predictive;
 
 import com.arbergashi.charts.api.DefaultPredictionBuffer;
+import com.arbergashi.charts.api.DefaultPlotContext;
 import com.arbergashi.charts.api.HarmonicOscillatorPredictor;
 import com.arbergashi.charts.api.LinearLeastSquaresPredictor;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.PredictionModel;
+import com.arbergashi.charts.api.PredictionBuffer;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.core.geometry.ArberRect;
 import com.arbergashi.charts.core.rendering.ArberCanvas;
@@ -47,6 +49,7 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
 
     private final PredictionModel predictor;
     private final DefaultPredictionBuffer buffer = new DefaultPredictionBuffer();
+    private final DefaultPredictionBuffer rangeBuffer = new DefaultPredictionBuffer();
     private final float[] lineX = new float[2];
     private final float[] lineY = new float[2];
     private double[] auditXs = new double[0];
@@ -89,6 +92,55 @@ public final class PredictiveShadowRenderer extends BaseRenderer {
     @Override
     public boolean isLegendRequired() {
         return false;
+    }
+
+    /** Includes the source data and the forecast horizon in automatic X scaling. */
+    @Override
+    public double[] getPreferredXRange(ChartModel model) {
+        return predictionRange(model, 0);
+    }
+
+    /** Includes the source data and predicted values in automatic Y scaling. */
+    @Override
+    public double[] getPreferredYRange(ChartModel model) {
+        return predictionRange(model, 1);
+    }
+
+    /**
+     * Computes a forecast for automatic range selection without replacing the
+     * rendered forecast or its delta-audit history. The predictor receives a
+     * unit-sized plot context covering the source data; viewport-dependent
+     * predictors may produce a different forecast when subsequently rendered.
+     *
+     * @param model source data
+     * @param out destination for the forecast used to estimate axis ranges
+     */
+    public void predictForAutoScale(ChartModel model, PredictionBuffer out) {
+        if (out == null) return;
+        out.setCount(0).setResidualStd(0.0).setResidualScale(1.0);
+        if (model == null || model.isEmpty() || !ChartAssets.getBoolean(KEY_ENABLED, true)) return;
+        double[] range = model.getDataRange();
+        PlotContext context = new DefaultPlotContext(new ArberRect(0, 0, 1, 1), model,
+                range[0], range[1], range[2], range[3]);
+        predictor.predict(model, context, out);
+    }
+
+    private double[] predictionRange(ChartModel model, int coordinate) {
+        if (model == null || model.isEmpty()) return null;
+        double[] dataRange = model.getDataRange();
+        double min = dataRange[coordinate * 2];
+        double max = dataRange[coordinate * 2 + 1];
+        predictForAutoScale(model, rangeBuffer);
+        int count = Math.min(rangeBuffer.count(), Math.min(rangeBuffer.x().length, rangeBuffer.y().length));
+        for (int i = 0; i < count; i++) {
+            double x = rangeBuffer.x()[i];
+            double y = rangeBuffer.y()[i];
+            if (!Double.isFinite(x) || !Double.isFinite(y)) continue;
+            double value = coordinate == 0 ? x : y;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
+        }
+        return new double[]{min, max};
     }
 
     /**

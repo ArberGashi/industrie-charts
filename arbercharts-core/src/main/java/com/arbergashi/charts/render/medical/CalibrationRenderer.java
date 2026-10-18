@@ -35,9 +35,21 @@ public final class CalibrationRenderer extends BaseRenderer {
     private final double[] px4 = new double[2];
     private final float[] lineX = new float[2];
     private final float[] lineY = new float[2];
+    private Boolean enabled;
 
     public CalibrationRenderer() {
         super("calibration");
+    }
+
+    /**
+     * Overrides the global activation setting for this overlay instance.
+     *
+     * @param enabled whether to draw the calibration pulse
+     * @return this renderer
+     */
+    public CalibrationRenderer setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        return this;
     }
 
     @Override
@@ -58,7 +70,8 @@ public final class CalibrationRenderer extends BaseRenderer {
     }
 
     private void drawCalibration(ArberCanvas canvas, PlotContext context) {
-        if (!ChartAssets.getBoolean(KEY_ENABLED, false)) {
+        boolean renderEnabled = enabled != null ? enabled : ChartAssets.getBoolean(KEY_ENABLED, false);
+        if (!renderEnabled) {
             return;
         }
 

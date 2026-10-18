@@ -190,6 +190,8 @@ public final class CircularChartModel implements ChartModel {
 
     @Override
     public long getTimestampNanos(int index) {
+        int count = getPointCount();
+        if (index < 0 || index >= count) return 0L;
         long stamp = updateStamp.get();
         ReadCache cache = readCache.get();
         if (!cache.valid || cache.index != index || cache.updateStamp != stamp) {
@@ -255,16 +257,31 @@ public final class CircularChartModel implements ChartModel {
         ensureSnapshot();
         int count = snapshotCount;
         if (count <= 0) return new double[]{0, 0, 0, 0};
-        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE;
-        double minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+        double minX = Double.POSITIVE_INFINITY, maxX = Double.NEGATIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < count; i++) {
             double x = xSnapshot[i];
             double y = ySnapshot[i];
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
+            double min = minSnapshot[i];
+            double max = maxSnapshot[i];
+            if (Double.isFinite(x)) {
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+            }
+            if (Double.isFinite(y)) {
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+            if (Double.isFinite(min)) {
+                minY = Math.min(minY, min);
+                maxY = Math.max(maxY, min);
+            }
+            if (Double.isFinite(max)) {
+                minY = Math.min(minY, max);
+                maxY = Math.max(maxY, max);
+            }
         }
+        if (!Double.isFinite(minX) || !Double.isFinite(minY)) return new double[]{0, 0, 0, 0};
         return new double[]{minX, maxX, minY, maxY};
     }
 
@@ -416,10 +433,11 @@ public final class CircularChartModel implements ChartModel {
                 t = (long) TAIL.getAcquire(this);
             }
 
-            invalidate();
+            updateStamp.incrementAndGet();
         } finally {
             writeLock.set(false);
         }
+        fireModelChanged();
     }
 
     public void setXY(double x, double y) {

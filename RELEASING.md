@@ -1,6 +1,6 @@
 # Releasing ArberCharts to Maven Central
 
-The current release line is **2.2.0**. A `verify` build creates local artifacts only; publishing to Maven Central and creating a GitHub release are separate release actions.
+The current release line is **2.5.0**. A `verify` build creates local artifacts only; publishing to Maven Central and creating a GitHub release are separate release actions.
 
 ## Build environment
 
@@ -20,12 +20,17 @@ Publishing additionally requires a Central Portal token in `~/.m2/settings.xml` 
    mvn versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
    ```
 
-3. Run a fresh full build, the scalar-fallback tests and static quality gate:
+   Set `project.build.outputTimestamp` in the parent POM to the release date in
+   UTC and retain it throughout verification and bundle preparation. Maven's
+   archive plugins and Spring Boot use this value for stable archive timestamps.
+   Compare the final library bytes with the libraries embedded in the tested
+   demo; a repeated packaging step must not silently replace tested payloads.
+
+3. Run a fresh signed build with the full quality gate, followed by scalar-fallback tests:
 
    ```sh
-   mvn -B -Djava.awt.headless=true clean verify
+   mvn -B -Pcentral-release,quality-gate -Djava.awt.headless=true clean verify
    mvn -B -pl arbercharts-core -Djava.awt.headless=true test -Darbercharts.test.jvmargs=
-   mvn -B -Pquality-gate validate
    ```
 
    The normal build attaches fresh binary, source and English Javadoc JARs. Check the generated Javadoc and relevant demo output before preparing the release. Architecture tests use the actual compiled Core location; an alternate output directory can be checked with:
@@ -47,23 +52,70 @@ Publishing additionally requires a Central Portal token in `~/.m2/settings.xml` 
 
 5. Update the current release notes and review the final diff, artifact contents and verification results. Keep earlier release documentation in Git history. Preserve dated evidence supporting the current release. Check that freshly built JARs contain the current `META-INF/LICENSE` and `META-INF/NOTICE`, and that release bundles include these same notices. Never replace already published binaries under the same version to repair embedded metadata; publish those corrections with a new version.
 
-## Publish the selected modules
+## Prepare the signed Central bundle
 
-Only run deployment as part of an authorized release. List the publishable modules explicitly:
+Prepare a signed bundle for the five publishable modules without uploading it:
 
 ```sh
-mvn -B -Djava.awt.headless=true clean deploy -Pcentral-release \
+mvn -B -Djava.awt.headless=true deploy -Pcentral-release \
+  -DskipUpload=true \
   -pl .,arbercharts-core,arbercharts-server-bridge,arbercharts-spring-boot-starter,arbercharts-swing-bridge
 ```
 
-`arbercharts-demo`, `arbercharts-starter` and `arbercharts-spring-boot-demo` are application/demo modules and are excluded from Central publication. They configure `skipPublishing=true`. The Central publishing plugin aggregates at the end of the selected reactor; including a skipped application as the final module can prevent the expected upload. Keep the explicit module list above.
+`skipUpload=true` stops the Central publishing plugin after local bundle
+preparation. This step requires the configured signing key but does not publish
+the release. The resulting bundle is
+`target/central-publishing/central-bundle.zip`.
 
-After deployment, verify the release in Central and allow for metadata synchronization:
+`arbercharts-demo`, `arbercharts-starter` and `arbercharts-spring-boot-demo` are
+application/demo modules and are excluded from Central publication. They
+configure `skipPublishing=true`. The Central publishing plugin aggregates at the
+end of the selected reactor; including a skipped application as the final module
+can prevent the expected bundle preparation. Keep the explicit module list above.
+
+Inspect the exact signed bundle and both staged demo distributions before any
+upload:
+
+```sh
+python3 tools/check_release_artifacts.py --version 2.5.0 \
+  target/central-publishing/central-bundle.zip \
+  dist/releases/jvm/2.5.0/ \
+  dist/releases/spring-boot/2.5.0/
+```
+
+Apply the same check to the final GitHub library and demo ZIP bundles once they
+are assembled. Review their file lists, current license notices, versioned
+contents, signatures and checksums. Preserve the validated files unchanged for
+upload; rebuilding or repackaging them requires another artifact check.
+
+## Publish and verify
+
+Publishing requires release authorization. Once that authorization is in place,
+upload the exact validated `central-bundle.zip` with the Publisher API in
+`USER_MANAGED` mode. Record the deployment identifier, wait for Central to report
+`VALIDATED`, then request publication for that deployment through the API. This
+workflow does not require a separate browser confirmation. Distinguish upload,
+validation, publishing and public availability in the release record.
+
+The `central-release` profile defaults to `autoPublish=false` and
+`waitUntil=validated`. A Maven deployment without `skipUpload` therefore uploads
+for validation rather than immediately publishing. The procedure above keeps
+bundle creation, artifact inspection, upload and publication explicit. Use
+credentials from the configured credential store; never put tokens into source
+files, release notes or diagnostic output.
+
+After Central completes publication, confirm the uploaded binaries, sources,
+Javadoc and signatures for every published module. Check the versioned paths as
+well as repository metadata, allowing for metadata synchronization:
 
 ```sh
 curl -fsS https://repo1.maven.org/maven2/com/arbergashi/arbercharts-core/maven-metadata.xml
 ```
 
-Confirm the uploaded binary, sources, Javadoc and signatures for each published module. Commit and tag the approved release as `vX.Y.Z`, publish the intended GitHub assets, then bump the development version according to the release workflow. Deployment, tagging and pushing are not performed by the verification commands.
+Commit and tag the approved source as `v2.5.0`. Publish the validated GitHub
+library bundle, both executable demo JARs, both demo ZIP bundles, checksum file
+and its signature. Compare public downloads with the local checksums. Packaging,
+repository checks and bundle preparation do not themselves publish a release.
 
-Central versions are immutable: a faulty publication requires a new version. Add the versioned release notes and link them from [RELEASE_NOTES.md](RELEASE_NOTES.md).
+Central versions are immutable: a faulty publication requires a new version.
+Add that version's release notes and link them from [RELEASE_NOTES.md](RELEASE_NOTES.md).

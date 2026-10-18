@@ -12,6 +12,7 @@ import com.arbergashi.charts.platform.render.StrokeCache;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Paint;
 import java.awt.Stroke;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
@@ -118,7 +119,20 @@ public final class SwingSpatialBatchConsumer implements SpatialChunkConsumer, Sp
         quadY[2] = (int) y3;
         quadX[3] = (int) x4;
         quadY[3] = (int) y4;
-        graphics.fillPolygon(quadX, quadY, 4);
+        Paint previousPaint = graphics.getPaint();
+        Color previousColor = graphics.getColor();
+        try {
+            long styleKey = builder.getStyleKey();
+            if (styleKey != 0L) {
+                graphics.setColor(ColorCache.get(SpatialStyleDescriptor.unpackArgb(styleKey)));
+            } else if (color != null) {
+                graphics.setColor(color);
+            }
+            graphics.fillPolygon(quadX, quadY, 4);
+        } finally {
+            graphics.setColor(previousColor);
+            graphics.setPaint(previousPaint);
+        }
     }
 
     private void drawBatch(SpatialPathBatch batch) {

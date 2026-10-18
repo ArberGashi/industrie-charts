@@ -156,6 +156,7 @@ public class CircularFastMedicalModel extends FastMedicalModel {
     public void clear() {
         head = 0;
         size = 0;
+        sweepIndex = 0;
         updateStamp.incrementAndGet();
     }
 
@@ -226,23 +227,28 @@ public class CircularFastMedicalModel extends FastMedicalModel {
     public double[] getDataRange() {
         if (size == 0) return new double[]{0, 0, 0, 0};
 
-        double minX = Double.MAX_VALUE;
-        double maxX = -Double.MAX_VALUE;
-        double minY = Double.MAX_VALUE;
-        double maxY = -Double.MAX_VALUE;
+        double minX = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
 
         // Iterate over valid points only
         for (int i = 0; i < size; i++) {
             double xv = getX(i);
-            if (xv < minX) minX = xv;
-            if (xv > maxX) maxX = xv;
+            if (Double.isFinite(xv)) {
+                minX = Math.min(minX, xv);
+                maxX = Math.max(maxX, xv);
+            }
 
             for (int c = 0; c < channels; c++) {
                 double yv = getY(i, c);
-                if (yv < minY) minY = yv;
-                if (yv > maxY) maxY = yv;
+                if (Double.isFinite(yv)) {
+                    minY = Math.min(minY, yv);
+                    maxY = Math.max(maxY, yv);
+                }
             }
         }
+        if (!Double.isFinite(minX) || !Double.isFinite(minY)) return new double[]{0, 0, 0, 0};
         return new double[]{minX, maxX, minY, maxY};
     }
 }

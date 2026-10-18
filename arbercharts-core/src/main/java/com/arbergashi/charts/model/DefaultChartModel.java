@@ -619,21 +619,35 @@ public class DefaultChartModel implements ChartModel {
         synchronized (dataLock) {
             if (size == 0) return new double[]{0, 0, 0, 0};
 
-            double minX = Double.MAX_VALUE;
-            double maxX = -Double.MAX_VALUE;
-            double minY = Double.MAX_VALUE;
-            double maxY = -Double.MAX_VALUE;
+            double minX = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            double minY = Double.POSITIVE_INFINITY;
+            double maxY = Double.NEGATIVE_INFINITY;
 
             for (int i = 0; i < size; i++) {
                 double x = xData[i];
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
+                if (Double.isFinite(x)) {
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                }
 
+                double y = yData[i];
                 double mn = minData[i];
                 double mx = maxData[i];
-                if (mn < minY) minY = mn;
-                if (mx > maxY) maxY = mx;
+                if (Double.isFinite(y)) {
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                }
+                if (Double.isFinite(mn)) {
+                    minY = Math.min(minY, mn);
+                    maxY = Math.max(maxY, mn);
+                }
+                if (Double.isFinite(mx)) {
+                    minY = Math.min(minY, mx);
+                    maxY = Math.max(maxY, mx);
+                }
             }
+            if (!Double.isFinite(minX) || !Double.isFinite(minY)) return new double[]{0, 0, 0, 0};
             return new double[]{minX, maxX, minY, maxY};
         }
     }

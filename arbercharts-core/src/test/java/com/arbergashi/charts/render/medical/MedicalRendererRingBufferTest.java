@@ -1,5 +1,7 @@
 package com.arbergashi.charts.render.medical;
 
+import com.arbergashi.charts.api.ChartTheme;
+import com.arbergashi.charts.api.ChartThemes;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.api.types.ArberPoint;
@@ -195,6 +197,27 @@ class MedicalRendererRingBufferTest {
     @Test
     void eegReadsWrappedChannelsInLogicalOrder() {
         assertEegChannels(render(new EEGRenderer(), eegModel(4, 6), EEG_CONTEXT), 2, 6);
+    }
+
+    @Test
+    void eegUsesDistinctDarkPaletteColorsForAllChannels() {
+        RecordingCanvas canvas = render(new EEGRenderer(), eegModel(4, 6), EEG_CONTEXT);
+        assertEegChannels(canvas, 2, 6);
+        assertEquals(List.of(new ArberColor(0xFF3B82F6), new ArberColor(0xFF22C55E),
+                new ArberColor(0xFFF59E0B)), canvas.lineColors);
+    }
+
+    @Test
+    void eegFollowsThemeChangesWithoutAlteringChannelGeometry() {
+        EEGRenderer renderer = new EEGRenderer();
+        CircularFastMedicalModel model = eegModel(4, 6);
+        render(renderer, model, EEG_CONTEXT);
+
+        RecordingCanvas canvas = render(renderer, model,
+                new IdentityContext(-9, 9, ChartThemes.getLightTheme()));
+        assertEegChannels(canvas, 2, 6);
+        assertEquals(List.of(new ArberColor(0xFF2563EB), new ArberColor(0xFF16A34A),
+                new ArberColor(0xFFD97706)), canvas.lineColors);
     }
 
     @Test
@@ -418,7 +441,12 @@ class MedicalRendererRingBufferTest {
 
     private record Point(double x, double y) {}
 
-    private record IdentityContext(double minY, double maxY) implements PlotContext {
+    private record IdentityContext(double minY, double maxY, ChartTheme theme) implements PlotContext {
+        private IdentityContext(double minY, double maxY) {
+            this(minY, maxY, ChartThemes.getDarkTheme());
+        }
+
+        @Override public ChartTheme getTheme() { return theme; }
         @Override public double getMinX() { return 0; }
         @Override public double getMaxX() { return 4096; }
         @Override public double getMinY() { return minY; }

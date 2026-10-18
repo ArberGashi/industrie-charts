@@ -20,9 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - name: Check repository content and documentation
+      - name: Check repository content, documentation and browser contracts
         if: matrix.os == 'ubuntu-latest'
-        run: python3 tools/check_repository.py
+        run: |
+          python3 -m unittest discover -s tools/tests -v
+          python3 tools/check_repository.py
+          node --test arbercharts-spring-boot-demo/src/test/frontend/workbench.test.mjs
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6.1.0
@@ -34,5 +37,24 @@ jobs:
       - name: Build and test (SIMD)
         run: mvn -B verify
 
+      - name: Check packaged release contents
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          CHARTS_RELEASE_VERSION=$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('pom.xml').getroot().findtext('{http://maven.apache.org/POM/4.0.0}version'))")
+          python3 tools/check_release_artifacts.py --version "$CHARTS_RELEASE_VERSION" \
+            arbercharts-core/target/*.jar \
+            arbercharts-server-bridge/target/*.jar \
+            arbercharts-spring-boot-starter/target/*.jar \
+            arbercharts-swing-bridge/target/*.jar \
+            "dist/releases/jvm/$CHARTS_RELEASE_VERSION/" \
+            "dist/releases/spring-boot/$CHARTS_RELEASE_VERSION/"
+
       - name: Core tests without Vector API (scalar fallback)
         run: mvn -B -pl arbercharts-core test -Darbercharts.test.jvmargs=
+
+      - name: Swing layout with enlarged UI scale
+        run: >-
+          mvn -B -pl arbercharts-demo -am test
+          -Dtest=DemoWorkbenchLayoutTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+          -Dflatlaf.uiScale=1.5

@@ -15,6 +15,7 @@ import com.arbergashi.charts.platform.ui.HighPrecisionCrosshair;
 import com.arbergashi.charts.platform.ui.TooltipOverlay;
 import com.arbergashi.charts.render.BaseRenderer;
 import com.arbergashi.charts.render.legend.InteractiveLegendOverlay;
+import com.arbergashi.charts.util.ChartScale;
 import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -354,6 +355,64 @@ class PresentationContractTest {
     }
 
     @Test
+    void axisLabelsCanBeHiddenAndRestoredWithoutChangingDomainsOrGridFlags() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            ArberChartPanel panel = panel(new ProbeRenderer());
+            panel.setLayer(model("Secondary"), new ProbeRenderer().setYAxisRole(AxisRole.SECONDARY));
+            panel.setXAxisConfig(new AxisConfig().setFixedRange(0, 2).setShowGrid(false));
+            panel.setYAxisConfig(new AxisConfig().setFixedRange(0, 2));
+            panel.setYAxisSecondaryConfig(new AxisConfig().setFixedRange(0, 20));
+            assertTrue(panel.isAxisLabelsVisible(), "Existing charts keep visible labels by default");
+
+            PlotContext original = panel.getDebugContext();
+            BufferedImage visible = paintAxisLabels(panel);
+            Rectangle imageBounds = new Rectangle(0, 0, visible.getWidth(), visible.getHeight());
+            assertTrue(nontransparent(visible, imageBounds) > 100);
+
+            assertSame(panel, panel.setAxisLabelsVisible(false));
+            PlotContext hidden = panel.getDebugContext();
+            assertEquals(original.getMinX(), hidden.getMinX());
+            assertEquals(original.getMaxX(), hidden.getMaxX());
+            assertEquals(original.getMinY(), hidden.getMinY());
+            assertEquals(original.getMaxY(), hidden.getMaxY());
+            assertFalse(hidden.isGridVisibleX());
+            assertTrue(hidden.isGridVisibleY());
+            assertEquals(0, nontransparent(paintAxisLabels(panel), imageBounds),
+                    "Neither primary nor secondary axis labels should be painted");
+
+            panel.setAxisLabelsVisible(true);
+            assertEquals(original.getPlotBounds(), panel.getDebugContext().getPlotBounds());
+            assertEquals(0, differentPixels(visible, paintAxisLabels(panel), imageBounds),
+                    "Restoring visibility must restore the original label layout");
+        });
+    }
+
+    @Test
+    void hiddenAxisLabelsReleaseMeasuredMarginsButKeepBasePadding() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            ArberChartPanel panel = panel(new ProbeRenderer());
+            panel.setLayer(model("Secondary"), new ProbeRenderer().setYAxisRole(AxisRole.SECONDARY));
+            panel.setXAxisConfig(new AxisConfig().setFixedRange(0, 2_000_000).setUnitSuffix("microseconds"));
+            panel.setYAxisConfig(new AxisConfig().setFixedRange(0, 2_000_000).setUnitSuffix("millivolts"));
+            panel.setYAxisSecondaryConfig(new AxisConfig().setFixedRange(0, 2_000_000).setUnitSuffix("microamperes"));
+            ArberRect visible = panel.getDebugContext().getPlotBounds();
+
+            panel.setAxisLabelsVisible(false);
+            ArberRect hidden = panel.getDebugContext().getPlotBounds();
+            assertEquals(ChartScale.scale(48), hidden.x());
+            assertEquals(ChartScale.scale(32), hidden.y());
+            assertEquals(panel.getOverlayCanvasForTesting().getWidth() - ChartScale.scale(24), hidden.maxX());
+            assertEquals(panel.getOverlayCanvasForTesting().getHeight() - ChartScale.scale(36), hidden.maxY());
+            assertTrue(hidden.x() < visible.x());
+            assertTrue(hidden.maxX() > visible.maxX());
+
+            panel.setAxisLabelsVisible(true);
+            assertEquals(visible, panel.getDebugContext().getPlotBounds(),
+                    "The visibility setter must invalidate the cached layout in both directions");
+        });
+    }
+
+    @Test
     void hostPropagatesIndependentGridFlagsAndLocaleFormatting() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             ArberChartPanel panel = panel(new ProbeRenderer());
@@ -440,6 +499,14 @@ class PresentationContractTest {
             graphics.scale(scale, scale);
             panel.paint(graphics);
         } finally { graphics.dispose(); }
+        return image;
+    }
+
+    private static BufferedImage paintAxisLabels(ArberChartPanel panel) {
+        BufferedImage image = new BufferedImage(panel.getWidth(), panel.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = image.createGraphics();
+        try { panel.drawAxisLabels(graphics, panel.getDebugContext()); }
+        finally { graphics.dispose(); }
         return image;
     }
 

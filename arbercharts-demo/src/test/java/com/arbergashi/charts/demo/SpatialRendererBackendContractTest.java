@@ -68,10 +68,12 @@ class SpatialRendererBackendContractTest {
         TernaryPlotRenderer renderer = new TernaryPlotRenderer();
         renderer.setMultiColor(true);
         BufferedImage image = backend.render(renderer, model);
-        BufferedImage direct = direct(renderer, model);
-        for (int[] point : new int[][]{{200, 18}, {48, 282}, {352, 282}}) {
+        int[][] points = {{200, 18}, {48, 282}, {352, 282}};
+        for (int i = 0; i < points.length; i++) {
+            int[] point = points[i];
             assertNotEquals(0, image.getRGB(point[0], point[1]) >>> 24);
-            assertEquals(direct.getRGB(point[0], point[1]), image.getRGB(point[0], point[1]));
+            assertEquals(THEME.getSeriesColor(i).argb(), image.getRGB(point[0], point[1]),
+                    "Each composition must retain its own theme palette color");
         }
         assertEquals(0, image.getRGB(124, 150), "No line may connect the A and B compositions");
         assertEquals(0, image.getRGB(200, 282), "No line may connect the B and C compositions");

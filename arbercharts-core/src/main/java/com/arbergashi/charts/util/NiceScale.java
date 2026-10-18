@@ -19,14 +19,17 @@ package com.arbergashi.charts.util;
  * @since 2025-06-01
  */
 public class NiceScale {
+    private static final int MAX_REQUESTED_TICKS = 10000;
+    private static final int MAX_GENERATED_TICKS = 2 * MAX_REQUESTED_TICKS + 2;
 
     private double minPoint;
     private double maxPoint;
     private double maxTicks = 10;
     private double tickSpacing;
-    private double range;
     private double niceMin;
     private double niceMax;
+    private double firstTickIndex;
+    private double lastTickIndex;
 
     /**
      * Create a NiceScale for the provided data range.
@@ -58,19 +61,47 @@ public class NiceScale {
      * The algorithm will attempt to return at most this many ticks; the exact
      * number may be less or slightly different to preserve "nice" spacing.
      *
-     * @param maxTicks maximum number of ticks to aim for (must be &gt;= 2 for sensible results)
+     * @param maxTicks approximate target, clamped to 2 through 10000;
+     *                 non-finite values restore the default of 10
      */
     public NiceScale setMaxTicks(double maxTicks) {
-        this.maxTicks = maxTicks;
+        this.maxTicks = Double.isFinite(maxTicks) ? Math.clamp(maxTicks, 2, MAX_REQUESTED_TICKS) : 10;
         calculate();
         return this;
     }
 
     private void calculate() {
-        this.range = niceNum(maxPoint - minPoint, false);
-        this.tickSpacing = niceNum(range / (maxTicks - 1), true);
-        this.niceMin = Math.floor(minPoint / tickSpacing) * tickSpacing;
-        this.niceMax = Math.ceil(maxPoint / tickSpacing) * tickSpacing;
+        cachedTickCount = 0;
+        if (!Double.isFinite(minPoint) || !Double.isFinite(maxPoint) || maxPoint < minPoint) {
+            tickSpacing = niceMin = niceMax = Double.NaN;
+            return;
+        }
+        if (minPoint == maxPoint) {
+            tickSpacing = minPoint == 0 ? 1 : Math.max(Math.ulp(minPoint), niceNum(Math.abs(minPoint) * 0.1, true));
+            niceMin = niceMax = minPoint;
+            return;
+        }
+        double range = maxPoint - minPoint;
+        double rawSpacing = Double.isFinite(range) ? niceNum(range, false) / (maxTicks - 1)
+                : maxPoint / (maxTicks - 1) - minPoint / (maxTicks - 1);
+        if (!Double.isFinite(rawSpacing)) rawSpacing = Double.MAX_VALUE;
+        double resolution = Math.max(Math.ulp(minPoint), Math.ulp(maxPoint));
+        tickSpacing = Math.max(niceNum(rawSpacing, true), resolution);
+        firstTickIndex = Math.floor(minPoint / tickSpacing);
+        lastTickIndex = Math.ceil(maxPoint / tickSpacing);
+        niceMin = firstTickIndex * tickSpacing;
+        niceMax = lastTickIndex * tickSpacing;
+        // Rounding of a large quotient must not move a bound into the data range.
+        if (niceMin > minPoint) {
+            firstTickIndex--;
+            niceMin = firstTickIndex * tickSpacing;
+        }
+        if (niceMax < maxPoint) {
+            lastTickIndex++;
+            niceMax = lastTickIndex * tickSpacing;
+        }
+        if (!Double.isFinite(niceMin)) niceMin = minPoint;
+        if (!Double.isFinite(niceMax)) niceMax = maxPoint;
     }
 
     /**
@@ -83,12 +114,15 @@ public class NiceScale {
      * @return a "nice" number close to the provided range
      */
     private double niceNum(double range, boolean round) {
+        if (!(range > 0)) return Double.MIN_VALUE;
         double exponent; /** exponent of range */
         double fraction; /** fractional part of range */
         double niceFraction; /** nice, rounded fraction */
 
         exponent = Math.floor(Math.log10(range));
-        fraction = range / Math.pow(10, exponent);
+        double power = Math.pow(10, exponent);
+        if (power == 0) return range;
+        fraction = range / power;
 
         if (round) {
             if (fraction < 1.5) niceFraction = 1;
@@ -102,7 +136,8 @@ public class NiceScale {
             else niceFraction = 10;
         }
 
-        return niceFraction * Math.pow(10, exponent);
+        double nice = niceFraction * power;
+        return Double.isFinite(nice) ? nice : range;
     }
 
     /**
@@ -143,30 +178,34 @@ public class NiceScale {
      * <p><strong>Note:</strong> The returned array is reused internally. Copy if needed beyond
      * the current frame.</p>
      *
-     * @return an array of tick values. Returns an empty array if spacing is non-positive
-     *         or if the computed number of ticks is non-positive.
+     * @return the reused storage; only the first {@link #getTickCount()} elements
+     *         are valid. Non-finite or reversed ranges have zero ticks; constant
+     *         finite ranges have one tick. Valid ticks are finite and strictly increasing.
      */
     public double[] getTicks() {
-        if (tickSpacing <= 0) {
-            cachedTickCount = 0;
+        cachedTickCount = 0;
+        if (!(tickSpacing > 0) || !Double.isFinite(tickSpacing)) {
             return cachedTicks;
         }
-        int count = (int) Math.round((niceMax - niceMin) / tickSpacing) + 1;
-        if (count <= 0) {
-            cachedTickCount = 0;
+        if (minPoint == maxPoint) {
+            cachedTicks[0] = minPoint;
+            cachedTickCount = 1;
             return cachedTicks;
         }
+        int count = (int) Math.min(MAX_GENERATED_TICKS, lastTickIndex - firstTickIndex + 1);
 
         // Resize cached array if needed (rare, Zero-GC friendly)
         if (count > cachedTicks.length) {
             cachedTicks = new double[Math.max(count, cachedTicks.length * 2)];
         }
 
-        cachedTickCount = count;
-        double v = niceMin;
         for (int i = 0; i < count; i++) {
-            cachedTicks[i] = v;
-            v += tickSpacing;
+            // Use integer multiples instead of cumulative addition or subtracting
+            // a large origin. This preserves exact zero ticks across wide ranges.
+            double tick = (firstTickIndex + i) * tickSpacing;
+            if (!Double.isFinite(tick)) continue;
+            if (cachedTickCount > 0 && tick <= cachedTicks[cachedTickCount - 1]) break;
+            cachedTicks[cachedTickCount++] = tick;
         }
         return cachedTicks;
     }
@@ -181,20 +220,17 @@ public class NiceScale {
     }
 
     /**
-     * Iterates over tick values without allocating a new array.
+     * Iterates over cached tick positions.
      *
-     * <p><strong>Zero-GC:</strong> Use this method for allocation-free tick iteration.</p>
+     * <p>Uses the same bounded tick sequence as {@link #getTicks()}; storage is
+     * reused and can grow when the requested tick count increases.</p>
      *
      * @param consumer callback invoked for each tick value
      */
     public void forEachTick(java.util.function.DoubleConsumer consumer) {
-        if (tickSpacing <= 0) return;
-        int count = (int) Math.round((niceMax - niceMin) / tickSpacing) + 1;
-        if (count <= 0) return;
-        double v = niceMin;
-        for (int i = 0; i < count; i++) {
-            consumer.accept(v);
-            v += tickSpacing;
+        double[] ticks = getTicks();
+        for (int i = 0; i < cachedTickCount; i++) {
+            consumer.accept(ticks[i]);
         }
     }
 

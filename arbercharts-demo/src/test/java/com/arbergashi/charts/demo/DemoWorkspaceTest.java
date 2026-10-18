@@ -3,6 +3,7 @@ package com.arbergashi.charts.demo;
 import com.arbergashi.charts.api.PlotContext;
 import com.arbergashi.charts.api.types.ArberColor;
 import com.arbergashi.charts.model.ChartModel;
+import com.arbergashi.charts.model.HierarchicalChartModel;
 import com.arbergashi.charts.platform.export.ChartExportService;
 import com.arbergashi.charts.platform.swing.ArberChartPanel;
 import com.arbergashi.charts.render.analysis.AdaptiveFunctionRenderer;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.imageio.ImageIO;
+import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
@@ -52,6 +55,9 @@ class DemoWorkspaceTest {
         onEdt(() -> {
             String theme = DemoThemeSupport.setupLookAndFeel();
             application = new DemoApplication(theme);
+            Method menu = DemoApplication.class.getDeclaredMethod("buildMenuBar", JFrame.class);
+            menu.setAccessible(true);
+            menu.invoke(application, (JFrame) null);
             workspace = application.buildWorkspace();
             workspace.setSize(1200, 800);
             layout(workspace);
@@ -107,7 +113,7 @@ class DemoWorkspaceTest {
         ExecutorService executor = adaptiveExecutor(original);
         assertFalse(executor.isShutdown());
 
-        onEdt(() -> invokeApplicationAction("refreshCurrent"));
+        onEdt(() -> clickToolbarAction("reloadButton"));
         assertTrue(executor.isShutdown(), "Reload must release the discarded renderer's workers");
         ArberChartPanel replacement = awaitActiveChart();
         assertNotSame(original, replacement);
@@ -122,7 +128,7 @@ class DemoWorkspaceTest {
         awaitActiveChart();
         assertFalse(cachedExecutor.isShutdown(), "A cached view remains reusable while browsing");
 
-        onEdt(() -> invokeApplicationAction("toggleTheme"));
+        onEdt(() -> clickToolbarAction("themeSwitchButton"));
         assertTrue(cachedExecutor.isShutdown(), "Theme rebuild must release hidden discarded views");
         awaitActiveChart();
     }
@@ -134,6 +140,50 @@ class DemoWorkspaceTest {
             onEdt(() -> select(name));
             ArberChartPanel chart = awaitActiveChart();
             onEdt(() -> assertEquals(name, chart.getPrimaryRenderer().getClass().getName()));
+        }
+    }
+
+    @Test
+    void sunburstCatalogEntriesUseTheirMatchingRenderersAndModels() throws Exception {
+        for (String category : new String[]{"circular", "specialized"}) {
+            String name = "com.arbergashi.charts.render." + category + ".SunburstRenderer";
+            onEdt(() -> select(name));
+            ArberChartPanel chart = awaitActiveChart();
+            onEdt(() -> {
+                assertEquals(name, chart.getPrimaryRenderer().getClass().getName());
+                ChartModel model = chart.getPrimaryModel();
+                assertFalse(model.isEmpty(), "The selected Sunburst model must reach the render path");
+                if ("circular".equals(category)) {
+                    assertTrue(model instanceof HierarchicalChartModel<?>);
+                    assertEquals(0, model.getPointCount(), "Hierarchical data does not require flat points");
+                } else {
+                    assertTrue(model.getPointCount() > 0);
+                    assertTrue(model.getLabel(0).contains("/"));
+                }
+            });
+        }
+    }
+
+    @Test
+    void sunburstCatalogEntriesPaintEveryRingInBothThemesAfterResize() throws Exception {
+        for (int theme = 0; theme < 2; theme++) {
+            for (String category : new String[]{"circular", "specialized"}) {
+                String name = "com.arbergashi.charts.render." + category + ".SunburstRenderer";
+                onEdt(() -> select(name));
+                ArberChartPanel chart = awaitActiveChart();
+                for (int[] size : new int[][]{{1200, 800}, {1000, 680}}) {
+                    onEdt(() -> {
+                        workspace.setSize(size[0], size[1]);
+                        layout(workspace);
+                        chart.setAnimationsEnabled(false);
+                        assertSunburstRingsVisible(chart);
+                    });
+                }
+            }
+            if (theme == 0) {
+                onEdt(() -> invokeApplicationAction("toggleTheme"));
+                awaitActiveChart();
+            }
         }
     }
 
@@ -263,6 +313,48 @@ class DemoWorkspaceTest {
         return image;
     }
 
+    private static void assertSunburstRingsVisible(ArberChartPanel panel) {
+        String layer = panel.getLayerId(0);
+        panel.getLayerVisibilityModel().setVisible(layer, false);
+        BufferedImage hidden;
+        try {
+            hidden = paint(panel);
+        } finally {
+            panel.getLayerVisibilityModel().setVisible(layer, true);
+        }
+        BufferedImage visible = paint(panel);
+        var bounds = panel.getDebugContext().getPlotBounds();
+        assertFalse(panel.isAxisLabelsVisible(), "A Sunburst must not display unrelated Cartesian axis values");
+        assertFalse(panel.getDebugContext().isGridVisibleX());
+        assertFalse(panel.getDebugContext().isGridVisibleY());
+        int offsetX = panel.getOverlayCanvasForTesting().getX();
+        int offsetY = panel.getOverlayCanvasForTesting().getY();
+        int background = panel.getTheme().getBackground().argb();
+        int backgroundArtifacts = 0;
+        for (int y = (int) bounds.y() + offsetY + 12; y < (int) bounds.maxY() + offsetY - 12; y++) {
+            for (int x = (int) bounds.x() + offsetX + 12; x < (int) bounds.maxX() + offsetX - 12; x++) {
+                if (background != hidden.getRGB(x, y)) backgroundArtifacts++;
+            }
+        }
+        assertEquals(0, backgroundArtifacts, "The hidden Sunburst layer must leave a clean plot background");
+        double centerX = bounds.centerX() + panel.getOverlayCanvasForTesting().getX();
+        double centerY = bounds.centerY() + panel.getOverlayCanvasForTesting().getY();
+        double radius = Math.min(bounds.width(), bounds.height()) * 0.45;
+        // Compare the same view with its data layer hidden. Background, axes and
+        // legend alone must not make a blank renderer pass this regression test.
+        for (double fraction : new double[]{0.12, 0.38, 0.64, 0.9}) {
+            int visibleSamples = 0;
+            for (int sample = 0; sample < 72; sample++) {
+                double angle = (sample + 0.5) * Math.PI / 36;
+                int x = (int) Math.round(centerX + Math.cos(angle) * radius * fraction);
+                int y = (int) Math.round(centerY + Math.sin(angle) * radius * fraction);
+                if (hidden.getRGB(x, y) != visible.getRGB(x, y)) visibleSamples++;
+            }
+            assertTrue(visibleSamples >= 12,
+                    "Sunburst ring at radius " + fraction + " must contain visible data: " + visibleSamples);
+        }
+    }
+
     private static ExecutorService adaptiveExecutor(ArberChartPanel panel) throws ReflectiveOperationException {
         AdaptiveFunctionRenderer renderer = (AdaptiveFunctionRenderer) panel.getPrimaryRenderer();
         Field field = AdaptiveFunctionRenderer.class.getDeclaredField("executor");
@@ -274,6 +366,15 @@ class DemoWorkspaceTest {
         Method method = DemoApplication.class.getDeclaredMethod(name);
         method.setAccessible(true);
         method.invoke(application);
+    }
+
+    private void clickToolbarAction(String name) throws ReflectiveOperationException {
+        Field field = DemoApplication.class.getDeclaredField(name);
+        field.setAccessible(true);
+        JButton button = (JButton) field.get(application);
+        assertNotNull(button, "The action must be reachable through the actual workbench controls");
+        assertTrue(button.isEnabled());
+        button.doClick(0);
     }
 
     private ArberChartPanel awaitActiveChart() throws Exception {

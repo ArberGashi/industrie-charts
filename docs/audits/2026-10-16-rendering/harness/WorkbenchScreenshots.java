@@ -28,12 +28,15 @@ import javax.swing.ToolTipManager;
 public final class WorkbenchScreenshots {
     private static final int SCALE = 2;
     private static final Field CURRENT_CHART;
+    private static final Field TOOL_WINDOWS;
     private static final Method DISPOSE;
 
     static {
         try {
             CURRENT_CHART = DemoApplication.class.getDeclaredField("currentChartPanel");
             CURRENT_CHART.setAccessible(true);
+            TOOL_WINDOWS = DemoApplication.class.getDeclaredField("toolWindowShell");
+            TOOL_WINDOWS.setAccessible(true);
             DISPOSE = DemoApplication.class.getDeclaredMethod("disposeDemoResources");
             DISPOSE.setAccessible(true);
         } catch (ReflectiveOperationException failure) {
@@ -60,12 +63,13 @@ public final class WorkbenchScreenshots {
         System.out.println("SHA-256: " + HexFormat.of().formatHex(digest.digest()));
         Path output = Path.of(args[0]);
         Files.createDirectories(output);
-        capture("dark", 1360, 880, output.resolve("workbench-dark.png"));
-        capture("light", 1360, 880, output.resolve("workbench-light.png"));
-        capture("light", 1000, 680, output.resolve("workbench-light-compact.png"));
+        capture("dark", 1360, 880, true, false, output.resolve("workbench-dark.png"));
+        capture("light", 1360, 880, true, true, output.resolve("workbench-light.png"));
+        capture("light", 1000, 680, false, true, output.resolve("workbench-light-compact.png"));
     }
 
-    private static void capture(String theme, int width, int height, Path output) throws Exception {
+    private static void capture(String theme, int width, int height, boolean catalogVisible,
+                                boolean toolsVisible, Path output) throws Exception {
         AtomicReference<DemoApplication> application = new AtomicReference<>();
         AtomicReference<JPanel> workspace = new AtomicReference<>();
         try {
@@ -80,7 +84,13 @@ public final class WorkbenchScreenshots {
             awaitChart(application.get());
             onEdt(() -> {
                 JPanel root = workspace.get();
+                DemoToolWindowShell shell = (DemoToolWindowShell) TOOL_WINDOWS.get(application.get());
+                shell.setCatalogVisible(catalogVisible);
+                shell.setToolsVisible(toolsVisible);
                 layout(root);
+                if (shell.isCatalogVisible() != catalogVisible || shell.isToolsVisible() != toolsVisible) {
+                    throw new IllegalStateException("The requested tool-window layout did not fit the capture");
+                }
                 ArberChartPanel chart = (ArberChartPanel) CURRENT_CHART.get(application.get());
                 chart.setAnimationsEnabled(false);
                 if (chart.isShowing()) throw new IllegalStateException("The capture must stay offscreen");

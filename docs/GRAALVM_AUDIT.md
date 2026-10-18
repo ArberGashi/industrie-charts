@@ -1,6 +1,6 @@
 # GraalVM metadata audit
 
-This describes native-image metadata ownership in the **2.2.0** tree. The normal JVM build uses Eclipse Temurin 25. GraalVM SDK dependencies and metadata do not require replacing the installed JDK, and their presence does not prove that a native library has been built or validated.
+This describes native-image metadata ownership in the **2.5.0** tree. The normal JVM build uses Eclipse Temurin 25. GraalVM SDK dependencies and metadata do not require replacing the installed JDK, and their presence does not prove that a native library has been built or validated.
 
 ## Core scope
 
@@ -35,12 +35,18 @@ The entries describe the current reflective calls to `PDDocument.load(File)`, `g
 
 ## Validation limits
 
+The 2.5.0 Spring Boot starter no longer includes its old blanket `native/.*`
+resource rule or the obsolete JNI metadata. JVM applications do not need those
+files. Applications building native images must supply and validate metadata
+for their own native resources and entry points; the retained reflection
+configuration alone does not establish native-image compatibility.
+
 The server bridge and Spring Boot starter render through the JVM's Java2D and
 ImageIO APIs. Their normal integration does not load a bundled JNI library or
 require GraalVM. Use Eclipse Temurin 25 for the JVM build and both demo applications.
 
 The [architecture checks](VERIFICATION_STRATEGY.md#jdk-based-architecture-checks) verify that production Core bytecode has no `java.desktop` or bridge dependency. The server bridge still uses Java2D and ImageIO, even in headless mode. These are JVM dependency assertions, not native-image execution tests.
 
-A native release needs a build with the intended native-image toolchain, target-platform loading tests, C entry-point and command-stream checks, and explicit resource/provider/reflection coverage. A successful JVM build does not establish that a native library matches the current source revision. The 2.2.0 JVM release and this metadata inventory do not claim native-image execution validation.
+A native release needs a build with the intended native-image toolchain, target-platform loading tests, C entry-point and command-stream checks, and explicit resource/provider/reflection coverage. A successful JVM build does not establish that a native library matches the current source revision. The 2.5.0 JVM release and this metadata inventory do not claim native-image execution validation.
 
 See [Rendering architecture](RENDERING_ARCHITECTURE.md) for module ownership and migration details, and [Dependency updates](DEPENDENCY_UPDATES.md) for the current SDK and build-tool baseline.

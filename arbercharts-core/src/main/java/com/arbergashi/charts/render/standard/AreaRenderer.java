@@ -14,6 +14,9 @@ import com.arbergashi.charts.util.ChartScale;
 
 /**
  * Professional, zero-allocation, high-precision area chart renderer.
+ * <p>Each contiguous run of finite samples forms an area down to the plot's
+ * bottom edge. Missing samples or invalid mapped coordinates split both the
+ * fill and its outline; isolated samples do not create an area.</p>
  *
  * @author Arber Gashi
  * @since 2025-06-01
@@ -59,65 +62,41 @@ public final class AreaRenderer extends BaseRenderer implements TooltipContentPr
         ArberRect bounds = context.getPlotBounds();
         float baseY = (float) (bounds.y() + bounds.height());
 
-        int first = -1;
+        ensureAreaCapacity(n + 2);
+        ensureLineCapacity(n);
+        ChartTheme theme = getResolvedTheme(context);
+        ArberColor series = theme.getSeriesColor(getLayerIndex());
+        canvas.setStroke(resolveStrokeWidth());
+        canvas.setColor(series);
+
+        int count = 0;
         for (int i = 0; i < n; i++) {
             double x = xData[i];
             double y = yData[i];
             if (Double.isFinite(x) && Double.isFinite(y)) {
-                first = i;
-                break;
+                context.mapToPixel(x, y, p0);
+                if (Float.isFinite((float) p0[0]) && Float.isFinite((float) p0[1])) {
+                    lineXs[count] = (float) p0[0];
+                    lineYs[count++] = (float) p0[1];
+                    continue;
+                }
             }
+            drawRun(canvas, count, baseY);
+            count = 0;
         }
-        if (first < 0) return;
+        drawRun(canvas, count, baseY);
+    }
 
-        int last = first;
-        for (int i = first + 1; i < n; i++) {
-            double x = xData[i];
-            double y = yData[i];
-            if (!Double.isFinite(x) || !Double.isFinite(y)) continue;
-            last = i;
-        }
-        if (last == first) return;
-
-        int polyCount = (last - first + 1) + 2;
-        ensureAreaCapacity(polyCount);
-
-        context.mapToPixel(xData[first], 0, p0);
-        areaXs[0] = (float) p0[0];
+    private void drawRun(ArberCanvas canvas, int count, float baseY) {
+        if (count < 2) return;
+        areaXs[0] = lineXs[0];
         areaYs[0] = baseY;
-
-        int idx = 1;
-        for (int i = first; i <= last; i++) {
-            double x = xData[i];
-            double y = yData[i];
-            if (!Double.isFinite(x) || !Double.isFinite(y)) continue;
-            context.mapToPixel(x, y, p0);
-            if (!Double.isFinite(p0[0]) || !Double.isFinite(p0[1])) continue;
-            areaXs[idx] = (float) p0[0];
-            areaYs[idx] = (float) p0[1];
-            idx++;
-        }
-
-        context.mapToPixel(xData[last], 0, p0);
-        areaXs[idx] = (float) p0[0];
-        areaYs[idx] = baseY;
-        idx++;
-
-        ChartTheme theme = getResolvedTheme(context);
-        ArberColor series = theme.getSeriesColor(getLayerIndex());
-        canvas.setColor(series);
-        canvas.fillPolygon(areaXs, areaYs, idx);
-
-        int lineCount = idx - 2;
-        ensureLineCapacity(lineCount);
-        for (int i = 0; i < lineCount; i++) {
-            lineXs[i] = areaXs[i + 1];
-            lineYs[i] = areaYs[i + 1];
-        }
-
-        canvas.setStroke(resolveStrokeWidth());
-        canvas.setColor(series);
-        canvas.drawPolyline(lineXs, lineYs, lineCount);
+        System.arraycopy(lineXs, 0, areaXs, 1, count);
+        System.arraycopy(lineYs, 0, areaYs, 1, count);
+        areaXs[count + 1] = lineXs[count - 1];
+        areaYs[count + 1] = baseY;
+        canvas.fillPolygon(areaXs, areaYs, count + 2);
+        canvas.drawPolyline(lineXs, lineYs, count);
     }
 
     private void ensureAreaCapacity(int needed) {

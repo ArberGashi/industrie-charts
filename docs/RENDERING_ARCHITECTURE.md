@@ -1,6 +1,6 @@
 # Rendering architecture
 
-This document describes the **2.2.0** source tree. The dependency cleanup and API relocations below apply when upgrading from 2.1.0 to 2.2.0.
+This document describes the **2.5.0** source tree. The dependency cleanup and API relocations below were introduced in 2.2.0 and apply when upgrading from 2.1.0. Version 2.5.0 preserves those module boundaries and rendering contracts.
 
 ## Module boundaries
 

@@ -8,55 +8,41 @@ import java.awt.GraphicsConfiguration;
 import java.awt.geom.AffineTransform;
 
 /**
- * High-DPI Rendering Support for ArberCharts v2.0.
+ * Scale conversion helpers using one shared, cached display scale.
  *
- * <p>Automatically detects and adapts to display scaling factors:
- * <ul>
- *   <li>100% (1.0x) - Standard DPI</li>
- *   <li>125% (1.25x) - Windows common</li>
- *   <li>150% (1.5x) - Windows/macOS</li>
- *   <li>200% (2.0x) - Retina/4K</li>
- *   <li>250% (2.5x) - 5K/8K displays</li>
- * </ul>
+ * <p>{@link #getScaleFactor(Component)} derives the larger X/Y scale from a
+ * component's default graphics transform when the cache is empty. The cached
+ * value is then shared across components until {@link #resetCache()} is called.
+ * This helper does not monitor display changes, maintain per-monitor state or
+ * render SVG icons. Font and stroke helpers perform explicit numeric scaling;
+ * they do not guarantee pixel-identical output across displays.
  *
- * <h2>Features</h2>
- * <ul>
- *   <li><strong>Automatic Scale Detection</strong> - Per-display scaling</li>
- *   <li><strong>Font Scaling</strong> - Sharp text at any scale</li>
- *   <li><strong>Line Width Scaling</strong> - Consistent stroke widths</li>
- *   <li><strong>Icon Scaling</strong> - SVG-based icons scale perfectly</li>
- *   <li><strong>Grid Snap</strong> - Pixel-perfect alignment at all scales</li>
- * </ul>
- *
- * <h2>Usage Example</h2>
+ * <p>Do not apply the scale again to a graphics context that already contains
+ * its device transform, such as a Swing paint context. For an application-owned
+ * image with an initially unscaled graphics context, the helper can convert
+ * logical drawing units to the image's allocated pixel dimensions:
  * <pre>{@code
- * public void paintComponent(Graphics g) {
- *     Graphics2D g2 = (Graphics2D) g;
- *
- *     // Apply High-DPI scaling
- *     HighDpiRenderer.applyScaling(g2, this);
- *
- *     // Now draw normally - scaling is automatic
- *     g2.drawLine(0, 0, 100, 100);
+ * int width = HighDpiRenderer.toDevicePixels(400, component);
+ * int height = HighDpiRenderer.toDevicePixels(200, component);
+ * var image = new java.awt.image.BufferedImage(
+ *     width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+ * Graphics2D graphics = image.createGraphics();
+ * try {
+ *     HighDpiRenderer.applyScaling(graphics, component);
+ *     graphics.drawLine(0, 0, 100, 100);
+ * } finally {
+ *     graphics.dispose();
  * }
  * }</pre>
  *
- * <h2>Platform Support</h2>
- * <ul>
- *   <li><strong>Windows</strong> - Full support via Java 9+ HiDPI API</li>
- *   <li><strong>macOS</strong> - Native Retina support</li>
- *   <li><strong>Linux</strong> - X11/Wayland scale factor detection</li>
- * </ul>
- *
  * @since 2.0.0
- * @see java.awt.Graphics2D#scale(double, double)
+ * @see java.awt.Graphics2D#getTransform()
  * @see java.awt.GraphicsConfiguration#getDefaultTransform()
  */
 public final class HighDpiRenderer {
 
     /**
-     * Cached scale factor to avoid repeated calculations.
-     * First call wins policy for consistency.
+     * Shared scale factor reused until explicitly reset.
      */
     private static volatile Double cachedScaleFactor = null;
 
@@ -65,16 +51,18 @@ public final class HighDpiRenderer {
     }
 
     /**
-     * Detects the display scale factor for a component.
+     * Returns the shared cached scale, deriving it from the component when absent.
      *
-     * <p>This uses Java 9+ API to detect per-monitor DPI scaling.
-     * On older Java versions, returns 1.0 (no scaling).
+     * <p>Uses the larger X/Y value of the default graphics transform. If no
+     * configuration is available or lookup fails, caches 1.0. The result is not
+     * specific to later components and is not refreshed when a window moves.
+     * The library requires Java 25.
      *
      * @param component the component to check
      * @return scale factor (1.0, 1.25, 1.5, 2.0, 2.5, etc.)
      */
     public static double getScaleFactor(Component component) {
-        // Use cached value for consistency (first call wins)
+        // Reuse the shared scale until resetCache() clears it
         if (cachedScaleFactor != null) {
             return cachedScaleFactor;
         }
@@ -94,7 +82,7 @@ public final class HighDpiRenderer {
                 return scale;
             }
         } catch (Exception e) {
-            // Fallback for older Java versions
+            // Use the default scale when the graphics configuration cannot be read
         }
 
         // Default: no scaling
@@ -103,10 +91,12 @@ public final class HighDpiRenderer {
     }
 
     /**
-     * Applies High-DPI scaling to a Graphics2D context.
+     * Multiplies the current graphics transform by the cached scale.
      *
-     * <p>Call this at the beginning of your paintComponent() method.
-     * All subsequent drawing operations will be automatically scaled.
+     * <p>Use only when the host requires this additional logical-to-pixel
+     * conversion. A Swing paint context can already contain a device scale;
+     * applying this method again would multiply it a second time. Preserve the
+     * host context by drawing through a copy and disposing that copy afterward.
      *
      * @param g2 the graphics context
      * @param component the component being painted
@@ -133,8 +123,9 @@ public final class HighDpiRenderer {
     /**
      * Scales a line width for High-DPI displays.
      *
-     * <p>Ensures lines are visible and consistent across all scales.
-     * Minimum width is 1 device pixel.
+     * <p>Multiplies by the cached scale and clamps the result to at least 1.0.
+     * The result is a width in drawing units; its device-pixel footprint also
+     * depends on the graphics transform and rasterization.
      *
      * @param baseWidth the base line width (at 100%)
      * @param component the component context
@@ -144,15 +135,15 @@ public final class HighDpiRenderer {
         double scale = getScaleFactor(component);
         float scaled = (float) (baseWidth * scale);
 
-        // Minimum 1 device pixel
+        // Minimum one drawing unit
         return Math.max(scaled, 1.0f);
     }
 
     /**
-     * Snaps a coordinate to the nearest device pixel.
+     * Rounds a coordinate to the nearest pixel boundary for the cached scale.
      *
-     * <p>This prevents blurry lines caused by sub-pixel rendering.
-     * Essential for grid lines and axis rendering.
+     * <p>The calculation is {@code round(coordinate * scale) / scale}. Actual
+     * stroke alignment also depends on line width and the graphics transform.
      *
      * @param coordinate logical coordinate
      * @param component the component context
@@ -201,7 +192,7 @@ public final class HighDpiRenderer {
      * Gets a user-friendly description of the current scale.
      *
      * @param component the component context
-     * @return description like "200% (2.0x)" or "100% (Standard)"
+     * @return description such as "200% (Retina/4K)" or "100% (Standard)"
      */
     public static String getScaleDescription(Component component) {
         double scale = getScaleFactor(component);
@@ -243,11 +234,9 @@ public final class HighDpiRenderer {
     /**
      * Resets the cached scale factor.
      *
-     * <p>Call this if the display configuration changes
-     * (e.g., window moved to different monitor).
-     *
-     * <p><strong>Warning:</strong> This breaks the "first call wins" policy
-     * and may cause visual inconsistencies. Use with caution.
+     * <p>The next lookup recomputes one shared value. Hosts must coordinate
+     * cache resets with their display lifecycle; resetting does not create
+     * independent scale values for windows on different monitors.
      */
     public static void resetCache() {
         cachedScaleFactor = null;

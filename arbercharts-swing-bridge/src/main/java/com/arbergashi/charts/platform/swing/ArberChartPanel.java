@@ -192,6 +192,7 @@ public class ArberChartPanel extends JPanel {
     private boolean externalRenderSurface = false;
     private boolean crosshairEnabled = true;
     private boolean legendVisible = true;
+    private boolean axisLabelsVisible = true;
     private boolean animationsEnabled = !Boolean.getBoolean("arbercharts.reduceMotion");
     private boolean modelListenersAttached = true;
     private Locale locale = Locale.getDefault();
@@ -1173,6 +1174,7 @@ public class ArberChartPanel extends JPanel {
     }
 
     void drawAxisLabels(Graphics2D g2, PlotContext ctx) {
+        if (!axisLabelsVisible) return;
         ChartTheme activeTheme = ctx.getTheme() != null ? ctx.getTheme() : theme;
         g2.setFont(axisFont());
         g2.setColor(toAwt(activeTheme.getAxisLabelColor()));
@@ -1763,24 +1765,26 @@ public class ArberChartPanel extends JPanel {
     private Rectangle2D.Double getCalculatedPlotBounds() {
         double left = ChartScale.scale(padding.left), top = ChartScale.scale(padding.top);
         double right = ChartScale.scale(padding.right), bottom = ChartScale.scale(padding.bottom);
-        FontMetrics metrics = getFontMetrics(axisFont());
-        double minY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMin() : viewMinY;
-        double maxY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMax() : viewMaxY;
-        left = Math.max(left, measuredAxisWidth(metrics, yAxisConfig, minY, maxY) + ChartScale.scale(12));
-        if (hasSecondaryAxis()) {
-            double[] range = secondaryRange();
-            right = Math.max(right, measuredAxisWidth(metrics, yAxisSecondaryConfig, range[0], range[1]) + ChartScale.scale(12));
+        if (axisLabelsVisible) {
+            FontMetrics metrics = getFontMetrics(axisFont());
+            double minY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMin() : viewMinY;
+            double maxY = yAxisConfig.isFixedRange() ? yAxisConfig.getFixedMax() : viewMaxY;
+            left = Math.max(left, measuredAxisWidth(metrics, yAxisConfig, minY, maxY) + ChartScale.scale(12));
+            if (hasSecondaryAxis()) {
+                double[] range = secondaryRange();
+                right = Math.max(right, measuredAxisWidth(metrics, yAxisSecondaryConfig, range[0], range[1]) + ChartScale.scale(12));
+            }
+            double minX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMin() : viewMinX;
+            double maxX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMax() : viewMaxX;
+            double endLabelMargin = measuredAxisWidth(metrics, xAxisConfig, minX, maxX) * 0.5 + ChartScale.scale(4);
+            left = Math.max(left, endLabelMargin);
+            right = Math.max(right, endLabelMargin);
+            bottom = Math.max(bottom, metrics.getHeight() + ChartScale.scale(18));
         }
-        double minX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMin() : viewMinX;
-        double maxX = xAxisConfig.isFixedRange() ? xAxisConfig.getFixedMax() : viewMaxX;
-        double endLabelMargin = measuredAxisWidth(metrics, xAxisConfig, minX, maxX) * 0.5 + ChartScale.scale(4);
-        left = Math.max(left, endLabelMargin);
-        right = Math.max(right, endLabelMargin);
         int width = Math.max(1, overlayCanvas.getWidth());
         int height = Math.max(1, overlayCanvas.getHeight());
         left = Math.min(left, width * 0.4);
         right = Math.min(right, width * 0.4);
-        bottom = Math.max(bottom, metrics.getHeight() + ChartScale.scale(18));
         plotBoundsCache.setRect(left, top, Math.max(1, width - left - right), Math.max(1, height - top - bottom));
         return plotBoundsCache;
     }
@@ -1992,6 +1996,35 @@ public class ArberChartPanel extends JPanel {
      */
     public boolean isAnimationsEnabled() {
         return animationsEnabled;
+    }
+
+    /**
+     * Returns whether the X-axis and both Y-axis tick labels are visible.
+     *
+     * @return {@code true} when axis labels are visible; the default is {@code true}
+     * @since 2.5.0
+     */
+    public boolean isAxisLabelsVisible() {
+        return axisLabelsVisible;
+    }
+
+    /**
+     * Shows or hides all axis tick labels, including secondary Y-axis labels.
+     * Hidden labels do not reserve additional measured space, while the panel's
+     * base padding remains in place. Axis configuration and grid visibility are unchanged;
+     * use {@link AxisConfig#setShowGrid(boolean)} to configure grid lines separately.
+     *
+     * @param visible {@code true} to show axis labels
+     * @return this panel for chaining
+     * @since 2.5.0
+     */
+    public ArberChartPanel setAxisLabelsVisible(boolean visible) {
+        if (axisLabelsVisible != visible) {
+            axisLabelsVisible = visible;
+            cacheDirty = true;
+            repaint();
+        }
+        return this;
     }
 
     /**

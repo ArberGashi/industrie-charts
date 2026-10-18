@@ -15,9 +15,7 @@ class AxisConfigTest {
         AxisConfig config = new AxisConfig();
         config.setLocale(Locale.US);
 
-        // 1000.555 wird gerundet (standardmäßig HALF_EVEN oder HALF_UP)
-        // Je nach JDK Version kann das Ergebnis 1,000.56 sein. 
-        // Scheinbar liefert das aktuelle System 1,000.55 oder 1,000.56.
+        // Accept both rounding results observed for 1000.555 across JDK versions.
         String val = config.getFormattedValue(1000.555);
         assertTrue(val.equals("1,000.56") || val.equals("1,000.55"));
 

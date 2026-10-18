@@ -183,8 +183,7 @@ public final class RendererDemoDataFactory {
     );
     private static final Set<String> PREDICTIVE_RENDERERS = Set.of(
             "PredictiveShadowRenderer",
-            "AnomalyGapRenderer",
-            "PredictiveCandleRenderer"
+            "AnomalyGapRenderer"
     );
     private static final Set<String> FORENSIC_RENDERERS = Set.of(
             "PlaybackStatusRenderer"
@@ -351,10 +350,28 @@ public final class RendererDemoDataFactory {
         return switch (simple) {
             case "RSIRenderer" -> rsiModel();
             case "RenkoRenderer" -> renkoModel();
+            case "PointAndFigureRenderer" -> pointAndFigureModel();
             case "VolumeRenderer", "VolumeProfileRenderer", "LiquidityHeatmapRenderer" -> distributionModel();
             case "WaterfallRenderer" -> paretoModel();
             default -> financialModel();
         };
+    }
+
+    private static DefaultChartModel pointAndFigureModel() {
+        DefaultChartModel model = new DefaultChartModel("Synthetic P&F: 2-point boxes / 3-box reversals");
+        int[] reversals = {14, 8, 19, 12, 25, 17, 29, 22, 33, 24, 30, 20, 27, 16, 23, 12,
+                20, 10, 18, 7, 15, 5, 13, 6, 17, 9, 22, 14, 26, 18, 31, 23, 28, 19, 25, 15, 22, 12, 19, 9};
+        int previous = 7;
+        for (int column = 0; column < reversals.length; column++) {
+            int end = reversals[column];
+            int direction = Integer.compare(end, previous);
+            for (int box = previous + direction; direction > 0 ? box <= end : box >= end; box += direction) {
+                model.setPoint(column, 100 + box * 2, direction,
+                        "Column " + (column + 1) + (direction > 0 ? " X" : " O"));
+            }
+            previous = end;
+        }
+        return model;
     }
 
     private static ChartModel statisticalRendererModel(String simple) {
@@ -369,9 +386,163 @@ public final class RendererDemoDataFactory {
 
     private static ChartModel medicalRendererModel(String simple) {
         return switch (simple) {
-            case "CalibrationRenderer", "SpectrogramMedicalRenderer", "SpirometryRenderer" -> medicalModel();
-            default -> medicalModel();
+            case "CalibrationRenderer", "ECGRenderer", "ECGRhythmRenderer", "MedicalSweepRenderer",
+                    "SweepEraseEKGRenderer" -> medicalModel();
+            case "VCGRenderer" -> vectorcardiogramModel();
+            case "SpirometryRenderer" -> spirometryModel();
+            case "EEGRenderer" -> eegModel();
+            case "EMGRenderer" -> medicalSeries("Synthetic EMG activity (mV)", 1, (t, values) -> {
+                double phase = t % 3.0;
+                double envelope = 0.06 + 0.7 * Math.exp(-Math.pow((phase - 1.4) / 0.55, 4));
+                values[0] = envelope * (Math.sin(2 * Math.PI * 43 * t)
+                        + 0.55 * Math.sin(2 * Math.PI * 71 * t + 0.4)
+                        + 0.3 * Math.sin(2 * Math.PI * 97 * t));
+            });
+            case "EOGRenderer" -> medicalSeries("Synthetic EOG gaze steps (mV)", 1, (t, values) ->
+                    values[0] = 0.6 * Math.tanh(10 * Math.sin(2 * Math.PI * t / 3.0)));
+            case "PPGRenderer" -> medicalSeries("Synthetic PPG pulse (relative)", 1, (t, values) ->
+                    values[0] = pulseShape((t * 1.2) % 1.0));
+            case "IBPRenderer" -> medicalSeries("Synthetic arterial pressure (mmHg)", 1, (t, values) ->
+                    values[0] = 76 + 44 * pulseShape((t * 1.2) % 1.0));
+            case "CapnographyRenderer" -> medicalSeries("Synthetic CO2 plateau (mmHg)", 1, (t, values) ->
+                    values[0] = capnography(t % 3.0 / 3.0));
+            case "NIRSRenderer" -> medicalSeries("Synthetic NIRS oxygenation trend (%)", 1, (t, values) ->
+                    values[0] = 70 + 3 * Math.sin(2 * Math.PI * t / 12.0)
+                            + 0.7 * Math.sin(2 * Math.PI * t / 6.0));
+            case "VentilatorWaveformRenderer" -> ventilatorModel();
+            case "SpectrogramMedicalRenderer" -> medicalIntensitySeries("Synthetic frequency / intensity", (t, values) -> {
+                values[0] = 22 + 9 * Math.sin(2 * Math.PI * t / 3.0) + 3 * Math.sin(2 * Math.PI * t);
+                values[1] = 140 + 95 * Math.sin(2 * Math.PI * t / 2.0);
+            });
+            case "UltrasoundMModeRenderer" -> medicalIntensitySeries("Synthetic moving interface / intensity", (t, values) -> {
+                values[0] = 35 + 8 * Math.sin(2 * Math.PI * 1.2 * t);
+                values[1] = 145 + 85 * Math.cos(2 * Math.PI * 1.2 * t + 0.4);
+            });
+            default -> throw new IllegalArgumentException("No medical showcase data for " + simple);
         };
+    }
+
+    private static CircularFastMedicalModel medicalSeries(String name, int channels, MedicalSignal signal) {
+        CircularFastMedicalModel model = new CircularFastMedicalModel(1500, channels).setName(name);
+        return fillMedicalSeries(model, signal);
+    }
+
+    private static CircularFastMedicalModel medicalIntensitySeries(String name, MedicalSignal signal) {
+        return fillMedicalSeries(new MedicalIntensityDemoModel().setName(name), signal);
+    }
+
+    private static CircularFastMedicalModel fillMedicalSeries(CircularFastMedicalModel model, MedicalSignal signal) {
+        double[] values = new double[model.getChannelCount()];
+        for (int i = 0; i < 1500; i++) {
+            double time = i / 250.0;
+            signal.sample(time, values);
+            model.add(time, values);
+        }
+        return model;
+    }
+
+    private static final class MedicalIntensityDemoModel extends CircularFastMedicalModel {
+        private MedicalIntensityDemoModel() {
+            super(1500, 2);
+        }
+
+        @Override
+        public double[] getDataRange() {
+            if (getPointCount() == 0) return new double[]{0, 0, 0, 0};
+            double minX = Double.POSITIVE_INFINITY, maxX = Double.NEGATIVE_INFINITY;
+            double maxCoordinate = 0;
+            for (int i = 0; i < getPointCount(); i++) {
+                minX = Math.min(minX, getX(i));
+                maxX = Math.max(maxX, getX(i));
+                maxCoordinate = Math.max(maxCoordinate, getY(i, 0));
+            }
+            // Intensity is color metadata, not frequency or depth on the Y axis.
+            return new double[]{minX, maxX, 0, maxCoordinate};
+        }
+    }
+
+    @FunctionalInterface
+    private interface MedicalSignal {
+        void sample(double time, double[] values);
+    }
+
+    private static CircularFastMedicalModel eegModel() {
+        return medicalSeries("Synthetic EEG channels (microvolts)", 6, (t, values) -> {
+            for (int channel = 0; channel < values.length; channel++) {
+                double frequency = 8 + channel;
+                values[channel] = (22 + channel * 2) * Math.sin(2 * Math.PI * frequency * t + channel * 0.7)
+                        + 6 * Math.sin(2 * Math.PI * 3 * t + channel)
+                        + 3 * Math.sin(2 * Math.PI * 19 * t + channel * 0.3);
+            }
+        });
+    }
+
+    private static CircularFastMedicalModel vectorcardiogramModel() {
+        CircularFastMedicalModel model = new CircularFastMedicalModel(1500, 1)
+                .setName("Synthetic VCG: X / Y leads (mV)");
+        double[] values = new double[1];
+        double rotation = 0.35;
+        for (int i = 0; i < 1500; i++) {
+            double angle = 2 * Math.PI * i / 1499.0;
+            double u = 1.1 * Math.cos(angle) + 0.18 * Math.cos(2 * angle);
+            double v = 0.65 * Math.sin(angle) - 0.12 * Math.sin(2 * angle);
+            double x = u * Math.cos(rotation) - v * Math.sin(rotation);
+            values[0] = u * Math.sin(rotation) + v * Math.cos(rotation);
+            model.add(x, values);
+        }
+        return model;
+    }
+
+    private static CircularFastMedicalModel spirometryModel() {
+        CircularFastMedicalModel model = new CircularFastMedicalModel(1500, 1)
+                .setName("Synthetic expiratory / inspiratory flow-volume loop");
+        double[] values = new double[1];
+        for (int i = 0; i < 1500; i++) {
+            double phase = i / 1499.0;
+            boolean expiration = phase <= 0.5;
+            double volume = 4.5 * (expiration ? phase * 2 : (1 - phase) * 2);
+            values[0] = expiration
+                    ? 8 * (1 - Math.exp(-volume / 0.2)) * Math.pow(Math.max(0, 1 - volume / 4.5), 0.65)
+                    : -4 * Math.sin(Math.PI * volume / 4.5);
+            model.add(volume, values);
+        }
+        return model;
+    }
+
+    private static CircularFastMedicalModel ventilatorModel() {
+        // The existing renderer shares one Y axis, so all three signals use explicit normalized units.
+        return medicalSeries("Synthetic pressure / volume / flow (normalized)", 3, (t, values) -> {
+            double phase = t % 3.0 / 3.0;
+            if (phase < 0.4) {
+                double inspiration = phase / 0.4;
+                values[0] = 0.2 + 0.65 * Math.min(1, inspiration / 0.12);
+                values[1] = inspiration;
+                values[2] = 0.7;
+            } else {
+                double expiration = (phase - 0.4) / 0.6;
+                values[0] = 0.2 + 0.65 * Math.exp(-expiration * 18);
+                values[1] = (Math.exp(-expiration * 5) - Math.exp(-5)) / (1 - Math.exp(-5));
+                values[2] = -Math.exp(-expiration * 5);
+            }
+        });
+    }
+
+    private static double pulseShape(double phase) {
+        if (phase < 0.18) {
+            double rise = Math.sin(Math.PI * 0.5 * phase / 0.18);
+            return rise * rise;
+        }
+        double decay = (1 - phase) / 0.82;
+        double notch = 0.12 * Math.exp(-Math.pow((phase - 0.39) / 0.035, 2));
+        double rebound = 0.08 * Math.exp(-Math.pow((phase - 0.48) / 0.06, 2));
+        return Math.max(0, decay * decay - notch + rebound);
+    }
+
+    private static double capnography(double phase) {
+        if (phase < 0.28 || phase >= 0.82) return 0;
+        if (phase < 0.38) return 36 * (phase - 0.28) / 0.1;
+        if (phase < 0.73) return 36 + 4 * (phase - 0.38) / 0.35;
+        return 40 * (0.82 - phase) / 0.09;
     }
 
     private static ChartModel specializedRendererModel(String simple) {
@@ -1151,7 +1322,7 @@ public final class RendererDemoDataFactory {
         int sampleRate = 250; // 250 Hz - standard ECG
         double duration = 6.0; // 6 seconds
         int points = (int) (sampleRate * duration);
-        CircularFastMedicalModel model = new CircularFastMedicalModel(points, 3);
+        CircularFastMedicalModel model = new CircularFastMedicalModel(points, 3).setName("Synthetic ECG leads (mV)");
 
         double heartRate = 72.0; // BPM
         double rrInterval = 60.0 / heartRate; // seconds between beats

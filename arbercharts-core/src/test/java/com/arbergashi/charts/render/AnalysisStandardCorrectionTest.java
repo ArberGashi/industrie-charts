@@ -17,10 +17,12 @@ import com.arbergashi.charts.render.analysis.FourierOverlayRenderer;
 import com.arbergashi.charts.render.analysis.LiveFFTRenderer;
 import com.arbergashi.charts.render.analysis.ThresholdRenderer;
 import com.arbergashi.charts.render.predictive.PredictiveShadowRenderer;
+import com.arbergashi.charts.render.standard.AreaRenderer;
 import com.arbergashi.charts.render.standard.BubbleRenderer;
 import com.arbergashi.charts.render.standard.PredictivePathRenderer;
 import com.arbergashi.charts.render.standard.SplineRenderer;
 import com.arbergashi.charts.util.ChartAssets;
+import com.arbergashi.charts.util.NiceScale;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,6 +50,59 @@ class AnalysisStandardCorrectionTest {
             if (value == null) ChartAssets.removeProperty(key);
             else ChartAssets.setProperty(key, value);
         });
+    }
+
+    @Test
+    void areaFillAndOutlineBreakAtMissingSamples() {
+        for (double missing : new double[]{Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+            ArrayModel model = new ArrayModel(new double[]{0, 1, 2, 3, 4}, new double[]{1, 2, missing, 2, 1});
+            RecordingCanvas canvas = new RecordingCanvas();
+            new AreaRenderer().render(canvas, model, context(model, 0, 4, 0, 2));
+            assertEquals(2, canvas.lines.size());
+            assertEquals(2, canvas.polygons.size());
+            assertArrayEquals(new float[]{0, 25}, canvas.lines.get(0).x);
+            assertArrayEquals(new float[]{75, 100}, canvas.lines.get(1).x);
+            assertArrayEquals(new float[]{0, 0, 25, 25}, canvas.polygons.get(0).x);
+            assertArrayEquals(new float[]{100, 50, 0, 100}, canvas.polygons.get(0).y);
+            assertArrayEquals(new float[]{75, 75, 100, 100}, canvas.polygons.get(1).x);
+            assertArrayEquals(new float[]{100, 0, 50, 100}, canvas.polygons.get(1).y);
+        }
+    }
+
+    @Test
+    void areaMissingXAndLogarithmicDomainFailuresAlsoSplitThePath() {
+        ArrayModel model = new ArrayModel(new double[]{0, 1, Double.NaN, 3, 4}, new double[]{1, 10, 5, 10, 1});
+        RecordingCanvas canvas = new RecordingCanvas();
+        AreaRenderer renderer = new AreaRenderer();
+        renderer.render(canvas, model, context(model, 0, 4, 0, 10));
+        assertEquals(2, canvas.polygons.size());
+        model.x[2] = 2;
+        model.y[2] = 0;
+        canvas.clear();
+        PlotContext logarithmic = new DefaultPlotContext(new ArberRect(0, 0, 100, 100), 0, 4, 1, 10,
+                true, NiceScale.ScaleMode.LINEAR, NiceScale.ScaleMode.LOGARITHMIC);
+        renderer.render(canvas, model, logarithmic);
+        assertEquals(2, canvas.polygons.size());
+        assertArrayEquals(new float[]{0, 25}, canvas.lines.get(0).x);
+        assertArrayEquals(new float[]{75, 100}, canvas.lines.get(1).x);
+    }
+
+    @Test
+    void isolatedAreaSamplesCannotCreateFilledBridgesOrReuseOldGeometry() {
+        ArrayModel model = new ArrayModel(new double[]{0, 1, 2, 3, 4}, new double[]{1, 2, 3, 2, 1});
+        RecordingCanvas canvas = new RecordingCanvas();
+        AreaRenderer renderer = new AreaRenderer();
+        renderer.render(canvas, model, context(model, 0, 4, 0, 3));
+        assertEquals(1, canvas.polygons.size());
+        model.y[1] = model.y[3] = Double.NaN;
+        canvas.clear();
+        renderer.render(canvas, model, context(model, 0, 4, 0, 3));
+        assertTrue(canvas.polygons.isEmpty());
+        assertTrue(canvas.lines.isEmpty());
+        Arrays.fill(model.y, Double.NaN);
+        renderer.render(canvas, model, context(model, 0, 4, 0, 3));
+        assertTrue(canvas.polygons.isEmpty());
+        assertTrue(canvas.lines.isEmpty());
     }
 
     @Test

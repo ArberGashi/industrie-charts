@@ -77,7 +77,7 @@ public class RendererGuidelinesChecker {
         }
     }
 
-    // neu: rekursive Verzeichnissuche nach Namen
+    // Recursively search for a directory by name.
     private static File findDirectoryByName(File root, String name) {
         if (root == null || !root.exists()) return null;
         if (root.isDirectory() && root.getName().equals(name)) return root;

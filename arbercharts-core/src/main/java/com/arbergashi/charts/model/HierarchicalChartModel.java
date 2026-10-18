@@ -18,6 +18,20 @@ public interface HierarchicalChartModel<T> extends ChartModel {
     Node<T> getRootNode();
 
     /**
+     * Returns whether this model has no root node.
+     *
+     * <p>A hierarchy can contain data without exposing any flat chart points.
+     * Render hosts must therefore inspect the root rather than the point count
+     * when deciding whether to draw a hierarchical model.</p>
+     *
+     * @return {@code true} when the root node is absent
+     */
+    @Override
+    default boolean isEmpty() {
+        return getRootNode() == null;
+    }
+
+    /**
      * Represents a node in the hierarchical data structure.
      * Each node has a name, a value, and can have children.
      */

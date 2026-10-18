@@ -29,6 +29,9 @@ import java.util.Arrays;
 public final class ImageBufferCanvas implements ArberCanvas, AutoCloseable {
     private static final int STYLE_CACHE_SIZE = 256;
     private static final Font DEFAULT_TEXT_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 12);
+    private static final float[][] SPATIAL_DASH_PATTERNS = {
+            {5f, 5f}, {2f, 4f}, {8f, 4f, 2f, 4f}
+    };
 
     private final int width;
     private final int height;
@@ -38,6 +41,7 @@ public final class ImageBufferCanvas implements ArberCanvas, AutoCloseable {
     private final Rectangle2D.Float clipRect = new Rectangle2D.Float();
     private final Color[] colors = new Color[STYLE_CACHE_SIZE];
     private final BasicStroke[] strokes = new BasicStroke[STYLE_CACHE_SIZE];
+    private final BasicStroke[][] dashedStrokes = new BasicStroke[SPATIAL_DASH_PATTERNS.length][STYLE_CACHE_SIZE];
     private int color;
     private float stroke;
     private float lastX;
@@ -105,8 +109,13 @@ public final class ImageBufferCanvas implements ArberCanvas, AutoCloseable {
 
     @Override
     public void setStroke(float width) {
+        setSpatialStroke(width, 0);
+    }
+
+    // Spatial dash IDs match the Swing batch consumer; ordinary canvas strokes stay solid.
+    void setSpatialStroke(float width, int dashId) {
         ensureOpen();
-        BasicStroke cached = cachedStroke(width);
+        BasicStroke cached = cachedStroke(width, dashId);
         stroke = width;
         graphics.setStroke(cached);
     }
@@ -287,13 +296,18 @@ public final class ImageBufferCanvas implements ArberCanvas, AutoCloseable {
         return cached;
     }
 
-    private BasicStroke cachedStroke(float width) {
+    private BasicStroke cachedStroke(float width, int dashId) {
         int bits = Float.floatToIntBits(width);
         int slot = styleSlot(bits);
-        BasicStroke cached = strokes[slot];
+        boolean dashed = dashId >= 1 && dashId <= SPATIAL_DASH_PATTERNS.length;
+        BasicStroke[] cache = dashed ? dashedStrokes[dashId - 1] : strokes;
+        BasicStroke cached = cache[slot];
         if (cached == null || cached.getLineWidth() != width) {
-            cached = new BasicStroke(width);
-            strokes[slot] = cached;
+            cached = dashed
+                    ? new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
+                    10f, SPATIAL_DASH_PATTERNS[dashId - 1], 0f)
+                    : new BasicStroke(width);
+            cache[slot] = cached;
         }
         return cached;
     }
